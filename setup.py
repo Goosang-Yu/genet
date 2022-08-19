@@ -1,0 +1,29 @@
+import setuptools
+
+with open('README.md', 'r', encoding='utf-8') as fh:
+    long_description = fh.read()
+    
+setuptools.setup(
+    name="GenET",
+    version="0.0.1",
+    author="Goosang Yu",
+    author_email="gsyu93@gmail.com",
+    description="Python library for genome editing research",
+    long_description=long_description,
+    long_description_content_type="text/markdown",
+    url="https://github.com/Goosang-Yu/genet",
+    install_requires = [
+        'pandas'
+    ],
+    project_urls={
+        "Bug Tracker": "https://github.com/Goosang-Yu/genet/issues",
+    },
+    classifiers=[
+        "Programming Language :: Python :: 3",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
+    ],
+    package_dir={"": "src"},
+    packages=setuptools.find_packages(where="src"),
+    python_requires=">=3.6",
+)
