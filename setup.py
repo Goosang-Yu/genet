@@ -8,7 +8,7 @@ setuptools.setup(
     version="0.0.1",
     author="Goosang Yu",
     author_email="gsyu93@gmail.com",
-    description="Python library for genome editing research",
+    description="Genome Editing Toolkit",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/Goosang-Yu/genet",

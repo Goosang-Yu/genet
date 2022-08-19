@@ -22,6 +22,10 @@ GenET은 genome editing과 관련된 다양한 python 함수를 구현해놓은 
 pip install genet
 ```
 
+```python
+pip install -e.[dev] genet
+```
+
 ## Who should use genet?
 GenET은 누구나 쉽게 유전자가위를 이용한 연구를 할 수 있도록 개발되었습니다. 특히 아래와 같은 목적을 가진 사람들에게 유용하게 사용될 수 있습니다: <br />
 
