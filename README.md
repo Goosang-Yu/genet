@@ -16,7 +16,7 @@
 ## Welcome to GenET
 GenET은 genome editing과 관련된 다양한 python 함수를 구현해놓은 library입니다. GenET은 아직 제대로 구현된 기능이 없으며 앞으로 계속 업데이트 예정입니다. 현재 계획 중인 구현 내용은 guideRNA design, saturation library design, sequencing data 분석, gRNA activity prediction 등의 내용입니다. 
 
-## Installation
+## Installation (not released yet)
 
 ```python
 pip install genet

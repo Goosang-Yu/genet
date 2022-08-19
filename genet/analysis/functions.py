@@ -13,3 +13,4 @@ TODO
 '''
 
 def loadseq():
+    print('This is loadseq function')
