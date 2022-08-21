@@ -1,4 +1,4 @@
-from genet.analysis.functions import(
+from genet.analysis.functional import(
     loadseq,
     
 

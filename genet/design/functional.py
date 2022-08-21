@@ -1,0 +1,63 @@
+# from genet.utils import *
+import genet.utils
+
+'''
+TODO
+1. flash를 python code로 구현한 것이 없으므로, 여기서 input은 .fastq 파일만 가능
+2. 나중에 flashpy 개발이 좀 더 진행되면 도입하는 것을 생각해보자
+3. python 기본적으로 python 3.6~3.10까지 호환되는 것을 목표로 하고, 3.11도 테스트하기
+
+'''
+
+def loadseq():
+    print('This is loadseq function')
+    
+    
+def mismatch(seq: str, 
+             n: int, 
+             start: int = 0, 
+             end: int = -1, 
+             capital: bool = False,
+             full: bool = False,
+             ):
+    
+    '''
+    seq  : mismatch를 만들고자 하는 sequence 정보 (DNA 기준, 추후 RNA 추가해주면 좋을듯?)
+    n    : mismatch를 만드는 수
+    start: target에서 mismatch를 도입할 시작점
+    end  : target에서 mismatch를 도입할 종료점
+    capital: mismatched nucleotide 표기를 대문자로 할 것인지, True이면 대문자로 표시됨
+    full: 모든 mismatched position, WT, Alt, original seq 등 자세한 내용을 DataFrame으로 받을지.
+    '''
+    
+    from itertools import combinations, product
+    
+    
+    '''
+    아직 미완성!!!!
+    '''
+    
+    
+    seq = seq.upper()
+    target_seq = seq[start:end]
+    
+    input_len = len(seq)
+    list_seq = list(seq)
+    dic = {}
+    loc = list(combinations(range(input_len), n))
+    nucleo_dic = {"A": ["T","G","C"], 
+                  "T": ["A","G","C"], 
+                  "G": ["A","T","C"], 
+                  "C": ["A","T","G"]}
+    
+    for i in loc:
+        b = list_seq.copy()
+        for k in range(len(i)):
+            b[i[k]] = nucleo_dic[b[i[k]]]
+        lst = list(product(*b))
+        for i in lst:
+            dic [''.join(i)] = input
+            
+    return dic
+    
+    
