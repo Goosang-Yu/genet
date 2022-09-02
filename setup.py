@@ -8,7 +8,7 @@ VERSION = genet.__version__
 
 setuptools.setup(
     name="genet",
-    version="0.0.1",
+    version=VERSION,
     author="Goosang Yu",
     author_email="gsyu93@gmail.com",
     description="Genome Editing Toolkit",
