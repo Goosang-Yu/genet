@@ -13,4 +13,9 @@ TODO
 '''
 
 def loadseq():
+    '''
+    테스트용으로 만든 코드
+    
+    '''
+    
     print('This is loadseq function')

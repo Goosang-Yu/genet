@@ -1,8 +1,11 @@
 import setuptools
+import genet
 
 with open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
     
+VERSION = genet.__version__
+
 setuptools.setup(
     name="genet",
     version="0.0.1",
