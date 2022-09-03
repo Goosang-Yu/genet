@@ -11,6 +11,11 @@ TODO
 import os, sys
 import numpy as np
 
+import tensorflow.compat.v1 as tf
+
+tf.disable_v2_behavior()
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 
 class Deep_xCas9(object):
     def __init__(self, filter_size, filter_num, node_1=80, node_2=60, l_rate=0.005):
@@ -52,47 +57,46 @@ class Deep_xCas9(object):
 
         with tf.variable_scope('Fully_Connected_Layer1'):
             layer_node_0 = int((length - filter_size[0]) / 2) + 1
-            node_num_0 = layer_node_0 * filter_num[0]
+            node_num_0   = layer_node_0 * filter_num[0]
             layer_node_1 = int((length - filter_size[1]) / 2) + 1
-            node_num_1 = layer_node_1 * filter_num[1]
+            node_num_1   = layer_node_1 * filter_num[1]
             layer_node_2 = int((length - filter_size[2]) / 2) + 1
-            node_num_2 = layer_node_2 * filter_num[2]
-            L_flatten_0 = tf.reshape(L_pool_0, [-1, node_num_0])
-            L_flatten_1 = tf.reshape(L_pool_1, [-1, node_num_1])
-            L_flatten_2 = tf.reshape(L_pool_2, [-1, node_num_2])
-            L_flatten = tf.concat([L_flatten_0, L_flatten_1, L_flatten_2], 1, name='concat')
-            node_num = node_num_0 + node_num_1 + node_num_2
-            W_fcl1 = tf.get_variable("W_fcl1", shape=[node_num, node_1])
-            B_fcl1 = tf.get_variable("B_fcl1", shape=[node_1])
-            L_fcl1_pre = tf.nn.bias_add(tf.matmul(L_flatten, W_fcl1), B_fcl1)
-            L_fcl1 = tf.nn.relu(L_fcl1_pre)
-            L_fcl1_drop = tf.layers.dropout(L_fcl1, 0.3, self.is_training)
+            node_num_2   = layer_node_2 * filter_num[2]
+
+            L_flatten_0  = tf.reshape(L_pool_0, [-1, node_num_0])
+            L_flatten_1  = tf.reshape(L_pool_1, [-1, node_num_1])
+            L_flatten_2  = tf.reshape(L_pool_2, [-1, node_num_2])
+            L_flatten    = tf.concat([L_flatten_0, L_flatten_1, L_flatten_2], 1, name='concat')
+
+            node_num     = node_num_0 + node_num_1 + node_num_2
+            W_fcl1       = tf.get_variable("W_fcl1", shape=[node_num, node_1])
+            B_fcl1       = tf.get_variable("B_fcl1", shape=[node_1])
+            L_fcl1_pre   = tf.nn.bias_add(tf.matmul(L_flatten, W_fcl1), B_fcl1)
+            L_fcl1       = tf.nn.relu(L_fcl1_pre)
+            L_fcl1_drop  = tf.layers.dropout(L_fcl1, 0.3, self.is_training)
 
         with tf.variable_scope('Fully_Connected_Layer2'):
-            W_fcl2 = tf.get_variable("W_fcl2", shape=[node_1, node_2])
-            B_fcl2 = tf.get_variable("B_fcl2", shape=[node_2])
-            L_fcl2_pre = tf.nn.bias_add(tf.matmul(L_fcl1_drop, W_fcl2), B_fcl2)
-            L_fcl2 = tf.nn.relu(L_fcl2_pre)
-            L_fcl2_drop = tf.layers.dropout(L_fcl2, 0.3, self.is_training)
+            W_fcl2       = tf.get_variable("W_fcl2", shape=[node_1, node_2])
+            B_fcl2       = tf.get_variable("B_fcl2", shape=[node_2])
+            L_fcl2_pre   = tf.nn.bias_add(tf.matmul(L_fcl1_drop, W_fcl2), B_fcl2)
+            L_fcl2       = tf.nn.relu(L_fcl2_pre)
+            L_fcl2_drop  = tf.layers.dropout(L_fcl2, 0.3, self.is_training)
 
         with tf.variable_scope('Output_Layer'):
-            W_out = tf.get_variable("W_out", shape=[node_2, 1])  # , initializer=tf.contrib.layers.xavier_initializer())
-            B_out = tf.get_variable("B_out", shape=[1])  # , initializer=tf.contrib.layers.xavier_initializer())
+            W_out        = tf.get_variable("W_out", shape=[node_2, 1])
+            B_out        = tf.get_variable("B_out", shape=[1])
             self.outputs = tf.nn.bias_add(tf.matmul(L_fcl2_drop, W_out), B_out)
 
         # Define loss function and optimizer
-        self.obj_loss = tf.reduce_mean(tf.square(self.targets - self.outputs))
-        self.optimizer = tf.train.AdamOptimizer(l_rate).minimize(self.obj_loss)
+        self.obj_loss    = tf.reduce_mean(tf.square(self.targets - self.outputs))
+        self.optimizer   = tf.train.AdamOptimizer(l_rate).minimize(self.obj_loss)
+
     # def end: def __init__
-
-
 # class end: Deep_xCas9
 
 
 def Model_Finaltest(sess, TEST_X, model):
     test_batch = 500
-    test_spearman = 0.0
-    optimizer = model.optimizer
     TEST_Z = np.zeros((TEST_X.shape[0], 1), dtype=float)
 
     for i in range(int(np.ceil(float(TEST_X.shape[0]) / float(test_batch)))):
@@ -111,34 +115,27 @@ def Model_Finaltest(sess, TEST_X, model):
 def preprocess_seq(data, seq_length):
 
     seq_onehot = np.zeros((len(data), 1, seq_length, 4), dtype=float)
-    # print(np.shape(data), len(data), seq_length)
+
     for l in range(len(data)):
         for i in range(seq_length):
-
             try:
                 data[l][i]
             except Exception:
                 print(data[l], i, seq_length, len(data))
 
-            if data[l][i] in "Aa":
-                seq_onehot[l, 0, i, 0] = 1
-            elif data[l][i] in "Cc":
-                seq_onehot[l, 0, i, 1] = 1
-            elif data[l][i] in "Gg":
-                seq_onehot[l, 0, i, 2] = 1
-            elif data[l][i] in "Tt":
-                seq_onehot[l, 0, i, 3] = 1
-            elif data[l][i] in "Xx":
-                pass
-            elif data[l][i] in "Nn.":
-                pass
+            if   data[l][i] in "Aa":  seq_onehot[l, 0, i, 0] = 1
+            elif data[l][i] in "Cc":  seq_onehot[l, 0, i, 1] = 1
+            elif data[l][i] in "Gg":  seq_onehot[l, 0, i, 2] = 1
+            elif data[l][i] in "Tt":  seq_onehot[l, 0, i, 3] = 1
+            elif data[l][i] in "Xx":  pass
+            elif data[l][i] in "Nn.": pass
             else:
                 print("[Input Error] Non-ATGC character " + data[l])
                 sys.exit()
 
     return seq_onehot
 
-def pred_spcas9(list_target30:list , gpu_env=0):
+def pred_spcas9(sBase_DIR, list_target30:list , gpu_env=0):
     '''
     list_target30은 list 형태로 30bp sequence가 들어가야한다. \n
     gpu_env는 기본으로 0으로 세팅되어 있다.
@@ -161,13 +158,38 @@ def pred_spcas9(list_target30:list , gpu_env=0):
                 2.25273704528808,
                 53.4233360290527,
                 ]
-    
     '''
     
-    import tensorflow.compat.v1 as tf
+    # TensorFlow config
+    conf = tf.ConfigProto()
+    conf.gpu_options.allow_growth = True
+    os.environ['CUDA_VISIBLE_DEVICES'] = '%d' % gpu_env
 
-    tf.disable_v2_behavior()
-    os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+    x_test = preprocess_seq(list_target30, 30)
+
+    import genet.predict.models.DeepSpCas9
+
+    best_model_path = '%s/models/DeepSpCas9' % sBase_DIR
+    best_model = 'PreTrain-Final-3-5-7-100-70-40-0.001-550-80-60'
+
+    filter_size = [3, 5, 7]
+    filter_num  = [100, 70, 40]
+    args        = [filter_size, filter_num, 0.001, 550]
+
+    tf.reset_default_graph()
+
+    with tf.Session(config=conf) as sess:
+        sess.run(tf.global_variables_initializer())
+        model = Deep_xCas9(filter_size, filter_num, 80, 60, args[2])
+
+        saver = tf.train.Saver()
+        saver.restore(sess, best_model_path + '/' + best_model)
+
+        list_score = Model_Finaltest(sess, x_test, model)
+
+    return list_score
+
+def legacy_pred_spcas9(list_target30:list , gpu_env=0):
     
     # TensorFlow config
     conf = tf.ConfigProto()
@@ -203,6 +225,7 @@ def pred_spcas9(list_target30:list , gpu_env=0):
     filter_num = [filter_num_1, filter_num_2, filter_num_3]
     args = [filter_size, filter_num, l_rate, load_episode]
     tf.reset_default_graph()
+    
     with tf.Session(config=conf) as sess:
         sess.run(tf.global_variables_initializer())
         model = Deep_xCas9(filter_size, filter_num, node_1, node_2, args[2])
@@ -212,4 +235,3 @@ def pred_spcas9(list_target30:list , gpu_env=0):
         list_score = Model_Finaltest(sess, TEST_X, model)
 
     return list_score
-

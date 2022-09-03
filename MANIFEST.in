@@ -1,1 +1,2 @@
 include README.md
+include genet/predict/models/DeepSpCas9/*
