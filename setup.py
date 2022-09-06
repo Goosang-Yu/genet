@@ -16,7 +16,7 @@ setuptools.setup(
     packages        = setuptools.find_packages(exclude = ['dev_ing', 'dev_ing.*']),
     python_requires = ">=3.6",
     
-    install_requires = ['pandas'],
+    install_requires = ['pandas', 'pyensembl', 'biopython'],
     long_description = long_description,
     long_description_content_type = "text/markdown",
     project_urls={"Bug Tracker": "https://github.com/Goosang-Yu/genet/issues"},

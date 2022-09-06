@@ -1,5 +1,9 @@
 # from genet.utils import *
+
+import os, sys
+
 import genet.utils
+import pyensembl
 
 '''
 TODO
@@ -11,6 +15,71 @@ TODO
 
 def loadseq():
     print('This is loadseq function')
+
+
+
+def make_stop():
+    '''
+    특정 gene symbol을 넣으면,
+    그 gene에서 SNV (1bp substitution)으로 만들 수 있는 모든 stop codon의 경우의 수를 return 한다.
+
+    input  = gene symbol (ensembl 기준)
+    output = DataFrame (gene | pos | WT (121bp) | ED (121bp))
+
+    example:
+    
+    ```python
+    from genet.design import make_stop
+    df_out = make_stop('ACE2')
+
+
+    ```
+
+    '''
+
+
+
+
+
+def not_found_ensembl_db(ensemlb_ver: int, species: str):
+    print('''
+------------------------------------------------------
+Don't worry, this is NOT ERROR :)
+
+Ensembl database not found.
+We are installing ensembl data first by PyEnsembl.
+It'll take few minutes, and about 1.5Gb storage volumns. 
+
+You can find the path of Ensembl data using this:
+>>> pyensembl list
+
+You can change the path of Ensembl data by adding this on your scipt:
+```python
+import os
+os.environ['PYENSEMBL_CACHE_DIR'] = '/custom/cache/dir'
+```
+------------------------------------------------------
+
+    ''')
+
+    install_ok = input('Install Ensembl data on your disk? [y] / n') or 'y'
+
+    if install_ok == 'y' or install_ok == 'Y':
+        os.system('pyensembl install --release %s --species %s' % (str(ensemlb_ver), species))
+        print('Ensembl database installed - release ver.%s | Species - %s' % (ensemlb_ver, species))
+
+    elif install_ok =='n' or install_ok == 'N':
+        print('Not installed - Exit()')
+        sys.exit()
+    else:
+        print('Input error')
+        sys.exit()
+
+# def not_found_ensembl_db: End
+
+
+
+
     
     
 def mismatch(seq: str, 
