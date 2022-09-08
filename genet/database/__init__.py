@@ -1,5 +1,5 @@
 from genet.database.functional import(
-    GetGeneSeq,
+    GetGene,
 )
 
 from Bio import Entrez

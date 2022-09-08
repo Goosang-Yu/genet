@@ -1,8 +1,6 @@
 import os, sys
 import genet.utils
-from Bio import Entrez
-from Bio import GenBank
-
+from Bio import Entrez, GenBank, SeqIO
 
 class GetGene:
     def __init__(self, 
@@ -42,21 +40,31 @@ class GetGene:
         print('Find %s from NCBI nucleotide database' % gene_name)
         search_string = '%s[Gene] AND %s[Organism] %s' % (gene_name, species, search_option)
         
-        self.handle = Entrez.esearch(db="nucleotide", term=search_string)
-        self.record = Entrez.read(self.handle)
-
-        if len(self.record['IdList']) > 1:
+        self.handle      = Entrez.esearch(db="nucleotide", term=search_string)
+        self.gene_record = Entrez.read(self.handle)
+        self.ids         = self.gene_record['IdList']
+        if len(self.gene_record['IdList']) > 1:
             print('[Warnning] There are more than one ID from result. Please check your search options.')
 
+
+        print('RefGenID found: ', self.ids)
+        print('')
+
+        self.fetch      = Entrez.efetch(db='nucleotide', id=self.gene_record['IdList'], rettype='gb', retmode='xlm')
+        self.seq_record = SeqIO.read(self.fetch, 'genbank')
+    
+    
     # def __init__: End
 
-    def seq(self):
+    def exons(self):
         '''
-        esearch로 가져온 RefSeq의 ID를 이용해서, efetch로 정보를 불러오고, sequence 가져오기
+        esearch로 가져온 RefSeq의 ID를 받아서, efetch로 정보를 불러온다.
+        불러온 정보는 seq_record로 저장되고, 그 안에서 각종 정보를 가져올 수 있다.
         
         '''
 
-        from Bio import SeqIO
+
+
 
 
 
