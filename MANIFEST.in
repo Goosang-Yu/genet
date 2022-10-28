@@ -1,2 +1,5 @@
 include README.md
 include genet/predict/models/DeepSpCas9/*
+include genet/predict/models/DeepPrime/DeepPrime_base/*
+include genet/predict/models/DeepPrime/DeepPrime_FT/*
+include genet/predict/models/DeepBaseEditor/*

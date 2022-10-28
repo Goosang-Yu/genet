@@ -4,6 +4,7 @@
 
 **Genome editing library in Python** </br>
 **Since 2022. 08. 19.** </br>
+**This is demo version. `pip install genet`**
 
 [![Python](https://img.shields.io/badge/Python-3.7%20%7C%203.8%20%7C%203.9-blue)](https://badge.fury.io/py/genet) 
 [![PyPI version](https://badge.fury.io/py/genet.svg)](https://badge.fury.io/py/genet) 
@@ -11,22 +12,13 @@
 
 
 <div align="left">
-
+  
 ## Welcome to GenET
 GenET (Genoe Editing Toolkit)은 genome editing과 관련된 다양한 python 함수를 구현해놓은 library입니다. GenET은 아직 제대로 구현된 기능이 없으며 앞으로 계속 업데이트 예정입니다. 현재 계획 중인 구현 내용은 guideRNA design, saturation library design, sequencing data 분석, gRNA activity prediction 등의 내용입니다. 
-
-## Required OS
-GenET은 linux or macOS에서만 모든 기능을 사용할 수 있습니다. Prediction model에서 사용하는 feature 중 MFE를 계산하는 ViennaRNA package가 window를 지원하지 않기 때문입니다. Window를 사용하는 분들 께서는 docker를 이용해서 환경을 구축해야 합니다. 
 
 ## Installation (alpha version)
 
 ```python
-# Create virtual env for genet.
-# python 3.8 was tested. 
-conda create -n genet python=3.8
-conda activate genet
-
-# install genet package in your env.
 pip install genet
 ```
 
@@ -49,11 +41,11 @@ from genet import predict as prd
 # Cas9 activity를 구하고 싶은 target context (30bp)를 list 안에 넣어준다.
 # Input seq 형태는 4bp 5' context + 20 guide + 3bp PAM + 3bp 3' context
 
-list_target30 = [
-                'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
-                'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
-                'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
-                ]
+list_seq = [
+            'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
+            'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
+            'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
+            ]
                 
 list_out = prd.spcas9_score(list_target30)
 
@@ -79,7 +71,7 @@ list_seq = [
             'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
             ]
 
-list_out = prd.pe_score(list_target30)
+list_out = prd.spcas9_score(list_target30)
 
 list_out
 >>> [2.80322408676147, 2.25273704528808, 53.4233360290527]

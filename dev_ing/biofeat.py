@@ -1,248 +1,18 @@
-# from genet.utils import *
-import genet.utils
-
-'''
-TODO
-모든 Deep learning model을 여기에 넣어주기
-
-'''
-
-    
-import os, sys, time, regex
+import os, regex, sys
 import numpy as np
 import pandas as pd
 
-import tensorflow.compat.v1 as tf
-
-from glob import glob
 from Bio.SeqUtils import MeltingTemp as mt
 from Bio.SeqUtils import GC as gc
 from Bio.Seq import Seq
 from RNA import fold_compound
 
 np.set_printoptions(threshold=sys.maxsize)
-tf.disable_v2_behavior()
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-class Deep_xCas9(object):
-    def __init__(self, filter_size, filter_num, node_1=80, node_2=60, l_rate=0.005):
-        length = 30
-        self.inputs = tf.placeholder(tf.float32, [None, 1, length, 4])
-        self.targets = tf.placeholder(tf.float32, [None, 1])
-        self.is_training = tf.placeholder(tf.bool)
+## Constants ##
+nAltIndex = 60  # 60nts --- Alt --- 60nts *0-based
 
-        def create_new_conv_layer(input_data, num_input_channels, num_filters, filter_shape, pool_shape, name):
-            # setup the filter input shape for tf.nn.conv_2d
-            conv_filt_shape = [filter_shape[0], filter_shape[1], num_input_channels,
-                               num_filters]
-
-            # initialise weights and bias for the filter
-            weights = tf.Variable(tf.truncated_normal(conv_filt_shape, stddev=0.03), name=name + '_W')
-            bias = tf.Variable(tf.truncated_normal([num_filters]), name=name + '_b')
-
-            # setup the convolutional layer operation
-            out_layer = tf.nn.conv2d(input_data, weights, [1, 1, 1, 1], padding='VALID')
-
-            # add the bias
-            out_layer += bias
-
-            # apply a ReLU non-linear activation
-            out_layer = tf.layers.dropout(tf.nn.relu(out_layer), 0.3, self.is_training)
-
-            # now perform max pooling
-            ksize = [1, pool_shape[0], pool_shape[1], 1]
-            strides = [1, 1, 2, 1]
-            out_layer = tf.nn.avg_pool(out_layer, ksize=ksize, strides=strides, padding='SAME')
-
-            return out_layer
-
-        # def end: create_new_conv_layer
-
-        L_pool_0 = create_new_conv_layer(self.inputs, 4, filter_num[0], [1, filter_size[0]], [1, 2], name='conv1')
-        L_pool_1 = create_new_conv_layer(self.inputs, 4, filter_num[1], [1, filter_size[1]], [1, 2], name='conv2')
-        L_pool_2 = create_new_conv_layer(self.inputs, 4, filter_num[2], [1, filter_size[2]], [1, 2], name='conv3')
-
-        with tf.variable_scope('Fully_Connected_Layer1'):
-            layer_node_0 = int((length - filter_size[0]) / 2) + 1
-            node_num_0   = layer_node_0 * filter_num[0]
-            layer_node_1 = int((length - filter_size[1]) / 2) + 1
-            node_num_1   = layer_node_1 * filter_num[1]
-            layer_node_2 = int((length - filter_size[2]) / 2) + 1
-            node_num_2   = layer_node_2 * filter_num[2]
-
-            L_flatten_0  = tf.reshape(L_pool_0, [-1, node_num_0])
-            L_flatten_1  = tf.reshape(L_pool_1, [-1, node_num_1])
-            L_flatten_2  = tf.reshape(L_pool_2, [-1, node_num_2])
-            L_flatten    = tf.concat([L_flatten_0, L_flatten_1, L_flatten_2], 1, name='concat')
-
-            node_num     = node_num_0 + node_num_1 + node_num_2
-            W_fcl1       = tf.get_variable("W_fcl1", shape=[node_num, node_1])
-            B_fcl1       = tf.get_variable("B_fcl1", shape=[node_1])
-            L_fcl1_pre   = tf.nn.bias_add(tf.matmul(L_flatten, W_fcl1), B_fcl1)
-            L_fcl1       = tf.nn.relu(L_fcl1_pre)
-            L_fcl1_drop  = tf.layers.dropout(L_fcl1, 0.3, self.is_training)
-
-        with tf.variable_scope('Fully_Connected_Layer2'):
-            W_fcl2       = tf.get_variable("W_fcl2", shape=[node_1, node_2])
-            B_fcl2       = tf.get_variable("B_fcl2", shape=[node_2])
-            L_fcl2_pre   = tf.nn.bias_add(tf.matmul(L_fcl1_drop, W_fcl2), B_fcl2)
-            L_fcl2       = tf.nn.relu(L_fcl2_pre)
-            L_fcl2_drop  = tf.layers.dropout(L_fcl2, 0.3, self.is_training)
-
-        with tf.variable_scope('Output_Layer'):
-            W_out        = tf.get_variable("W_out", shape=[node_2, 1])
-            B_out        = tf.get_variable("B_out", shape=[1])
-            self.outputs = tf.nn.bias_add(tf.matmul(L_fcl2_drop, W_out), B_out)
-
-        # Define loss function and optimizer
-        self.obj_loss    = tf.reduce_mean(tf.square(self.targets - self.outputs))
-        self.optimizer   = tf.train.AdamOptimizer(l_rate).minimize(self.obj_loss)
-
-    # def end: def __init__
-# class end: Deep_xCas9
-
-
-def Model_Finaltest(sess, TEST_X, model):
-    test_batch = 500
-    TEST_Z = np.zeros((TEST_X.shape[0], 1), dtype=float)
-
-    for i in range(int(np.ceil(float(TEST_X.shape[0]) / float(test_batch)))):
-        Dict = {model.inputs: TEST_X[i * test_batch:(i + 1) * test_batch], model.is_training: False}
-        TEST_Z[i * test_batch:(i + 1) * test_batch] = sess.run([model.outputs], feed_dict=Dict)[0]
-
-    list_score = sum(TEST_Z.tolist(), [])
-
-    return list_score
-
-
-# def end: Model_Finaltest
-
-
-
-def preprocess_seq(data, seq_length):
-
-    seq_onehot = np.zeros((len(data), 1, seq_length, 4), dtype=float)
-
-    for l in range(len(data)):
-        for i in range(seq_length):
-            try:
-                data[l][i]
-            except Exception:
-                print(data[l], i, seq_length, len(data))
-
-            if   data[l][i] in "Aa":  seq_onehot[l, 0, i, 0] = 1
-            elif data[l][i] in "Cc":  seq_onehot[l, 0, i, 1] = 1
-            elif data[l][i] in "Gg":  seq_onehot[l, 0, i, 2] = 1
-            elif data[l][i] in "Tt":  seq_onehot[l, 0, i, 3] = 1
-            elif data[l][i] in "Xx":  pass
-            elif data[l][i] in "Nn.": pass
-            else:
-                print("[Input Error] Non-ATGC character " + data[l])
-                sys.exit()
-
-    return seq_onehot
-
-def spcas9_score(sBase_DIR, list_target30:list , gpu_env=0):
-    '''
-    list_target30은 list 형태로 30bp sequence가 들어가야한다. \n
-    gpu_env는 기본으로 0으로 세팅되어 있다.
-    또한 sequence[24:27]은 NGG PAM이 들어가있어야 한다.
-    
-    만약 다른 GPU (nvidia-smi 기준)를 사용하고 싶다면,\n
-    1, 2... 등으로 다른 숫자를 넣어주면 된다. \n
-    
-    예시) 
-    list_target30 = [
-                    'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
-                    'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
-                    'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
-                    ]
-                    
-    list_out = pre_spcas9(list_target30)
-    
-    list_out = [
-                2.80322408676147,
-                2.25273704528808,
-                53.4233360290527,
-                ]
-    '''
-    
-    # TensorFlow config
-    conf = tf.ConfigProto()
-    conf.gpu_options.allow_growth = True
-    os.environ['CUDA_VISIBLE_DEVICES'] = '%d' % gpu_env
-
-    x_test = preprocess_seq(list_target30, 30)
-
-    import genet.predict.models.DeepSpCas9
-
-    best_model_path = '%s/models/DeepSpCas9' % sBase_DIR
-    best_model = 'DeepSpCas9_model'
-
-    filter_size = [3, 5, 7]
-    filter_num  = [100, 70, 40]
-    args        = [filter_size, filter_num, 0.001, 550]
-
-    tf.reset_default_graph()
-
-    with tf.Session(config=conf) as sess:
-        sess.run(tf.global_variables_initializer())
-        model = Deep_xCas9(filter_size, filter_num, 80, 60, args[2])
-
-        saver = tf.train.Saver()
-        saver.restore(sess, best_model_path + '/' + best_model)
-
-        list_score = Model_Finaltest(sess, x_test, model)
-
-    return list_score
-
-def legacy_pred_spcas9(list_target30:list , gpu_env=0):
-    
-    # TensorFlow config
-    conf = tf.ConfigProto()
-    conf.gpu_options.allow_growth = True
-    os.environ['CUDA_VISIBLE_DEVICES'] = '%d' % gpu_env
-
-    TEST_X = preprocess_seq(list_target30, 30)
-
-    best_model_path = '%s/models/DeepSpCas9' % os.getcwd()
-    best_model = 'PreTrain-Final-3-5-7-100-70-40-0.001-550-80-60'
-    valuelist = best_model.split('-')
-    fulllist = []
-
-    for value in valuelist:
-        if value == 'True':
-            value = True
-        elif value == 'False':
-            value = False
-        else:
-            try:
-                value = int(value)
-            except:
-                try:
-                    value = float(value)
-                except:
-                    pass
-        fulllist.append(value)
-    # loop end: value
-
-    filter_size_1, filter_size_2, filter_size_3, filter_num_1, filter_num_2, filter_num_3, l_rate, load_episode, node_1, node_2 = fulllist[
-                                                                                                                                  2:]
-    filter_size = [filter_size_1, filter_size_2, filter_size_3]
-    filter_num = [filter_num_1, filter_num_2, filter_num_3]
-    args = [filter_size, filter_num, l_rate, load_episode]
-    tf.reset_default_graph()
-    
-    with tf.Session(config=conf) as sess:
-        sess.run(tf.global_variables_initializer())
-        model = Deep_xCas9(filter_size, filter_num, node_1, node_2, args[2])
-
-        saver = tf.train.Saver()
-        saver.restore(sess, best_model_path + '/' + best_model)
-        list_score = Model_Finaltest(sess, TEST_X, model)
-
-    return list_score
 
 def reverse_complement(sSeq):
     dict_sBases = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N', 'U': 'U', 'n': '',
@@ -252,6 +22,7 @@ def reverse_complement(sSeq):
     return ''.join(list_sSeq)[::-1]
 
 # def END: reverse_complement
+
 
 def set_alt_position_window(sStrand, sAltKey, nAltIndex, nIndexStart, nIndexEnd, nAltLen):
     if sStrand == '+':
@@ -388,6 +159,8 @@ class FeatureExtraction:
         nSetRTLen = 0  # Fix RT  Len: Set if >0
         PAM: 4-nt sequence
         """
+
+        
 
         nMaxEditPosWin = nMaxRT + 3  # Distance between PAM and mutation
 
@@ -761,7 +534,7 @@ class FeatureExtraction:
 
     # def END: determine_MFE
 
-    def make_output_df(self):
+    def make_output_df(self, bTest):
 
         list_output = []
         list_sOutputKeys = ['Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD', 'nGCcnt1', 'nGCcnt2', 'nGCcnt3',
@@ -800,11 +573,21 @@ class FeatureExtraction:
                 else:
                     RHA_len = len(sRTTSeq) - nEditPos - self.nAltLen + 1
 
+                if bTest:
 
-                list_sOut = [self.input_id, sWTSeq74, sEDSeq74, 
-                            len(sPBSSeq), len(sRTTSeq), len(sPBSSeq + sRTTSeq), nEditPos, self.nAltLen,
-                            RHA_len, self.type_sub, self.type_ins, self.type_del
-                            ] + [self.dict_sOutput[sPAMKey][sSeqKey][sKey] for sKey in list_sOutputKeys]
+                    # sSpacer_for_MFE = 'G' + sGuideSeq[5:24]
+                    sSpacer_for_MFE = 'G' + sGuideSeq[1:-3]
+                    list_sOut = [sPBSSeq, sRTTSeq, dict_seq['Tm1'], dict_seq['Tm2'], dict_seq['Tm2new'],
+                                dict_seq['Tm3'][0], dict_seq['Tm3'][1], dict_seq['Tm4'][0], dict_seq['Tm4'][1],
+                                sSpacer_for_MFE, self.sAltType, sWTSeq74, sEDSeq74, len(sPBSSeq), len(sRTTSeq), len(sPBSSeq + sRTTSeq),
+                                nEditPos, self.nAltLen, RHA_len, self.type_sub, self.type_ins, self.type_del
+                                ] + [self.dict_sOutput[sPAMKey][sSeqKey][sKey] for sKey in list_sOutputKeys]
+                else:
+                    list_sOut = [self.input_id, sWTSeq74, sEDSeq74, 
+                                # dict_seq['RTPBS_right4'], dict_seq['AfterRTT_left4'],
+                                len(sPBSSeq), len(sRTTSeq), len(sPBSSeq + sRTTSeq), nEditPos, self.nAltLen,
+                                RHA_len, self.type_sub, self.type_ins, self.type_del
+                                ] + [self.dict_sOutput[sPAMKey][sSeqKey][sKey] for sKey in list_sOutputKeys]
 
                 list_output.append(list_sOut)
             
@@ -813,181 +596,17 @@ class FeatureExtraction:
         hder_essen = ['ID', 'WT74_On', 'Edited74_On', 'PBSlen', 'RTlen', 'RT-PBSlen', 'Edit_pos', 'Edit_len', 'RHA_len',
                     'type_sub', 'type_ins', 'type_del','Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD',
                     'nGCcnt1', 'nGCcnt2', 'nGCcnt3', 'fGCcont1', 'fGCcont2', 'fGCcont3', 'MFE3', 'MFE4']
+        hder_test  = ['PBSSeq', 'RTTSeq', 'sForTm1', 'sForTm2', 'sForTm2new', 'sForTm3_1', 'sForTm3_2',
+                    'sForTm4_1', 'sForTm4_2', 'gN19', 'AltType']
 
-        df_out = pd.DataFrame(list_output, columns=hder_essen)
+        if bTest:
+            df_out = pd.DataFrame(list_output, columns=hder_test + hder_essen)
+            print('[NOTICE] This is make_output_test.')
+        else:
+            df_out = pd.DataFrame(list_output, columns=hder_essen)
         
         # loop END: sPAMKey
 
         return df_out
 
 # def END: make_output
-
-
-
-
-class GeneInteractionModel(nn.Module):
-    import os
-    import torch
-    import torch.nn.functional as F
-    import torch.nn as nn
-
-    def __init__(self, hidden_size, num_layers, num_features=24, dropout=0.1):
-        super(GeneInteractionModel, self).__init__()
-        self.hidden_size = hidden_size
-        self.num_layers = num_layers
-
-        self.c1 = nn.Sequential(
-            nn.Conv2d(in_channels=4, out_channels=128, kernel_size=(2, 3), stride=1, padding=(0, 1)),
-            nn.BatchNorm2d(128),
-            nn.GELU(),
-        )
-        self.c2 = nn.Sequential(
-            nn.Conv1d(in_channels=128, out_channels=108, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(108),
-            nn.GELU(),
-            nn.AvgPool1d(kernel_size=2, stride=2),
-
-            nn.Conv1d(in_channels=108, out_channels=108, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(108),
-            nn.GELU(),
-            nn.AvgPool1d(kernel_size=2, stride=2),
-
-            nn.Conv1d(in_channels=108, out_channels=128, kernel_size=3, stride=1, padding=1),
-            nn.BatchNorm1d(128),
-            nn.GELU(),
-            nn.AvgPool1d(kernel_size=2, stride=2),
-        )
-
-        self.r = nn.GRU(128, hidden_size, num_layers, batch_first=True, bidirectional=True)
-
-        self.s = nn.Linear(2 * hidden_size, 12, bias=False)
-
-        self.d = nn.Sequential(
-            nn.Linear(num_features, 96, bias=False),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(96, 64, bias=False),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(64, 128, bias=False)
-        )
-
-        self.head = nn.Sequential(
-            nn.BatchNorm1d(140),
-            nn.Dropout(dropout),
-            nn.Linear(140, 1, bias=True),
-        )
-
-    def forward(self, g, x):
-        g = torch.squeeze(self.c1(g), 2)
-        g = self.c2(g)
-        g, _ = self.r(torch.transpose(g, 1, 2))
-        g = self.s(g[:, -1, :])
-
-        x = self.d(x)
-
-        out = self.head(torch.cat((g, x), dim=1))
-
-        return F.softplus(out)
-
-def seq_concat(data, col1='WT74_On', col2='Edited74_On', seq_length=74):
-    wt = preprocess_seq(data[col1], seq_length)
-    ed = preprocess_seq(data[col2], seq_length)
-    g = np.concatenate((wt, ed), axis=1)
-    g = 2 * g - 1
-
-    return g
-
-
-def select_cols(data):
-    features = data.loc[:, ['PBSlen', 'RTlen', 'RT-PBSlen', 'Edit_pos', 'Edit_len', 'RHA_len', 'type_sub',
-                            'type_ins', 'type_del', 'Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD',
-                            'nGCcnt1', 'nGCcnt2', 'nGCcnt3', 'fGCcont1', 'fGCcont2', 'fGCcont3', 'MFE3', 'MFE4', 'DeepSpCas9_score']]
-
-    return features
-
-
-def calculate_deepprime_score(df_input, pe_system='PE2'):
-
-    os.environ['CUDA_VISIBLE_DEVICES']='0'
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
-    dict_model_path = {'PE2': 'DeepPrime_base',
-                        'NRCH_PE2': 'DeepPrime_var/DP_variant_293T_NRCH_PE2_Opti_220428',
-                        'PE2max': 'DeepPrime_var/DP_variant_293T_PE2max_Opti_220428'}
-
-    model_type = dict_model_path[pe_system]
-
-    mean = pd.read_csv('models/%s/%s_mean.csv' % (model_type, pe_system), header=None, index_col=0).squeeze() # Train set mean (made with preprocessing.py)
-    std  = pd.read_csv('models/%s/%s_std.csv' % (model_type, pe_system), header=None, index_col=0).squeeze() # Train set std (made with preprocessing.py)
-
-    test_features = select_cols(df_input)
-
-    g_test = seq_concat(df_input)
-    x_test = (test_features - mean) / std
-
-    g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
-    x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
-
-    models = [m_files for m_files in glob('models/%s/*.pt' % model_type)]
-    preds  = []
-
-    for m in models:
-        model = GeneInteractionModel(hidden_size=128, num_layers=1).to(device)
-        model.load_state_dict(torch.load(m))
-        model.eval()
-        with torch.no_grad():
-            g, x = g_test, x_test
-            g = g.permute((0, 3, 1, 2))
-            pred = model(g, x).detach().cpu().numpy()
-        preds.append(pred)
-    
-    # AVERAGE PREDICTIONS
-    preds = np.squeeze(np.array(preds))
-    preds = np.mean(preds, axis=0)
-    preds = np.exp(preds) - 1
-
-    return preds
-
-def pe_score(Ref_seq: str, 
-            ED_seq: str, 
-            sAlt: str,
-            sID = 'Sample',
-            pe_system = 'PE2',
-            pbs_min = 7,
-            pbs_max = 15,
-            rtt_max = 40
-            ):
-    '''
-    DeepPrime score를 내기위한 function.\n
-    Input  = \n
-    Output = \n
-    '''
-    
-    nAltIndex   = 60
-    pbs_range   = [pbs_min, pbs_max]
-    rtt_max     = rtt_max
-    pe_system   = pe_system
-
-    edit_type   = sAlt[:-1]
-    edit_len    = int(sAlt[-1])
-
-    ## FeatureExtraction Class
-    cFeat = FeatureExtraction()
-
-    cFeat.input_id = sID
-    cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
-
-    cFeat.get_sAltNotation(nAltIndex)
-    cFeat.get_all_RT_PBS(nAltIndex, nMinPBS=pbs_range[0]-1, nMaxPBS=pbs_range[1], nMaxRT=rtt_max, pe_system=pe_system)
-    cFeat.make_rt_pbs_combinations()
-    cFeat.determine_seqs()
-    cFeat.determine_secondary_structure()
-
-    df = cFeat.make_output_df()
-
-    list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
-    df['DeepSpCas9_score'] = spcas9_score('./', list_Guide30)
-    df['DeepPrime_score']  = calculate_deepprime_score(df, pe_system)
-
-    return df
