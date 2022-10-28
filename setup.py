@@ -16,6 +16,13 @@ setuptools.setup(
     url             = "https://github.com/Goosang-Yu/genet",
     packages        = setuptools.find_packages(exclude = ['dev_ing', 'dev_ing.*']),
     
+    python_requires = ">=3.7",
+    classifiers=[
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+    ],
+
     package_data={
         'genet':[
             # DeepSpCas9
@@ -82,7 +89,7 @@ setuptools.setup(
         ]
     },
 
-    python_requires = ">=3.7",
+    
     install_requires = [
         'regex',
         'biopython',
@@ -95,10 +102,7 @@ setuptools.setup(
 
 
     dependency_links=[
-        'https://pypi.example.org/pypi/somedep/',
         'https://download.pytorch.org/whl/cu113',
-
-        
         ],
 
     long_description = long_description,
