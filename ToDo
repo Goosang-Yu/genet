@@ -6,3 +6,5 @@ Saturation library design 해주는것
 silent mutation 만드는것
 결과를 그래프로 그려주는 것
 Deep learning model -> 각종 gRNA에 대해서 예측값내주기
+
+DeepPrime 모델 예측 함수 구현하기
