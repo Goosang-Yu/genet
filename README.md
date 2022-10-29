@@ -29,7 +29,7 @@ conda create -n genet python=3.8
 conda activate genet
 
 # install genet package in your env.
-pip install genet==0.0.3 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+pip install genet==0.0.4 -f https://download.pytorch.org/whl/cu113/torch_stable.html
 ```
 
 
