@@ -5,6 +5,8 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
+import inspect
+from genet.predict.models import DeepSpCas9, DeepPrime
 
 
 import os, sys, time, regex
@@ -174,8 +176,7 @@ def spcas9_score(list_target30:list , gpu_env=0):
 
     x_test = preprocess_seq(list_target30, 30)
 
-    from genet.predict.models import DeepSpCas9
-    import inspect
+
 
     model_dir = inspect.getfile(DeepSpCas9).replace('/__init__.py', '')
     
@@ -200,56 +201,6 @@ def spcas9_score(list_target30:list , gpu_env=0):
     
     return list_score
 
-
-
-
-'''
-def legacy_pred_spcas9(list_target30:list , gpu_env=0):
-    
-    # TensorFlow config
-    conf = tf.ConfigProto()
-    conf.gpu_options.allow_growth = True
-    os.environ['CUDA_VISIBLE_DEVICES'] = '%d' % gpu_env
-
-    TEST_X = preprocess_seq(list_target30, 30)
-
-    best_model_path = '%s/models/DeepSpCas9' % os.getcwd()
-    best_model = 'PreTrain-Final-3-5-7-100-70-40-0.001-550-80-60'
-    valuelist = best_model.split('-')
-    fulllist = []
-
-    for value in valuelist:
-        if value == 'True':
-            value = True
-        elif value == 'False':
-            value = False
-        else:
-            try:
-                value = int(value)
-            except:
-                try:
-                    value = float(value)
-                except:
-                    pass
-        fulllist.append(value)
-    # loop end: value
-
-    filter_size_1, filter_size_2, filter_size_3, filter_num_1, filter_num_2, filter_num_3, l_rate, load_episode, node_1, node_2 = fulllist[
-                                                                                                                                  2:]
-    filter_size = [filter_size_1, filter_size_2, filter_size_3]
-    filter_num = [filter_num_1, filter_num_2, filter_num_3]
-    args = [filter_size, filter_num, l_rate, load_episode]
-    tf.reset_default_graph()
-    
-    with tf.Session(config=conf) as sess:
-        sess.run(tf.global_variables_initializer())
-        model = Deep_xCas9(filter_size, filter_num, node_1, node_2, args[2])
-
-        saver = tf.train.Saver()
-        saver.restore(sess, best_model_path + '/' + best_model)
-        list_score = Model_Finaltest(sess, TEST_X, model)
-
-    return list_score'''
 
 def reverse_complement(sSeq):
     dict_sBases = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N', 'U': 'U', 'n': '',
@@ -747,8 +698,6 @@ class FeatureExtraction:
     # def END: determine_GC
 
     def determine_MFE(self, sPAMKey, sSeqKey, sGuideSeqExt):
-        sScaffoldSeq = 'GTTTTAGAGCTAGAAATAGCAAGTTAAAATAAGGCTAGTCCGTTATCAACTTGAAAAAGTGGCACCGAGTCGGTGC'  # conventional scaff
-        sPolyTSeq = 'TTTTTT'
 
         sRTSeq, sPBSSeq = sSeqKey.split(',')
 
@@ -756,7 +705,7 @@ class FeatureExtraction:
         sGuideSeq = 'G' + sGuideSeqExt[1:-3] ## GN19 guide seq
 
         # MFE_3 - RT + PBS + PolyT
-        sInputSeq = reverse_complement(sPBSSeq + sRTSeq) + sPolyTSeq
+        sInputSeq = reverse_complement(sPBSSeq + sRTSeq) + 'TTTTTT'
         sDBSeq, fMFE3 = fold_compound(sInputSeq).mfe()
 
         # MFE_4 - spacer only
@@ -915,15 +864,17 @@ def calculate_deepprime_score(df_input, pe_system='PE2'):
 
     os.environ['CUDA_VISIBLE_DEVICES']='0'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
-
+    
+    model_dir = inspect.getfile(DeepPrime).replace('/__init__.py', '')
+    
     dict_model_path = {'PE2': 'DeepPrime_base',
-                        'NRCH_PE2': 'DeepPrime_var/DP_variant_293T_NRCH_PE2_Opti_220428',
-                        'PE2max': 'DeepPrime_var/DP_variant_293T_PE2max_Opti_220428'}
+                        'NRCH_PE2': 'DeepPrime_FT/DPFT_293T_NRCH_PE2',
+                        'PE2max': 'DeepPrime_FT/DPFT_293T_PE2max'}
 
     model_type = dict_model_path[pe_system]
 
-    mean = pd.read_csv('models/%s/%s_mean.csv' % (model_type, pe_system), header=None, index_col=0).squeeze() # Train set mean (made with preprocessing.py)
-    std  = pd.read_csv('models/%s/%s_std.csv' % (model_type, pe_system), header=None, index_col=0).squeeze() # Train set std (made with preprocessing.py)
+    mean = pd.read_csv('%s/DeepPrime_base/PE2_mean.csv' % model_dir, header=None, index_col=0).squeeze()
+    std  = pd.read_csv('%s/DeepPrime_base/PE2_std.csv' % model_dir, header=None, index_col=0).squeeze()
 
     test_features = select_cols(df_input)
 
@@ -933,7 +884,7 @@ def calculate_deepprime_score(df_input, pe_system='PE2'):
     g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
     x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
 
-    models = [m_files for m_files in glob('models/%s/*.pt' % model_type)]
+    models = [m_files for m_files in glob('%s/%s/*.pt' % (model_dir, model_type))]
     preds  = []
 
     for m in models:
@@ -991,7 +942,7 @@ def pe_score(Ref_seq: str,
     df = cFeat.make_output_df()
 
     list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
-    df['DeepSpCas9_score'] = spcas9_score('./', list_Guide30)
+    df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
     df['DeepPrime_score']  = calculate_deepprime_score(df, pe_system)
 
     return df
