@@ -21,6 +21,8 @@ setuptools.setup(
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: OS Independent",
     ],
 
     package_data={
@@ -88,7 +90,6 @@ setuptools.setup(
             'genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_293T_NTCH_PE2/NRCH_PE2_std.csv',
         ]
     },
-
     
     install_requires = [
         'regex',
@@ -101,7 +102,6 @@ setuptools.setup(
         'protobuf==3.20.*'
         ],
 
-
     dependency_links=[
         'https://download.pytorch.org/whl/cu113',
         ],
@@ -110,10 +110,5 @@ setuptools.setup(
     long_description_content_type = "text/markdown",
     project_urls={"Bug Tracker": "https://github.com/Goosang-Yu/genet/issues"},
     
-    classifiers=[
-        "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: OS Independent",
-    ],
     include_package_data=True,
 )
