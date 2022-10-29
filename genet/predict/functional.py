@@ -1,13 +1,12 @@
 # from genet.utils import *
 import genet.utils
 
-'''
-TODO
-모든 Deep learning model을 여기에 넣어주기
+import torch
+import torch.nn.functional as F
+import torch.nn as nn
 
-'''
 
-    
+
 import os, sys, time, regex
 import numpy as np
 import pandas as pd
@@ -143,7 +142,7 @@ def preprocess_seq(data, seq_length):
 
     return seq_onehot
 
-def spcas9_score(sBase_DIR, list_target30:list , gpu_env=0):
+def spcas9_score(list_target30:list , gpu_env=0):
     '''
     list_target30은 list 형태로 30bp sequence가 들어가야한다. \n
     gpu_env는 기본으로 0으로 세팅되어 있다.
@@ -159,7 +158,7 @@ def spcas9_score(sBase_DIR, list_target30:list , gpu_env=0):
                     'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
                     ]
                     
-    list_out = pre_spcas9(list_target30)
+    list_out = spcas9_score(list_target30)
     
     list_out = [
                 2.80322408676147,
@@ -175,9 +174,12 @@ def spcas9_score(sBase_DIR, list_target30:list , gpu_env=0):
 
     x_test = preprocess_seq(list_target30, 30)
 
-    import genet.predict.models.DeepSpCas9
+    from genet.predict.models import DeepSpCas9
+    import inspect
 
-    best_model_path = '%s/models/DeepSpCas9' % sBase_DIR
+    model_dir = inspect.getfile(DeepSpCas9).replace('/__init__.py', '')
+    
+    best_model_path = model_dir
     best_model = 'DeepSpCas9_model'
 
     filter_size = [3, 5, 7]
@@ -194,9 +196,14 @@ def spcas9_score(sBase_DIR, list_target30:list , gpu_env=0):
         saver.restore(sess, best_model_path + '/' + best_model)
 
         list_score = Model_Finaltest(sess, x_test, model)
-
+    
+    
     return list_score
 
+
+
+
+'''
 def legacy_pred_spcas9(list_target30:list , gpu_env=0):
     
     # TensorFlow config
@@ -242,7 +249,7 @@ def legacy_pred_spcas9(list_target30:list , gpu_env=0):
         saver.restore(sess, best_model_path + '/' + best_model)
         list_score = Model_Finaltest(sess, TEST_X, model)
 
-    return list_score
+    return list_score'''
 
 def reverse_complement(sSeq):
     dict_sBases = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N', 'U': 'U', 'n': '',
@@ -826,10 +833,7 @@ class FeatureExtraction:
 
 
 class GeneInteractionModel(nn.Module):
-    import os
-    import torch
-    import torch.nn.functional as F
-    import torch.nn as nn
+
 
     def __init__(self, hidden_size, num_layers, num_features=24, dropout=0.1):
         super(GeneInteractionModel, self).__init__()
