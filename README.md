@@ -15,7 +15,9 @@
 ## Welcome to GenET
 GenET (Genoe Editing Toolkit)은 genome editing과 관련된 다양한 python 함수를 구현해놓은 library입니다. GenET은 아직 제대로 구현된 기능이 없으며 앞으로 계속 업데이트 예정입니다. 현재 계획 중인 구현 내용은 guideRNA design, saturation library design, sequencing data 분석, gRNA activity prediction 등의 내용입니다. 
 
-## Required OS
+## System requirement
+GenET can be run on either Mac or Linux system. 
+
 GenET은 linux or macOS에서만 모든 기능을 사용할 수 있습니다. Prediction model에서 사용하는 feature 중 MFE를 계산하는 ViennaRNA package가 window를 지원하지 않기 때문입니다. Window를 사용하는 분들 께서는 docker를 이용해서 환경을 구축해야 합니다. 
 
 ## Installation (alpha version)
@@ -31,7 +33,7 @@ pip install genet==0.0.3 -f https://download.pytorch.org/whl/cu113/torch_stable.
 ```
 
 
-## Who should use genet?
+## Who should use GenET?
 GenET은 누구나 쉽게 유전자가위를 이용한 연구를 할 수 있도록 개발되었습니다. 특히 아래와 같은 목적을 가진 사람들에게 유용하게 사용될 수 있습니다: <br />
 
 - 특정 유전자에 대해 유전자가위를 빠르게 디자인하고 싶을 때
