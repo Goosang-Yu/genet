@@ -93,14 +93,15 @@ setuptools.setup(
     },
     
     install_requires = [
+        'pandas',
         'regex',
         'biopython',
-        'ViennaRNA',
         'tensorflow==2.8.0',
         'torch==1.11.0+cu113',
         'torchvision==0.12.0+cu113',
         'torchaudio==0.11.0',
         'protobuf==3.20.*'
+        'ViennaRNA',
         ],
 
     dependency_links=[
