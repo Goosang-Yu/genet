@@ -3,15 +3,7 @@ include genet/predict/models/DeepSpCas9/*
 include genet/predict/models/DeepPrime/DeepPrime_base/*
 include genet/predict/models/DeepPrime/DeepPrime_FT/*
 include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_293T_NRCH_PE2/*
-include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_293T_NRCH_PE2max/*
-include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_293T_PE2_Conv/*
 include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_293T_PE2max/*
 include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_293T_PE4max/*
-include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_A549_PE4max/*
-include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_DLD1_NRCH_PE4max/*
-include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_DLD1_PE4max/*
-include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_HCT116_PE2/*
-include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_HeLa_PE2max/*
-include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_MDA_PE2/*
-include genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_NIH_NRCH_PE4max/*
+
 include genet/predict/models/DeepBaseEditor/*
