@@ -860,18 +860,55 @@ def select_cols(data):
     return features
 
 
-def calculate_deepprime_score(df_input, pe_system='PE2'):
+def calculate_deepprime_score(df_input, pe_system='PE2', cell_type='HEK293T'):
 
     os.environ['CUDA_VISIBLE_DEVICES']='0'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
     model_dir = inspect.getfile(DeepPrime).replace('/__init__.py', '')
     
-    dict_model_path = {'PE2': 'DeepPrime_base',
-                        'NRCH_PE2': 'DeepPrime_FT/DPFT_293T_NRCH_PE2',
-                        'PE2max': 'DeepPrime_FT/DPFT_293T_PE2max'}
+    dict_models = {
+        
+        'HEK293T': {
+            'PE2'        : 'DeepPrime_base',
+            'NRCH_PE2'   : 'DeepPrime_FT/DPFT_293T_NRCH_PE2',
+            'NRCH_PE2max': 'DeepPrime_FT/DPFT_293T_NRCH_PE2max',
+            'PE2max'     : 'DeepPrime_FT/DPFT_293T_PE2max',
+            'PE4max'     : 'DeepPrime_FT/DPFT_293T_PE4max',
+        },
 
-    model_type = dict_model_path[pe_system]
+        'A549': {
+            'PE4max'     : 'DeepPrime_FT/DPFT_A549_PE4max',
+        },
+        
+        'DLD1': {
+            'NRCH_PE4max': 'DeepPrime_FT/DPFT_DLD1_NRCH_PE4max',
+            'PE4max'     : 'DeepPrime_FT/DPFT_DLD1_PE4max',
+        },
+
+        'HCT116': {
+            'PE2'        : 'DeepPrime_FT/DPFT_HCT116_PE2',
+        },
+        
+        'HeLa': {
+            'PE2max'     : 'DeepPrime_FT/DPFT_HeLa_PE2max',
+        },
+        
+        'MDA-MB-231': {
+            'PE2'        : 'DeepPrime_FT/DPFT_MDA_PE2',
+        },
+        
+        'NIH3T3': {
+            'NRCH_PE4max': 'DeepPrime_FT/DPFT_NIH_NRCH_PE4max',
+        },
+        
+    }
+
+    try:
+        model_type = dict_models[cell_type][pe_system]
+    except:
+        print('Not available Prime Editor')
+        sys.exit()
 
     mean = pd.read_csv('%s/DeepPrime_base/PE2_mean.csv' % model_dir, header=None, index_col=0).squeeze()
     std  = pd.read_csv('%s/DeepPrime_base/PE2_std.csv' % model_dir, header=None, index_col=0).squeeze()
@@ -909,6 +946,7 @@ def pe_score(Ref_seq: str,
             sAlt: str,
             sID = 'Sample',
             pe_system = 'PE2',
+            cell_type = 'HEK293T',
             pbs_min = 7,
             pbs_max = 15,
             rtt_max = 40
@@ -917,6 +955,16 @@ def pe_score(Ref_seq: str,
     DeepPrime score를 내기위한 function.\n
     Input  = \n
     Output = \n
+    
+    Available Edit types\n
+    sub1, sub2, sub3, ins1, ins2, ins3, del1, del2, del3\n
+    
+    Available PE systems\n
+    PE2, PE2max, PE4max, NRCH_PE2, NRCH_PE2max, NRCH_PE4max\n
+    
+    Available Cell types\n
+    HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3
+    
     '''
     
     nAltIndex   = 60
@@ -943,6 +991,6 @@ def pe_score(Ref_seq: str,
 
     list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
     df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
-    df['DeepPrime_score']  = calculate_deepprime_score(df, pe_system)
+    df['DeepPrime_score']  = calculate_deepprime_score(df, pe_system, cell_type)
 
     return df

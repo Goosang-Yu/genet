@@ -26,6 +26,8 @@ setuptools.setup(
         "Operating System :: POSIX"
     ],
 
+    
+    
     package_data={
         'genet':[
             # DeepSpCas9
@@ -89,6 +91,7 @@ setuptools.setup(
             'genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_293T_NTCH_PE2/final_model_19.pt',
             'genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_293T_NTCH_PE2/NRCH_PE2_mean.csv',
             'genet/predict/models/DeepPrime/DeepPrime_FT/DPFT_293T_NTCH_PE2/NRCH_PE2_std.csv',
+            
         ]
     },
     
