@@ -3,7 +3,6 @@
 import os, sys
 
 import genet.utils
-import pyensembl
 
 '''
 TODO

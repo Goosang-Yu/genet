@@ -29,7 +29,12 @@ conda create -n genet python=3.8
 conda activate genet
 
 # install genet package in your env.
-pip install genet==0.0.6 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+pip install genet==0.1.0 -f https://download.pytorch.org/whl/cu113/torch_stable.html
+
+# install ViennaRNA package for calculate RNA 2ndary structure feature
+# Installation by conda is recommended rather than pip install
+conda install viennarna
+
 ```
 
 
@@ -67,7 +72,7 @@ list_out
 ```
 
 ## Example: Predict Prime editing efficiency (by DeepPrime)
-특정 target sequence를 target으로 하는 Prime editor pegRNA의 PE efficiency를 예측하는 모델이다 (Unpublished). DeepSpCas9 score를 feature로 사용하기 때문에, 환경에 tensorflow (>= 2.6)가 설치되어 있어야 한다. 그리고 DeepPrime은 PyTorch 기반의 모델이기 때문에 pytorch도 함께 설치되어 있어야 한다. 마찬가지로 환경변수에 CUDA toolkit이 설정되어 있어야하는데, 이건 잘 모르겠으면 문의하면 알려드릴게요 (gsyu93@gmail.com).
+특정 target sequence를 target으로 하는 Prime editor pegRNA의 PE efficiency를 예측하는 모델이다 (Unpublished). DeepSpCas9 score를 feature로 사용하기 때문에, 환경에 tensorflow (>= 2.6)가 함께 사용된다. 그리고 DeepPrime은 PyTorch 기반의 모델이기 때문에 pytorch가 사용된다.
 
 아래의 예시를 참고해서 사용하면 된다.
 
@@ -94,9 +99,46 @@ output:
 |  3 | Sample | ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATG | xxxxxxxxxxxCACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGACGxxxxxxxxxxxxxxxxxx |       10 |      35 |          45 |         34 |          1 |         1 |          1 |          0 |          0 | 38.5141 | 62.1654 |  62.1654 | -277.939 | 58.2253 | -340.105 |         7 |        16 |        23 |    70      |    45.7143 |    51.1111 |  -10.4 |   -0.6 |            45.9675 |         0.0826205 |
 |  4 | Sample | ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATG | xxxxxxxxxxACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGACGxxxxxxxxxxxxxxxxxx |       11 |      35 |          46 |         34 |          1 |         1 |          1 |          0 |          0 | 40.8741 | 62.1654 |  62.1654 | -277.939 | 58.2253 | -340.105 |         7 |        16 |        23 |    63.6364 |    45.7143 |    50      |  -10.4 |   -0.6 |            45.9675 |         0.0910506 |
 
-KHB lab 사람들은 지하 서버에 가상환경을 잘 만들어놨으니, 그거 들어가서 쓰면 됩니다.
+
+## Example: NCBI에서 Gene 정보 가져오기 (GenET database module)
+우리가 target으로 사용하고자 하는 gene의 sequence / feature 정보를 가져오기 위한 module이다. 기본적으로 biopython에서 Entrez module을 사용한다. 현재는 각 feature들에 대한 meta data만 가져오는 것이 가능하지만, 추후 실제 sequence까지 가져오고, 자동으로 genome editing에 필요한 정보로 preprocessing 하는 것까지 추가할 예정.
+
+아래의 예시를 참고해서 사용하면 된다.
+
 ```python
-conda activate dev_deeplearning_env
+from genet import database as db
+# 처음 import 하면 e-mail을 입력해줘야한다.
+# NCBI의 Entrez database에 접속할 때 log를 남길 때 요구하기 때문.
+
+brca1 = db.GetGene('BRCA1')
+
+list_exons = brca1.exons()
+list_exons
+
+>>> output:
+[SeqFeature(FeatureLocation(ExactPosition(92500), ExactPosition(92713), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(93868), ExactPosition(93967), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(102204), ExactPosition(102258), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(111450), ExactPosition(111528), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(113027), ExactPosition(113116), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(113722), ExactPosition(113862), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(118103), ExactPosition(118209), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(120694), ExactPosition(120740), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(122061), ExactPosition(122138), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(123123), ExactPosition(126549), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(126951), ExactPosition(127040), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(135408), ExactPosition(135580), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(141369), ExactPosition(141496), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(143462), ExactPosition(143653), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(146745), ExactPosition(147056), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(150288), ExactPosition(150376), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(154032), ExactPosition(154110), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(154610), ExactPosition(154651), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(160848), ExactPosition(160932), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(166866), ExactPosition(166921), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(168789), ExactPosition(168863), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(170280), ExactPosition(170341), strand=1), type='exon'),
+ SeqFeature(FeatureLocation(ExactPosition(172181), ExactPosition(173689), strand=1), type='exon')]
 ```
 
 문의는 gsyu93@gmail.com 으로 해주세요. 
