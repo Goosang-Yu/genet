@@ -49,7 +49,7 @@ GenET은 누구나 쉽게 유전자가위를 이용한 연구를 할 수 있도�
 GenET은 아직 정식으로 개발이 완료되지 않았습니다. 아직 구현되지 않은 기능이 있을 수 있고, 실행 중 에러 메세지가 뜰 수 있습니다. 예를 들어, DeepSpCas9 model은 현재 tensorflow ver.1을 사용하기 때문에 오래된 함수에 대한 경고 메세지가 실행 중 계속 나타납니다. 하지만 전체적인 실행에는 문제가 없으니 이대로도 사용 가능합니다. 현재 사용하는 tensorflow 모델들은 향후 모두 pytorch로 재구현해서 package dependency를 간소화하고, 에러메세지를 최소화하도록 개선 예정입니다. 사용 중 나타나는 다양한 버그에 대한 제보나 피드백은 github 또는 메일 (gsyu93@gmail.com)으로 제보해주시면 감사하겠습니다. 
 
 ## Example: Predict SpCas9 activity (by DeepSpCas9)
-특정 target sequence를 target으로 하는 SpCas9의 sgRNA의 indel frequency를 예측하는 모델이다 ([SciAdv, 2019, Kim et al.](https://www.science.org/doi/10.1126/sciadv.aax9249)). Tensorflow 기반의 모델이기 때문에, 환경에 tensorflow (>= 2.6)가 설치되어 있어야 한다. 또한 환경변수에 CUDA toolkit이 설정되어 있어야하는데, 이건 잘 모르겠으면 문의하면 알려드릴게요 (gsyu93@gmail.com).
+특정 target sequence를 target으로 하는 SpCas9의 sgRNA의 indel frequency를 예측하는 모델이다 ([SciAdv, 2019, Kim et al.](https://www.science.org/doi/10.1126/sciadv.aax9249)). Tensorflow 기반의 모델이기 때문에, 환경에 tensorflow (>= 2.6)가 사용된다. 필요한 package들은 genet과 함께 설치된다.
 
 아래의 예시를 참고해서 사용하면 된다.
 
