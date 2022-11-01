@@ -81,7 +81,7 @@ from genet import predict as prd
 
 # WT sequence와 Edited sequence 정보를 각각 넣어준다.
 # 그리고 만들고자 하는 edit type을 정확히 선택해서 넣어준다. 
-# Input seq 형태는 4bp 5' context + 20 guide + 3bp PAM + 47bp 3' context
+# Input seq 형태는 60bp 5' context + 1bp center + 60bp 3' context (total 121bp)
 
 seq_wt   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATGTCAACTGAAACCTTAAAGTGAGTATTTAATTGAGCTGAAGT'
 seq_ed   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGACGAACTATAACCTGCAAATGTCAACTGAAACCTTAAAGTGAGTATTTAATTGAGCTGAAGT'
