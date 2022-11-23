@@ -1,4 +1,5 @@
 # from genet.utils import *
+import genet
 import genet.utils
 
 import torch
@@ -728,7 +729,6 @@ class FeatureExtraction:
             sAltKey, sAltNotation, sStrand, nPAM_Nick, nAltPosWin, sPAMSeq, sGuideSeq = sPAMKey.split(',')
             nNickIndex = int(nPAM_Nick)
 
-            ## 220615 수정! 
             if sStrand == '+':
                 sWTSeq74 = self.sWTSeq[nNickIndex - 21:nNickIndex + 53]
                 nEditPos = 61 - nNickIndex
@@ -944,12 +944,12 @@ def calculate_deepprime_score(df_input, pe_system='PE2', cell_type='HEK293T'):
 def pe_score(Ref_seq: str, 
             ED_seq: str, 
             sAlt: str,
-            sID = 'Sample',
-            pe_system = 'PE2',
-            cell_type = 'HEK293T',
-            pbs_min = 7,
-            pbs_max = 15,
-            rtt_max = 40
+            sID:str       = 'Sample',
+            pe_system:str = 'PE2',
+            cell_type:str = 'HEK293T',
+            pbs_min:int   = 7,
+            pbs_max:int   = 15,
+            rtt_max:int   = 40
             ):
     '''
     DeepPrime score를 내기위한 function.\n
@@ -974,6 +974,54 @@ def pe_score(Ref_seq: str,
 
     edit_type   = sAlt[:-1]
     edit_len    = int(sAlt[-1])
+
+    ## FeatureExtraction Class
+    cFeat = FeatureExtraction()
+
+    cFeat.input_id = sID
+    cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
+
+    cFeat.get_sAltNotation(nAltIndex)
+    cFeat.get_all_RT_PBS(nAltIndex, nMinPBS=pbs_range[0]-1, nMaxPBS=pbs_range[1], nMaxRT=rtt_max, pe_system=pe_system)
+    cFeat.make_rt_pbs_combinations()
+    cFeat.determine_seqs()
+    cFeat.determine_secondary_structure()
+
+    df = cFeat.make_output_df()
+
+    list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
+    df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
+    df['DeepPrime_score']  = calculate_deepprime_score(df, pe_system, cell_type)
+
+    return df
+
+def pecv_score(cv_record:genet.database.functional.GetClinVar,
+               sID:str       = 'Sample',
+               pe_system:str = 'PE2max',
+               cell_type:str = 'HEK293T',
+               pbs_min:int   = 7,
+               pbs_max:int   = 15,
+               rtt_max:int   = 40
+               ):
+
+    '''
+    database module에서 GetClinVar에서 가져온 variants record를 이용.\n
+    DeepPrime에 따로 sequence input을 가져올 필요 없이 바로 점수를 계산해준다.\n
+    만약 DeepPrime에서 예측이 불가능한 형태의 variants면, 메세지를 내보낸다.\n
+
+    
+    '''
+    print('DeepPrime score of ClinVar record')
+
+    Ref_seq, ED_seq = cv_record.seq()
+
+    nAltIndex   = 60
+    pbs_range   = [pbs_min, pbs_max]
+    rtt_max     = rtt_max
+    pe_system   = pe_system
+
+    edit_type   = cv_record.alt_type
+    edit_len    = int(cv_record.alt_len)
 
     ## FeatureExtraction Class
     cFeat = FeatureExtraction()

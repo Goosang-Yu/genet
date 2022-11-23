@@ -1,3 +1,2 @@
 from .modules import *
-
-from . import functional
+from genet.design.functional import *

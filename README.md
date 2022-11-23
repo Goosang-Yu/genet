@@ -48,7 +48,7 @@ GenET은 누구나 쉽게 유전자가위를 이용한 연구를 할 수 있도�
 ## 주의사항: GenET은 아직 개발이 진행 중입니다.
 GenET은 아직 정식으로 개발이 완료되지 않았습니다. 아직 구현되지 않은 기능이 있을 수 있고, 실행 중 에러 메세지가 뜰 수 있습니다. 예를 들어, DeepSpCas9 model은 현재 tensorflow ver.1을 사용하기 때문에 오래된 함수에 대한 경고 메세지가 실행 중 계속 나타납니다. 하지만 전체적인 실행에는 문제가 없으니 이대로도 사용 가능합니다. 현재 사용하는 tensorflow 모델들은 향후 모두 pytorch로 재구현해서 package dependency를 간소화하고, 에러메세지를 최소화하도록 개선 예정입니다. 사용 중 나타나는 다양한 버그에 대한 제보나 피드백은 github 또는 메일 (gsyu93@gmail.com)으로 제보해주시면 감사하겠습니다. 
 
-## Example: Predict SpCas9 activity (by DeepSpCas9)
+## Tutorial 1: Predict SpCas9 activity (by DeepSpCas9)
 특정 target sequence를 target으로 하는 SpCas9의 sgRNA의 indel frequency를 예측하는 모델이다 ([SciAdv, 2019, Kim et al.](https://www.science.org/doi/10.1126/sciadv.aax9249)). Tensorflow 기반의 모델이기 때문에, 환경에 tensorflow (>= 2.6)가 사용된다. 필요한 package들은 genet과 함께 설치된다.
 
 아래의 예시를 참고해서 사용하면 된다.
@@ -71,7 +71,7 @@ list_out
 >>> [2.80322408676147, 2.25273704528808, 53.4233360290527]
 ```
 
-## Example: Predict Prime editing efficiency (by DeepPrime)
+## Tutorial 2: Predict Prime editing efficiency (by DeepPrime)
 특정 target sequence를 target으로 하는 Prime editor pegRNA의 PE efficiency를 예측하는 모델이다 (Unpublished). DeepSpCas9 score를 feature로 사용하기 때문에, 환경에 tensorflow (>= 2.6)가 함께 사용된다. 그리고 DeepPrime은 PyTorch 기반의 모델이기 때문에 pytorch가 사용된다.
 
 아래의 예시를 참고해서 사용하면 된다.
@@ -100,7 +100,44 @@ output:
 |  4 | Sample | ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATG | xxxxxxxxxxACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGACGxxxxxxxxxxxxxxxxxx |       11 |      35 |          46 |         34 |          1 |         1 |          1 |          0 |          0 | 40.8741 | 62.1654 |  62.1654 | -277.939 | 58.2253 | -340.105 |         7 |        16 |        23 |    63.6364 |    45.7143 |    50      |  -10.4 |   -0.6 |            45.9675 |         0.0910506 |
 
 
-## Example: NCBI에서 Gene 정보 가져오기 (GenET database module)
+## Tutorial 3: Get ClinVar record and DeepPrime score using GenET
+ClinVar는 임상적으로 중요하다고 보고된 mutation record가 올라와있는 database이다. GenET의 database module에서는 NCBI efetch module을 이용해서 ClinVar record에 접근하고, 거기서 sequence information을 가져와서, 최종적으로 해당 mutation을 대상으로 하는 pegRNA를 디자인하고 DeepPrime score를 얻을 수 있는 함수를 구현하였다.
+
+아래의 예시를 참고하면 된다.
+
+```python
+from genet import database as db
+
+# get ClinVar record from database
+cv_record = db.GetClinVar('VCV000428864.3')
+print(cv_record.seq())
+
+output: # WT sequence, Alt sequence
+('GGTCACTCACCTGGAGTGAGCCCTGCTCCCCCCTGGCTCCTTCCCAGCCTGGGCATCCTTGAGTTCCAAGGCCTCATTCAGCTCTCGGAACATCTCGAAGCGCTCACGCCCACGGATCTGC',
+ 'GGTCACTCACCTGGAGTGAGCCCTGCTCCCCCCTGGCTCCTTCCCAGCCTGGGCATCCTTGTTCCAAGGCCTCATTCAGCTCTCGGAACATCTCGAAGCGCTCACGCCCACGGATCTGCAG')
+```
+
+또한, record에서 sequence 외에 다양한 정보를 가져올 수 있다.
+
+```python
+# 
+print(cv_record.alt_len)
+
+output:
+2
+```
+
+이렇게 fetching 해온 ClinVar record는 genet.predict module의 pecv_score 함수를 이용해서 가능한 모든 pegRNA에 대한 DeepPrime score를 얻는데 사용할 수 있다. 
+```python
+from genet import database as db
+from genet import predict as pred
+
+cv_record = db.GetClinVar('VCV000428864.3')
+pred.pecv_score(cv_record)
+```
+
+
+## Tutorial 4: NCBI에서 Gene 정보 가져오기 (GenET database module)
 우리가 target으로 사용하고자 하는 gene의 sequence / feature 정보를 가져오기 위한 module이다. 기본적으로 biopython에서 Entrez module을 사용한다. 현재는 각 feature들에 대한 meta data만 가져오는 것이 가능하지만, 추후 실제 sequence까지 가져오고, 자동으로 genome editing에 필요한 정보로 preprocessing 하는 것까지 추가할 예정.
 
 아래의 예시를 참고해서 사용하면 된다.

@@ -110,11 +110,90 @@ class GetGene:
         list_transcripts = [f for f in filter(is_source, self.feat)]
 
         return list_transcripts
-
-
     
 
+class GetClinVar:
+    '''
+    NCBI ClinVar에서 record를 찾기위한 function.\n
+    기본적으로 biopython의 Entrez module을 사용한다. 
+
+    example:
+    >>> from genet import database as db
+    >>> cv_record = db.GetClinVar('VCV000428864')
+
+    GetClinVar class에서 seq method로 해당 record sequence를 fetching 할 수 있다.
+
+    example:
+    >>> ref_seq, alt_seq = cv_record.seq()
+
+    output:
+    ref_seq = 'GGTCACTCACCTGGAGTGAGCCCTGCTCCCCCCTGGCTCCTTCCCAGCCTGGGCATCCTTGAGTTCCAAGGCCTCATTCAGCTCTCGGAACATCTCGAAGCGCTCACGCCCACGGATCTGC'
+    alt_seq = 'GGTCACTCACCTGGAGTGAGCCCTGCTCCCCCCTGGCTCCTTCCCAGCCTGGGCATCCTTGTTCCAAGGCCTCATTCAGCTCTCGGAACATCTCGAAGCGCTCACGCCCACGGATCTGCAG'
 
 
+    seq method에서 int 값을 넣어주면, context 길이를 조절할 수 있다.
+    >>> ref_seq, alt_seq = cv_record.seq(80)
 
+    '''
+
+    def __init__(self, record_id:str):
+
+
+        self._record_id = record_id
+
+        if self._record_id.startswith('VCV'):
+            self.handle = Entrez.efetch(db='clinvar', id=self._record_id.split('.')[0], rettype='vcv') # VCV로 받을 경우    
+        else:            
+            self.handle = Entrez.efetch(db='clinvar', id=self._record_id, rettype='vcv', is_varationid='true', from_esearch="true") # variation ID로 받을 경우
+        
+        import xml.etree.ElementTree as ET
+        self.result = ET.parse(self.handle)
+        self.root = self.result.getroot()
+        
+        self.var_loc = self.root.findall('./VariationArchive/InterpretedRecord/SimpleAllele/Location/SequenceLocation')
+
+        for self.info in self.var_loc:
+            if self.info.attrib['Assembly'] == 'GRCh38':
+                self.chr_acc = self.info.attrib['Accession']
+                self.start   = int(self.info.attrib['start'])
+                self.stop    = int(self.info.attrib['stop'])
+                self.ref_nt  = self.info.attrib['referenceAlleleVCF']
+                self.alt_nt  = self.info.attrib['alternateAlleleVCF']
+                self.alt_len = int(self.info.attrib['variantLength'])
+                break
+
+        if   len(self.ref_nt) == len(self.alt_nt): self.alt_type = 'sub'
+        elif len(self.ref_nt) <  len(self.alt_nt): self.alt_type = 'ins'
+        elif len(self.ref_nt) >  len(self.alt_nt): self.alt_type = 'del'
     
+    # def __init__: End
+
+    def seq(self, context:int = 60):
+        '''
+        esearch로 가져온 RefSeq의 ID를 받아서, efetch로 정보를 불러온다.
+        불러온 정보는 seq_record로 저장되고, 그 안에서 각종 정보를 가져올 수 있다.
+        
+        '''
+        self.chr_seq_fetch = Entrez.efetch(db="nucleotide", 
+                                           id=self.chr_acc, 
+                                           rettype="fasta", 
+                                           strand=1, 
+                                           seq_start = self.start-context, 
+                                           seq_stop  = self.stop+context+self.alt_len
+                                           )
+
+        self.ref_seq = str(SeqIO.read(self.chr_seq_fetch, "fasta").seq)
+        self.chr_seq_fetch.close()
+        
+        if self.alt_type != 'del':
+            self.alt_seq = self.ref_seq[:context] + self.alt_nt + self.ref_seq[context+1:]
+        else:
+            self.alt_seq = self.ref_seq[:context] + self.ref_seq[context+self.alt_len:]
+
+        if self.alt_type == 'ins':
+            self.ref_seq = self.ref_seq[1:]
+            self.alt_seq = self.alt_seq[1:]
+
+        return self.ref_seq[:1+context*2], self.alt_seq[:1+context*2]
+
+
