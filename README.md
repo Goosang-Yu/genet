@@ -2,7 +2,7 @@
   
   <img src="https://github.com/Goosang-Yu/genet/blob/main/docs/images/logo.png?raw=true" width="300"/>
 
-**Genome editing library in Python** </br>
+**Genome Editing Toolkit** </br>
 **Since 2022. 08. 19.** </br>
 
 [![Python](https://img.shields.io/badge/Python-3.7%20%7C%203.8%20%7C%203.9-blue)](https://badge.fury.io/py/genet) 
@@ -13,14 +13,12 @@
 <div align="left">
 
 ## Welcome to GenET
-GenET (Genoe Editing Toolkit)은 genome editing과 관련된 다양한 python 함수를 구현해놓은 library입니다. GenET은 아직 제대로 구현된 기능이 없으며 앞으로 계속 업데이트 예정입니다. 현재 계획 중인 구현 내용은 guideRNA design, saturation library design, sequencing data 분석, gRNA activity prediction 등의 내용입니다. 
+GenET (Genoe Editing Toolkit) is a library that implements various python functions related to genome editing. GenET has not yet been properly implemented and will continue to be updated. The implementations currently planned include guideRNA design, saturation library design, sequencing data analysis, and gRNA activity prediction.
 
 ## System requirement
-GenET can be run on either Mac or Linux system. 
+GenET can be run on either Mac or Linux system. This is because the Vienna RNA package, which calculates MFE among the features used in the Prediction model, does not support window. If you use Windows, you should use docker to build your environment.
 
-GenET은 linux or macOS에서만 모든 기능을 사용할 수 있습니다. Prediction model에서 사용하는 feature 중 MFE를 계산하는 ViennaRNA package가 window를 지원하지 않기 때문입니다. Window를 사용하는 분들 께서는 docker를 이용해서 환경을 구축해야 합니다. 
-
-## Installation (alpha version)
+## Installation
 
 ```python
 # Create virtual env for genet.
@@ -31,33 +29,31 @@ conda activate genet
 # install genet package in your env.
 pip install genet -f https://download.pytorch.org/whl/cu113/torch_stable.html
 
-# install ViennaRNA package for calculate RNA 2ndary structure feature
-# Installation by conda is recommended rather than pip install
+# install ViennaRNA package for prediction module
 conda install viennarna
-
 ```
 
 
 ## Who should use GenET?
-GenET은 누구나 쉽게 유전자가위를 이용한 연구를 할 수 있도록 개발되었습니다. 특히 아래와 같은 목적을 가진 사람들에게 유용하게 사용될 수 있습니다: <br />
+GenET has been developed so that anyone can easily do research using genome editing tools. It can be especially useful for people with the following purposes: <br />
 
-- 특정 유전자에 대해 유전자가위를 빠르게 디자인하고 싶을 때
-- sequencing data를 이용해서 특정 genome editing 을 분석해보고 싶을 때
-- 특정 gRNA 혹은 특정 editing을 만드는 모든 gRNA의 editing efficiency를 예측하고 싶을 때
+- When you want to quickly design guideRNA for a particular gene
+- When you want to analyze a specific genome editing using sequencing data
+- When you want to predict the editing efficiency of a particular gRNA or all the gRNAs that make a particular editing
 
-## 주의사항: GenET은 아직 개발이 진행 중입니다.
-GenET은 아직 정식으로 개발이 완료되지 않았습니다. 아직 구현되지 않은 기능이 있을 수 있고, 실행 중 에러 메세지가 뜰 수 있습니다. 예를 들어, DeepSpCas9 model은 현재 tensorflow ver.1을 사용하기 때문에 오래된 함수에 대한 경고 메세지가 실행 중 계속 나타납니다. 하지만 전체적인 실행에는 문제가 없으니 이대로도 사용 가능합니다. 현재 사용하는 tensorflow 모델들은 향후 모두 pytorch로 재구현해서 package dependency를 간소화하고, 에러메세지를 최소화하도록 개선 예정입니다. 사용 중 나타나는 다양한 버그에 대한 제보나 피드백은 github 또는 메일 (gsyu93@gmail.com)으로 제보해주시면 감사하겠습니다. 
+## Caution: GenET is still under development
+GenET has not been officially developed yet. There may be features that have not yet been implemented, and an error message may appear while running. For example, because the DeepSpCas9 model currently uses tensorflow ver.1, warning messages about outdated functions continue to appear during execution. However, there is no problem with the overall execution, so you can use it as it is. All currently used tensorflow models will be re-implemented in pytorch in the future to simplify package dependency and minimize error messages. We would appreciate it if you could report various bugs that appear during use through github or e-mail (gsyu93@gmail.com).
 
 ## Tutorial 1: Predict SpCas9 activity (by DeepSpCas9)
-특정 target sequence를 target으로 하는 SpCas9의 sgRNA의 indel frequency를 예측하는 모델이다 ([SciAdv, 2019, Kim et al.](https://www.science.org/doi/10.1126/sciadv.aax9249)). Tensorflow 기반의 모델이기 때문에, 환경에 tensorflow (>= 2.6)가 사용된다. 필요한 package들은 genet과 함께 설치된다.
+It is a model that predicts the indel frequency of the sgRNA of SpCas9 in a specific target sequence ([SciAdv, 2019, Kim et al.](https://www.science.org/doi/10.1126/sciadv.aax9249)). Since it is a tensorflow-based model, tensorflow (>=2.6) is required in the environment. The necessary packages are installed with genet.
 
-아래의 예시를 참고해서 사용하면 된다.
+You can use it by referring to the example below.
 
 ```python
 from genet import predict as prd
 
-# Cas9 activity를 구하고 싶은 target context (30bp)를 list 안에 넣어준다.
-# Input seq 형태는 4bp 5' context + 20 guide + 3bp PAM + 3bp 3' context
+# Put the target context (30bp) that you want to find Cas9 activity in the list.
+# Input seq: 4bp 5' context + 20 guide + 3bp PAM + 3bp 3' context
 
 list_target30 = [
                 'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
@@ -72,16 +68,16 @@ list_out
 ```
 
 ## Tutorial 2: Predict Prime editing efficiency (by DeepPrime)
-특정 target sequence를 target으로 하는 Prime editor pegRNA의 PE efficiency를 예측하는 모델이다 (Unpublished, will be available soon). DeepSpCas9 score를 feature로 사용하기 때문에, 환경에 tensorflow (>= 2.6)가 함께 사용된다. 그리고 DeepPrime은 PyTorch 기반의 모델이기 때문에 pytorch가 사용된다.
+It is a model that predicts the PE efficiency of pegRNA that produces the desired genome editing in a specific target sequence (Unpublished, will be available soon). Since DeepSpCas9 score is used as a feature, tensorflow (>=2.6) is used together in the environment. And since DeepPrime is a PyTorch-based model, pytorch is used.
 
-아래의 예시를 참고해서 사용하면 된다.
+You can use it by referring to the example below.
 
 ```python
 from genet import predict as prd
 
-# WT sequence와 Edited sequence 정보를 각각 넣어준다.
-# 그리고 만들고자 하는 edit type을 정확히 선택해서 넣어준다. 
-# Input seq 형태는 60bp 5' context + 1bp center + 60bp 3' context (total 121bp)
+# Place WT sequence and Edited sequence information, respectively.
+# And select the edit type you want to make and put it in.
+#Input seq: 60bp 5' context + 1bp center + 60bp 3' context (total 121bp)
 
 seq_wt   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATGTCAACTGAAACCTTAAAGTGAGTATTTAATTGAGCTGAAGT'
 seq_ed   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGACGAACTATAACCTGCAAATGTCAACTGAAACCTTAAAGTGAGTATTTAATTGAGCTGAAGT'
@@ -101,9 +97,9 @@ output:
 
 
 ## Tutorial 3: Get ClinVar record and DeepPrime score using GenET
-ClinVar는 임상적으로 중요하다고 보고된 mutation record가 올라와있는 database이다([Nucleic Acids Research, 2018, Laudrum et al.](https://academic.oup.com/nar/article/46/D1/D1062/4641904)). GenET의 database module에서는 NCBI efetch module을 이용해서 ClinVar record에 접근하고, 거기서 sequence information을 가져와서, 최종적으로 해당 mutation을 대상으로 하는 pegRNA를 디자인하고 DeepPrime score를 얻을 수 있는 함수를 구현하였다.
+ClinVar is a database of clinically important mutation records([Nucleic Acids Research, 2018, Laudrum et al.](https://academic.oup.com/nar/article/46/D1/D1062/4641904)). In GenET's database module, the NCBI efetch module was used to access the ClinVar record, and sequence information was obtained there, and finally a pegRNA targeting the corresponding mutation was designed. In addition, a DeepPrime score for the corresponding pegRNA can be obtained.
 
-아래의 예시를 참고하면 된다.
+You can refer to the example below.
 
 ```python
 from genet import database as db
@@ -118,7 +114,7 @@ print(cv_record.seq()) # default context length = 60nt
  'GGTCACTCACCTGGAGTGAGCCCTGCTCCCCCCTGGCTCCTTCCCAGCCTGGGCATCCTTGTTCCAAGGCCTCATTCAGCTCTCGGAACATCTCGAAGCGCTCACGCCCACGGATCTGCAG')
 ```
 
-또한, record에서 sequence 외에 다양한 정보를 가져올 수 있다.
+In addition, various information other than the sequence can be obtained from the record.
 
 ```python
 # for example, variant length of the record
@@ -128,7 +124,7 @@ print(cv_record.alt_len)
 2
 ```
 
-이렇게 fetching 해온 ClinVar record는 genet.predict module의 pecv_score 함수를 이용해서 가능한 모든 pegRNA에 대한 DeepPrime score를 얻는데 사용할 수 있다. 
+ClinVar records that have been fetched in this way can be used to obtain DeepPrime scores for all possible pegRNAs using the pegv_score function of genet.predict module.
 ```python
 from genet import database as db
 from genet import predict as prd
@@ -138,15 +134,15 @@ prd.pecv_score(cv_record)
 ```
 
 
-## Tutorial 4: NCBI에서 Gene 정보 가져오기 (GenET database module)
-우리가 target으로 사용하고자 하는 gene의 sequence / feature 정보를 가져오기 위한 module이다. 기본적으로 biopython에서 Entrez module을 사용한다. 현재는 각 feature들에 대한 meta data만 가져오는 것이 가능하지만, 추후 실제 sequence까지 가져오고, 자동으로 genome editing에 필요한 정보로 preprocessing 하는 것까지 추가할 예정.
+## Tutorial 4: Get Gene information from NCBI (GenET database module)
+It is a module for obtaining sequence/feature information of gen that we want to use as a target. By default, biopython uses Entrez module. Currently, it is possible to import only meta data for each feature, but in the future, we will bring the actual sequence and add preprocessing with the information necessary for genome editing automatically.
 
-아래의 예시를 참고해서 사용하면 된다.
+You can refer to the example below.
 
 ```python
 from genet import database as db
-# 처음 import 하면 e-mail을 입력해줘야한다.
-# NCBI의 Entrez database에 접속할 때 log를 남길 때 요구하기 때문.
+# If you import for the first time, you have to enter an email.
+# This is because it is required to leave a log when accessing NCBI's Entrez database.
 
 brca1 = db.GetGene('BRCA1')
 
@@ -179,4 +175,4 @@ list_exons
  SeqFeature(FeatureLocation(ExactPosition(172181), ExactPosition(173689), strand=1), type='exon')]
 ```
 
-문의는 gsyu93@gmail.com 으로 해주세요. 
+For inquiries, please contact gsyu93@gmail.com.
