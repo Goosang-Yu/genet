@@ -18,7 +18,7 @@ import tensorflow.compat.v1 as tf
 
 from glob import glob
 from Bio.SeqUtils import MeltingTemp as mt
-from Bio.SeqUtils import GC as gc
+from Bio.SeqUtils import gc_fraction as gc
 from Bio.Seq import Seq
 from RNA import fold_compound
 
@@ -995,7 +995,7 @@ def pe_score(Ref_seq: str,
 
     return df
 
-def pecv_score(cv_record:genet.database.functional.GetClinVar,
+def pecv_score(cv_record,
                sID:str       = 'Sample',
                pe_system:str = 'PE2max',
                cell_type:str = 'HEK293T',

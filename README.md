@@ -131,10 +131,10 @@ print(cv_record.alt_len)
 이렇게 fetching 해온 ClinVar record는 genet.predict module의 pecv_score 함수를 이용해서 가능한 모든 pegRNA에 대한 DeepPrime score를 얻는데 사용할 수 있다. 
 ```python
 from genet import database as db
-from genet import predict as pred
+from genet import predict as prd
 
 cv_record = db.GetClinVar('VCV000428864.3')
-pred.pecv_score(cv_record)
+prd.pecv_score(cv_record)
 ```
 
 
