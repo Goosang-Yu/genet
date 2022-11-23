@@ -46,6 +46,7 @@ setuptools.setup(
         'torchvision==0.12.0+cu113',
         'torchaudio==0.11.0',
         'protobuf==3.20.*',
+        'silence_tensorflow'
         ],
 
     dependency_links=[
