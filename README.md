@@ -72,7 +72,7 @@ list_out
 ```
 
 ## Tutorial 2: Predict Prime editing efficiency (by DeepPrime)
-특정 target sequence를 target으로 하는 Prime editor pegRNA의 PE efficiency를 예측하는 모델이다 (Unpublished). DeepSpCas9 score를 feature로 사용하기 때문에, 환경에 tensorflow (>= 2.6)가 함께 사용된다. 그리고 DeepPrime은 PyTorch 기반의 모델이기 때문에 pytorch가 사용된다.
+특정 target sequence를 target으로 하는 Prime editor pegRNA의 PE efficiency를 예측하는 모델이다 (Unpublished, will be available soon). DeepSpCas9 score를 feature로 사용하기 때문에, 환경에 tensorflow (>= 2.6)가 함께 사용된다. 그리고 DeepPrime은 PyTorch 기반의 모델이기 때문에 pytorch가 사용된다.
 
 아래의 예시를 참고해서 사용하면 된다.
 
@@ -101,18 +101,19 @@ output:
 
 
 ## Tutorial 3: Get ClinVar record and DeepPrime score using GenET
-ClinVar는 임상적으로 중요하다고 보고된 mutation record가 올라와있는 database이다. GenET의 database module에서는 NCBI efetch module을 이용해서 ClinVar record에 접근하고, 거기서 sequence information을 가져와서, 최종적으로 해당 mutation을 대상으로 하는 pegRNA를 디자인하고 DeepPrime score를 얻을 수 있는 함수를 구현하였다.
+ClinVar는 임상적으로 중요하다고 보고된 mutation record가 올라와있는 database이다([Nucleic Acids Research, 2018, Laudrum et al.](https://academic.oup.com/nar/article/46/D1/D1062/4641904)). GenET의 database module에서는 NCBI efetch module을 이용해서 ClinVar record에 접근하고, 거기서 sequence information을 가져와서, 최종적으로 해당 mutation을 대상으로 하는 pegRNA를 디자인하고 DeepPrime score를 얻을 수 있는 함수를 구현하였다.
 
 아래의 예시를 참고하면 된다.
 
 ```python
 from genet import database as db
 
-# get ClinVar record from database
+# Accession (VCV) or variantion ID is available
 cv_record = db.GetClinVar('VCV000428864.3')
-print(cv_record.seq())
 
-output: # WT sequence, Alt sequence
+print(cv_record.seq()) # default context length = 60nt
+
+>>> output: # WT sequence, Alt sequence
 ('GGTCACTCACCTGGAGTGAGCCCTGCTCCCCCCTGGCTCCTTCCCAGCCTGGGCATCCTTGAGTTCCAAGGCCTCATTCAGCTCTCGGAACATCTCGAAGCGCTCACGCCCACGGATCTGC',
  'GGTCACTCACCTGGAGTGAGCCCTGCTCCCCCCTGGCTCCTTCCCAGCCTGGGCATCCTTGTTCCAAGGCCTCATTCAGCTCTCGGAACATCTCGAAGCGCTCACGCCCACGGATCTGCAG')
 ```
@@ -120,10 +121,10 @@ output: # WT sequence, Alt sequence
 또한, record에서 sequence 외에 다양한 정보를 가져올 수 있다.
 
 ```python
-# 
+# for example, variant length of the record
 print(cv_record.alt_len)
 
-output:
+>>> output:
 2
 ```
 
