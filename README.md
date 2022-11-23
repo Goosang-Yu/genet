@@ -13,10 +13,10 @@
 <div align="left">
 
 ## Welcome to GenET
-GenET (Genoe Editing Toolkit) is a library that implements various python functions related to genome editing. GenET has not yet been properly implemented and will continue to be updated. The implementations currently planned include guideRNA design, saturation library design, sequencing data analysis, and gRNA activity prediction.
+GenET (Genome Editing Toolkit) is a library of various python functions for the purpose of analyzing and evaluating data from genome editing experiments. GenET is still in its early stages of development and continue to improve and expand. Currently planned functions include guideRNA design, saturation library design, deep sequenced data analysis, and guide RNA activity prediction.
 
 ## System requirement
-GenET can be run on either Mac or Linux system. This is because the Vienna RNA package, which calculates MFE among the features used in the Prediction model, does not support window. If you use Windows, you should use docker to build your environment.
+GenET can be run on either Mac or Linux system. GenET is currently available on Linux or Mac based systems as one of the dependent tools, ViennaRNA package, is limited to these operating systems. Windows users must establish a docker or virtual OS environment to use this tool.
 
 ## Installation
 
@@ -35,19 +35,18 @@ conda install viennarna
 
 
 ## Who should use GenET?
-GenET has been developed so that anyone can easily do research using genome editing tools. It can be especially useful for people with the following purposes: <br />
+GenET was developed for anyone interested in the field of genome editing. Especially, Genet can provide aid to those with the following objectives.: <br />
 
-- When you want to quickly design guideRNA for a particular gene
-- When you want to analyze a specific genome editing using sequencing data
-- When you want to predict the editing efficiency of a particular gRNA or all the gRNAs that make a particular editing
+- Develop a quick and easy to design an genome editing experiment for a specific gene.
+- Perform genome editing analysis based on sequening data
+- Predict the activtiy of specific guideRNAs or all guideRNAs designed for editing a specific product.
 
 ## Caution: GenET is still under development
-GenET has not been officially developed yet. There may be features that have not yet been implemented, and an error message may appear while running. For example, because the DeepSpCas9 model currently uses tensorflow ver.1, warning messages about outdated functions continue to appear during execution. However, there is no problem with the overall execution, so you can use it as it is. All currently used tensorflow models will be re-implemented in pytorch in the future to simplify package dependency and minimize error messages. We would appreciate it if you could report various bugs that appear during use through github or e-mail (gsyu93@gmail.com).
+GenET is still currently under development. There are functions that are yet to be implemented and runtime error message can occur during use. For example, DeepSpCas9 model was trained and tested on tensorflow ver.1 which has since been phased out for more modern and robust platforms and algoritms. During use, error messages regarding its depreciation and end of support can be observed. These messages do not affect the results or the analysis process, but we are planning to update this model using pytorch to reduce its dependency to other packages and improve its performance. Any errors or bugs identified during use can be noted on the github comments or directed to (gsyu93@gmail.com). Thank you.
 
 ## Tutorial 1: Predict SpCas9 activity (by DeepSpCas9)
-It is a model that predicts the indel frequency of the sgRNA of SpCas9 in a specific target sequence ([SciAdv, 2019, Kim et al.](https://www.science.org/doi/10.1126/sciadv.aax9249)). Since it is a tensorflow-based model, tensorflow (>=2.6) is required in the environment. The necessary packages are installed with genet.
+DeepSpCas9 is a prediction model developed to evaluate to indel frequency introduced by sgRNAs at specific target sites mediated by the SpCas9 ([SciAdv, 2019, Kim et al.](https://www.science.org/doi/10.1126/sciadv.aax9249)). The model was developed on tensorflow (version >= 2.6). Any dependent packages will be installed along with the GenET package.
 
-You can use it by referring to the example below.
 
 ```python
 from genet import predict as prd
@@ -68,9 +67,7 @@ list_out
 ```
 
 ## Tutorial 2: Predict Prime editing efficiency (by DeepPrime)
-It is a model that predicts the PE efficiency of pegRNA that produces the desired genome editing in a specific target sequence (Unpublished, will be available soon). Since DeepSpCas9 score is used as a feature, tensorflow (>=2.6) is used together in the environment. And since DeepPrime is a PyTorch-based model, pytorch is used.
-
-You can use it by referring to the example below.
+DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs) that target specific target sites for prime editing (Unpublished work currently under review). DeepSpCas9 prediction score is calculated simultaneously and requires tensorflow (version >=2.6). DeepPrime was developed on pytorch.
 
 ```python
 from genet import predict as prd
@@ -97,9 +94,7 @@ output:
 
 
 ## Tutorial 3: Get ClinVar record and DeepPrime score using GenET
-ClinVar is a database of clinically important mutation records([Nucleic Acids Research, 2018, Laudrum et al.](https://academic.oup.com/nar/article/46/D1/D1062/4641904)). In GenET's database module, the NCBI efetch module was used to access the ClinVar record, and sequence information was obtained there, and finally a pegRNA targeting the corresponding mutation was designed. In addition, a DeepPrime score for the corresponding pegRNA can be obtained.
-
-You can refer to the example below.
+ClinVar database contains mutations that are clinically evaluated to be pathogenic and related to human diseases([Nucleic Acids Research, 2018, Laudrum et al.](https://academic.oup.com/nar/article/46/D1/D1062/4641904)). GenET utilized the NCBI efect module to access ClinVar records to retrieve related variant data such as the genomic sequence, position, and mutation pattern. Using this data, genET designs and evaluates pegRNAs that target the variant using DeepPrime.
 
 ```python
 from genet import database as db
@@ -124,7 +119,8 @@ print(cv_record.alt_len)
 2
 ```
 
-ClinVar records that have been fetched in this way can be used to obtain DeepPrime scores for all possible pegRNAs using the pegv_score function of genet.predict module.
+Clinvar records obtained through this process is used to design all possible pegRNAs within the genet.predict module's pecv_score function.
+
 ```python
 from genet import database as db
 from genet import predict as prd
@@ -135,9 +131,9 @@ prd.pecv_score(cv_record)
 
 
 ## Tutorial 4: Get Gene information from NCBI (GenET database module)
-It is a module for obtaining sequence/feature information of gen that we want to use as a target. By default, biopython uses Entrez module. Currently, it is possible to import only meta data for each feature, but in the future, we will bring the actual sequence and add preprocessing with the information necessary for genome editing automatically.
+The database module is used to retrieve sequence and feature information regarding the target gene of interest. This process is based on the Entrez module on biopython. Currently, obtaining only the meta data cooresponding to each feature is available, but in the future, we plan to implement sequence retreival followed by full preprocessing of neccesary information required for genome editing.
 
-You can refer to the example below.
+ex) Retrieve gene info from NCBI
 
 ```python
 from genet import database as db
@@ -175,4 +171,4 @@ list_exons
  SeqFeature(FeatureLocation(ExactPosition(172181), ExactPosition(173689), strand=1), type='exon')]
 ```
 
-For inquiries, please contact gsyu93@gmail.com.
+Please send all comments and questions to gsyu93@gmail.com
