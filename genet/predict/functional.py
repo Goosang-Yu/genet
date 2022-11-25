@@ -685,9 +685,9 @@ class FeatureExtraction:
         self.nGCcnt1 = sPBSSeq.count('G') + sPBSSeq.count('C')
         self.nGCcnt2 = sRTSeqAlt.count('G') + sRTSeqAlt.count('C')
         self.nGCcnt3 = (sPBSSeq + sRTSeqAlt).count('G') + (sPBSSeq + sRTSeqAlt).count('C')
-        self.fGCcont1 = gc(sPBSSeq)
-        self.fGCcont2 = gc(sRTSeqAlt)
-        self.fGCcont3 = gc(sPBSSeq + sRTSeqAlt)
+        self.fGCcont1 = 100 * gc(sPBSSeq)
+        self.fGCcont2 = 100 * gc(sRTSeqAlt)
+        self.fGCcont3 = 100 * gc(sPBSSeq + sRTSeqAlt)
         self.dict_sOutput[sPAMKey][sSeqKey]['nGCcnt1'] = self.nGCcnt1
         self.dict_sOutput[sPAMKey][sSeqKey]['nGCcnt2'] = self.nGCcnt2
         self.dict_sOutput[sPAMKey][sSeqKey]['nGCcnt3'] = self.nGCcnt3
@@ -945,7 +945,7 @@ def pe_score(Ref_seq: str,
             ED_seq: str, 
             sAlt: str,
             sID:str       = 'Sample',
-            pe_system:str = 'PE2',
+            pe_system:str = 'PE2max',
             cell_type:str = 'HEK293T',
             pbs_min:int   = 7,
             pbs_max:int   = 15,
@@ -991,7 +991,7 @@ def pe_score(Ref_seq: str,
 
     list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
     df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
-    df['DeepPrime_score']  = calculate_deepprime_score(df, pe_system, cell_type)
+    df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
 
     return df
 
@@ -1039,6 +1039,6 @@ def pecv_score(cv_record,
 
     list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
     df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
-    df['DeepPrime_score']  = calculate_deepprime_score(df, pe_system, cell_type)
+    df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
 
     return df
