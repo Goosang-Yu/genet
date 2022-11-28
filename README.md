@@ -27,7 +27,7 @@ conda create -n genet python=3.8
 conda activate genet
 
 # install genet package in your env.
-pip install genet -f https://download.pytorch.org/whl/cu113/torch_stable.html
+pip install genet -f https://download.pytorch.org/whl/cu113/torch_stable.html git+https://github.com/Goosang-Yu/genet-models.git
 
 # install ViennaRNA package for prediction module
 conda install viennarna
