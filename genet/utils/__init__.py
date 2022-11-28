@@ -1,5 +1,5 @@
 from .functional import *
 
-version_ = '0.2.2'
+version_ = '0.3.0'
 
 __version__ = version_

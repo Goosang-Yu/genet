@@ -860,7 +860,49 @@ def select_cols(data):
     return features
 
 
+
 def calculate_deepprime_score(df_input, pe_system='PE2', cell_type='HEK293T'):
+
+    os.environ['CUDA_VISIBLE_DEVICES']='0'
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    
+    from genet_models import load_model
+
+    model_dir, model_type = load_model('PE2max', 'HEK293T')
+
+    mean = pd.read_csv('%s/DeepPrime_base/mean.csv' % model_dir, header=None, index_col=0).squeeze()
+    std  = pd.read_csv('%s/DeepPrime_base/std.csv' % model_dir, header=None, index_col=0).squeeze()
+
+    test_features = select_cols(df_input)
+
+    g_test = seq_concat(df_input)
+    x_test = (test_features - mean) / std
+
+    g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
+    x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
+
+    models = [m_files for m_files in glob('%s/%s/*.pt' % (model_dir, model_type))]
+    preds  = []
+
+    for m in models:
+        model = GeneInteractionModel(hidden_size=128, num_layers=1).to(device)
+        model.load_state_dict(torch.load(m))
+        model.eval()
+        with torch.no_grad():
+            g, x = g_test, x_test
+            g = g.permute((0, 3, 1, 2))
+            pred = model(g, x).detach().cpu().numpy()
+        preds.append(pred)
+    
+    # AVERAGE PREDICTIONS
+    preds = np.squeeze(np.array(preds))
+    preds = np.mean(preds, axis=0)
+    preds = np.exp(preds) - 1
+
+    return preds
+
+
+def lagacy_calculate_deepprime_score(df_input, pe_system='PE2', cell_type='HEK293T'):
 
     os.environ['CUDA_VISIBLE_DEVICES']='0'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
