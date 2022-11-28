@@ -147,27 +147,22 @@ def preprocess_seq(data, seq_length):
 
 def spcas9_score(list_target30:list , gpu_env=0):
     '''
-    list_target30은 list 형태로 30bp sequence가 들어가야한다. \n
-    gpu_env는 기본으로 0으로 세팅되어 있다.
-    또한 sequence[24:27]은 NGG PAM이 들어가있어야 한다.
+    The list_target30 should have a 30bp sequence in the form of a list.
+    Also, sequence [24:27] should contain NGG PAM.
     
-    만약 다른 GPU (nvidia-smi 기준)를 사용하고 싶다면,\n
-    1, 2... 등으로 다른 숫자를 넣어주면 된다. \n
+    If you want to use a different GPU (based on nvidia-smi),
+    You can put the GPU number in the gpu_env. \n
     
-    예시) 
-    list_target30 = [
-                    'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
-                    'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
-                    'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
-                    ]
-                    
-    list_out = spcas9_score(list_target30)
+    example) 
+    >>> list_target30 = [
+                        'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
+                        'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
+                        'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
+                        ]
+
+    >>> list_out = spcas9_score(list_target30)
     
-    list_out = [
-                2.80322408676147,
-                2.25273704528808,
-                53.4233360290527,
-                ]
+    >>> list_out = [2.80322408676147, 2.25273704528808, 53.4233360290527]
     '''
     
     # TensorFlow config
@@ -177,7 +172,9 @@ def spcas9_score(list_target30:list , gpu_env=0):
 
     x_test = preprocess_seq(list_target30, 30)
 
+    from genet_models import load_deepspcas9
 
+    model_dir, model_type = load_deepspcas9()
 
     model_dir = inspect.getfile(DeepSpCas9).replace('/__init__.py', '')
     
@@ -866,9 +863,9 @@ def calculate_deepprime_score(df_input, pe_system='PE2max', cell_type='HEK293T')
     os.environ['CUDA_VISIBLE_DEVICES']='0'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    from genet_models import load_genet_model
+    from genet_models import load_deepprime
 
-    model_dir, model_type = load_genet_model(pe_system, cell_type)
+    model_dir, model_type = load_deepprime(pe_system, cell_type)
 
     mean = pd.read_csv('%s/DeepPrime_base/mean.csv' % model_dir, header=None, index_col=0).squeeze()
     std  = pd.read_csv('%s/DeepPrime_base/std.csv' % model_dir, header=None, index_col=0).squeeze()
@@ -902,87 +899,6 @@ def calculate_deepprime_score(df_input, pe_system='PE2max', cell_type='HEK293T')
     return preds
 
 
-def lagacy_calculate_deepprime_score(df_input, pe_system='PE2', cell_type='HEK293T'):
-
-    os.environ['CUDA_VISIBLE_DEVICES']='0'
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
-    
-    model_dir = inspect.getfile(DeepPrime).replace('/__init__.py', '')
-    
-    dict_models = {
-        
-        'HEK293T': {
-            'PE2'        : 'DeepPrime_base',
-            'NRCH_PE2'   : 'DeepPrime_FT/DPFT_293T_NRCH_PE2',
-            'NRCH_PE2max': 'DeepPrime_FT/DPFT_293T_NRCH_PE2max',
-            'PE2max'     : 'DeepPrime_FT/DPFT_293T_PE2max',
-            'PE4max'     : 'DeepPrime_FT/DPFT_293T_PE4max',
-        },
-
-        'A549': {
-            'PE4max'     : 'DeepPrime_FT/DPFT_A549_PE4max',
-        },
-        
-        'DLD1': {
-            'NRCH_PE4max': 'DeepPrime_FT/DPFT_DLD1_NRCH_PE4max',
-            'PE4max'     : 'DeepPrime_FT/DPFT_DLD1_PE4max',
-        },
-
-        'HCT116': {
-            'PE2'        : 'DeepPrime_FT/DPFT_HCT116_PE2',
-        },
-        
-        'HeLa': {
-            'PE2max'     : 'DeepPrime_FT/DPFT_HeLa_PE2max',
-        },
-        
-        'MDA-MB-231': {
-            'PE2'        : 'DeepPrime_FT/DPFT_MDA_PE2',
-        },
-        
-        'NIH3T3': {
-            'NRCH_PE4max': 'DeepPrime_FT/DPFT_NIH_NRCH_PE4max',
-        },
-        
-    }
-
-    try:
-        model_type = dict_models[cell_type][pe_system]
-    except:
-        print('Not available Prime Editor')
-        sys.exit()
-
-    mean = pd.read_csv('%s/DeepPrime_base/PE2_mean.csv' % model_dir, header=None, index_col=0).squeeze()
-    std  = pd.read_csv('%s/DeepPrime_base/PE2_std.csv' % model_dir, header=None, index_col=0).squeeze()
-
-    test_features = select_cols(df_input)
-
-    g_test = seq_concat(df_input)
-    x_test = (test_features - mean) / std
-
-    g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
-    x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
-
-    models = [m_files for m_files in glob('%s/%s/*.pt' % (model_dir, model_type))]
-    preds  = []
-
-    for m in models:
-        model = GeneInteractionModel(hidden_size=128, num_layers=1).to(device)
-        model.load_state_dict(torch.load(m))
-        model.eval()
-        with torch.no_grad():
-            g, x = g_test, x_test
-            g = g.permute((0, 3, 1, 2))
-            pred = model(g, x).detach().cpu().numpy()
-        preds.append(pred)
-    
-    # AVERAGE PREDICTIONS
-    preds = np.squeeze(np.array(preds))
-    preds = np.mean(preds, axis=0)
-    preds = np.exp(preds) - 1
-
-    return preds
-
 def pe_score(Ref_seq: str, 
             ED_seq: str, 
             sAlt: str,
@@ -994,9 +910,9 @@ def pe_score(Ref_seq: str,
             rtt_max:int   = 40
             ):
     '''
-    DeepPrime score를 내기위한 function.\n
-    Input  = \n
-    Output = \n
+    Function to score Deep Prime score.\n
+    Input  = 121 nt DNA sequence without edit\n
+    Output = 121 nt DNA sequence with edit\n
     
     Available Edit types\n
     sub1, sub2, sub3, ins1, ins2, ins3, del1, del2, del3\n
@@ -1047,10 +963,9 @@ def pecv_score(cv_record,
                ):
 
     '''
-    database module에서 GetClinVar에서 가져온 variants record를 이용.\n
-    DeepPrime에 따로 sequence input을 가져올 필요 없이 바로 점수를 계산해준다.\n
-    만약 DeepPrime에서 예측이 불가능한 형태의 variants면, 메세지를 내보낸다.\n
-
+    Using variants records from GetClinVar in the database module.\n
+    You don't have to bring a sequence input to DeepPrime, but you calculate the score right away.\n
+    If DeepPrime is an unpredictable form of variants, it sends out a message.\n
     
     '''
     print('DeepPrime score of ClinVar record')
