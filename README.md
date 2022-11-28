@@ -41,8 +41,6 @@ GenET was developed for anyone interested in the field of genome editing. Especi
 - Perform genome editing analysis based on sequening data
 - Predict the activtiy of specific guideRNAs or all guideRNAs designed for editing a specific product.
 
-## Caution: GenET is still under development
-GenET is still currently under development. There are functions that are yet to be implemented and runtime error message can occur during use. For example, DeepSpCas9 model was trained and tested on tensorflow ver.1 which has since been phased out for more modern and robust platforms and algoritms. During use, error messages regarding its depreciation and end of support can be observed. These messages do not affect the results or the analysis process, but we are planning to update this model using pytorch to reduce its dependency to other packages and improve its performance. Any errors or bugs identified during use can be noted on the github comments or directed to (gsyu93@gmail.com). Thank you.
 
 ## Tutorial 1: Predict SpCas9 activity (by DeepSpCas9)
 DeepSpCas9 is a prediction model developed to evaluate to indel frequency introduced by sgRNAs at specific target sites mediated by the SpCas9 ([SciAdv, 2019, Kim et al.](https://www.science.org/doi/10.1126/sciadv.aax9249)). The model was developed on tensorflow (version >= 2.6). Any dependent packages will be installed along with the GenET package.
