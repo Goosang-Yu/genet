@@ -861,14 +861,14 @@ def select_cols(data):
 
 
 
-def calculate_deepprime_score(df_input, pe_system='PE2', cell_type='HEK293T'):
+def calculate_deepprime_score(df_input, pe_system='PE2max', cell_type='HEK293T'):
 
     os.environ['CUDA_VISIBLE_DEVICES']='0'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
     from genet_models import load_genet_model
 
-    model_dir, model_type = load_genet_model('PE2max', 'HEK293T')
+    model_dir, model_type = load_genet_model(pe_system, cell_type)
 
     mean = pd.read_csv('%s/DeepPrime_base/mean.csv' % model_dir, header=None, index_col=0).squeeze()
     std  = pd.read_csv('%s/DeepPrime_base/std.csv' % model_dir, header=None, index_col=0).squeeze()
