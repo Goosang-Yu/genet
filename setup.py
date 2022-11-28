@@ -47,7 +47,7 @@ setuptools.setup(
         'torchaudio==0.11.0',
         'protobuf==3.20.*',
         'silence_tensorflow',
-        'genet_models@git+https://github.com/Goosang-Yu/genet-models.git',
+        'genet_models@git+https://github.com/Goosang-Yu/genet-models.git@v1.0.0#egg=genet_models',
         ],
 
     dependency_links=[
