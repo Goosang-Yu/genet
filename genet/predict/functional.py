@@ -174,13 +174,13 @@ def spcas9_score(list_target30:list , gpu_env=0):
 
     from genet_models import load_deepspcas9
 
-    model_dir, model_type = load_deepspcas9()
+    model_dir = load_deepspcas9()
 
-    model_dir = inspect.getfile(DeepSpCas9).replace('/__init__.py', '')
-    
     best_model_path = model_dir
-    best_model = 'DeepSpCas9_model'
+    best_model = 'PreTrain-Final-3-5-7-100-70-40-0.001-550-80-60'
 
+    model_save = '%s/%s' % (best_model_path, best_model)
+    
     filter_size = [3, 5, 7]
     filter_num  = [100, 70, 40]
     args        = [filter_size, filter_num, 0.001, 550]
@@ -192,10 +192,9 @@ def spcas9_score(list_target30:list , gpu_env=0):
         model = Deep_xCas9(filter_size, filter_num, 80, 60, args[2])
 
         saver = tf.train.Saver()
-        saver.restore(sess, best_model_path + '/' + best_model)
+        saver.restore(sess, model_save)
 
         list_score = Model_Finaltest(sess, x_test, model)
-    
     
     return list_score
 
@@ -300,8 +299,8 @@ class FeatureExtraction:
     # def End: __init__
     
     def get_input(self, wt_seq, ed_seq, edit_type, edit_len):
-        self.sWTSeq = wt_seq
-        self.sEditedSeq = ed_seq
+        self.sWTSeq = wt_seq.upper()
+        self.sEditedSeq = ed_seq.upper()
         self.sAltKey = edit_type + str(edit_len)
         self.sAltType = edit_type
         self.nAltLen = edit_len
@@ -924,15 +923,22 @@ def pe_score(Ref_seq: str,
     HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3
     
     '''
-    
+        
     nAltIndex   = 60
     pbs_range   = [pbs_min, pbs_max]
     rtt_max     = rtt_max
     pe_system   = pe_system
 
-    edit_type   = sAlt[:-1]
+    edit_type   = sAlt[:-1].lower()
     edit_len    = int(sAlt[-1])
 
+    # check input parameters
+    if pbs_max > 17: return print('sID:%s\nPlease set PBS max length upto 17nt' % sID)
+    if rtt_max > 40: return print('sID:%s\nPlease set RTT max length upto 40nt' % sID)
+    if edit_type not in ['sub', 'ins', 'del']: return print('sID:%s\nPlease select proper edit type.\nAvailable edit tyle: sub, ins, del' % sID)
+    if edit_len > 3: return print('sID:%s\nPlease set edit length upto 3nt. Available edit length range: 1~3nt' % sID)
+    if edit_len < 1: return print('sID:%s\nPlease set edit length at least 1nt. Available edit length range: 1~3nt' % sID)
+    
     ## FeatureExtraction Class
     cFeat = FeatureExtraction()
 
@@ -947,9 +953,15 @@ def pe_score(Ref_seq: str,
 
     df = cFeat.make_output_df()
 
-    list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
-    df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
-    df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
+    if len(df) > 0:
+        list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
+        df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
+        df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
+    
+    else:
+        print('\nsID:', sID)
+        print('DeepPrime only support RTT length upto 40nt')
+        print('There are no available pegRNAs, please check your input sequences\n')
 
     return df
 
@@ -968,6 +980,11 @@ def pecv_score(cv_record,
     If DeepPrime is an unpredictable form of variants, it sends out a message.\n
     
     '''
+    
+    # check input parameters
+    if pbs_max > 17: return print('sID:%s\nPlease set PBS max length upto 17nt' % sID)
+    if rtt_max > 40: return print('sID:%s\nPlease set RTT max length upto 40nt' % sID)
+    
     print('DeepPrime score of ClinVar record')
 
     Ref_seq, ED_seq = cv_record.seq()
@@ -994,8 +1011,14 @@ def pecv_score(cv_record,
 
     df = cFeat.make_output_df()
 
-    list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
-    df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
-    df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
+    if len(df) > 0:
+        list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
+        df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
+        df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
+    
+    else:
+        print('\nsID:', sID)
+        print('DeepPrime only support RTT length upto 40nt')
+        print('There are no available pegRNAs, please check your input sequences\n')
 
     return df
