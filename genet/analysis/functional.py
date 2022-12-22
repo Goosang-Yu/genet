@@ -59,13 +59,12 @@ class SortByBarcodes:
         os.makedirs(self.sTEMP_DIR, exist_ok=True)
 
         # load barcode and data files
-        self.df_bc       = pd.read_csv(barcode_file, names=['id', 'barcode'])
-        self.record_iter = SeqIO.parse(open(seq_file), data_format)
-        self.records     = list(self.record_iter)
-        self.nFileCnt    = len(self.records)
+        self.df_bc    = pd.read_csv(barcode_file, names=['id', 'barcode'])
+        self.records  = list(SeqIO.parse(open(seq_file), data_format))
+        self.total    = len(self.records)
         
         # split fastq file
-        list_nBins = [[int(self.nFileCnt * (i + 0) / n_cores), int(self.nFileCnt * (i + 1) / n_cores)] for i in range(n_cores)]
+        list_nBins = [[int(self.total * (i + 0) / n_cores), int(self.total * (i + 1) / n_cores)] for i in range(n_cores)]
         self.list_sParameters = []
         
         for nStart, nEnd in list_nBins:
@@ -75,9 +74,9 @@ class SortByBarcodes:
             os.makedirs(sSplit_fastq_DIR, exist_ok=True)
             SeqIO.write(list_sSubSplits, '%s/_subsplits.%s' % (sSplit_fastq_DIR, output_format), output_format)
             self.list_sParameters.append([self.df_bc, barcode_pattern, nStart, nEnd, sSplit_fastq_DIR, output_format, silence])
+            del list_sSubSplits
         
         del self.records
-        del list_sSubSplits
 
         # sorting barcodes from subsplit files
         p = mp.Pool(n_cores)
@@ -92,17 +91,17 @@ class SortByBarcodes:
         sOUT_DIR = '%s/%s_results' % (output_path, output_name)
         os.makedirs(sOUT_DIR, exist_ok=True)
 
-        self.dict_barcode_record = mp.Manager().dict()
-        self.dict_barcode_record['_Not_matched'] = []
-        for key in self.df_bc['barcode']: self.dict_barcode_record[key] = []
+        self.couts = mp.Manager().dict()
+        self.couts['_Not_matched'] = []
+        for key in self.df_bc['barcode']: self.couts[key] = []
 
-        self.barcodes = self.dict_barcode_record.keys()
+        self.barcodes = self.couts.keys()
         self.nBarcodeCnt = len(self.barcodes)
 
         list_barcode_nBins = [[int(self.nBarcodeCnt * (i + 0) / n_cores), int(self.nBarcodeCnt * (i + 1) / n_cores)] for i in range(n_cores)]
 
         if silence == False: print('[Info] Make barcode subsplits: %s - %s' % (nStart, nEnd))
-        self.list_combine_param = [[self.sTEMP_DIR, output_format, sOUT_DIR, self.dict_barcode_record, self.barcodes[nStart:nEnd]] for nStart, nEnd in list_barcode_nBins]
+        self.list_combine_param = [[self.sTEMP_DIR, output_format, sOUT_DIR, self.couts, self.barcodes[nStart:nEnd], silence] for nStart, nEnd in list_barcode_nBins]
 
         p = mp.Pool(n_cores)
         if silence == False: print('[Info] Starting map_async: combine all temp files')
@@ -112,8 +111,10 @@ class SortByBarcodes:
         p.join()
 
         # finalize
+        '''mp 안에서 진행될 내용. 문제 없으면 삭제 가능
         for barcode, seq_rec in tqdm(self.dict_barcode_record.items(), ncols=100):
             SeqIO.write(seq_rec, '%s/%s.%s' % (sOUT_DIR, barcode, output_format), output_format)
+        '''
 
         if remove_temp_files==True:
             if silence == False: print('[Info] Removing temp files')
@@ -206,23 +207,20 @@ def combine_files(list_combine_param):
     sTEMP_DIR     = list_combine_param[0]
     output_format = list_combine_param[1]
     sOUT_DIR      = list_combine_param[2]
-    dict_record   = list_combine_param[3]
+    counts        = list_combine_param[3]
     barcodes      = list_combine_param[4]
+    silence       = list_combine_param[5]
 
-
-    
     for key in barcodes:
+        if silence == False: print('Make combined file: %s' % key)
         temp_fqs = glob.glob('%s/**/%s.%s' % (sTEMP_DIR, key, output_format))
 
         list_fqs = []
         for fq in temp_fqs:
             list_fqs.extend(list(SeqIO.parse(fq, output_format)))
+            SeqIO.write(list_fqs, '%s/%s.%s' % (sOUT_DIR, key, output_format), output_format)
+        counts[key] = len(list_fqs)
         
-        dict_record[key] = list_fqs
-        
-        
-        # counts[key] = len(list_fqs)
-
 
 def loadseq():
     '''
