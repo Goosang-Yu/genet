@@ -1,9 +1,8 @@
 # from genet.utils import *
-
 import os, sys, regex
 import genet.utils
-
 import pandas as pd
+from Bio import Entrez, GenBank, SeqIO
 
 '''
 TODO
@@ -18,7 +17,7 @@ def loadseq():
 
 
 
-def make_stop():
+class MakeStop:
     '''
     특정 gene symbol을 넣으면,
     그 gene에서 SNV (1bp substitution)으로 만들 수 있는 모든 stop codon의 경우의 수를 return 한다.
@@ -27,10 +26,37 @@ def make_stop():
     output = DataFrame (gene | pos | WT (121bp) | ED (121bp))
 
     example:
-    >>> from genet.design import make_stop
-    >>> df_out = make_stop('ACE2')
+    >>> from genet.design import MakeStop
+    >>> df_out = MakeStop('ACE2')
 
     '''
+    def __init__(self, gene_name:str):
+        print('Start MakeStop')
+
+
+
+
+# class END: MakeStop
+
+
+
+class MakeSNVs:
+    '''MakeSNVs
+    특정 spacis, chromosome, location을 정해주면 해당 범위 내에 모든 SNV saturation WT / ED sequence pair를 return 해주는 class.
+    SNV saturation library를 제작하거나, 특정 범위 내에 어디든 상관 없이 가장 base or prime editing 이 잘 되는 곳을 찾기 위해 필요한 함수
+    
+    #### Example
+    >>> from genet.design import MakeSNVs
+    >>> df_snvs = MakeSNVs(chr=13, start=1704029, end=1704100)
+    '''
+
+    def __init__(self, chr:int, start:int, end:int, species:str='homo sapiens'):
+        print('Start MakeSNVs')
+
+
+
+
+# class END: MakeSNVs
 
 
 

@@ -1,10 +1,7 @@
 import os, sys, regex, glob, shutil, itertools, time, subprocess
-import multiprocessing as mp
 import pandas as pd
-
+import multiprocessing as mp
 from Bio import SeqIO
-from Bio.Seq import Seq
-from tqdm import tqdm
 
 '''
 TODO
@@ -13,7 +10,6 @@ TODO
 3. python 기본적으로 python 3.7~3.10까지 호환되는 것을 목표로 하고, 3.11도 테스트하기
 
 '''
-
 
 class SortByBarcodes:
     '''# SortByBarcodes
@@ -46,6 +42,7 @@ class SortByBarcodes:
                  output_name:str = 'barcode_sorted', 
                  output_path:str = './',
                  data_format:str = 'fastq',
+                 output_format:str = 'fastq',
                  n_cores:int = int(mp.cpu_count())*0.5,
                  remove_temp_files:bool = True,
                  silence:bool = False,
@@ -68,42 +65,65 @@ class SortByBarcodes:
         self.records     = list(self.record_iter)
         self.nFileCnt    = len(self.records)
         
+        # prepare multiprocessing 
+        print('\n[Info] Multiprocessing')
+
+        m = mp.Manager()
+
+        self.dict_barcode = m.dict()
+        self.dict_barcode['_Not_matched'] = []
+        for key in self.df_bc['barcode']: self.dict_barcode[key] = []
+        
         # split fastq file
         list_nBins = [[int(self.nFileCnt * (i + 0) / n_cores), int(self.nFileCnt * (i + 1) / n_cores)] for i in range(n_cores)]
         self.list_sParameters = []
         
         for nStart, nEnd in list_nBins:
-            if silence == False: print('[Info] Make subsplits: %s - %s' % (nStart, nEnd))
+            if silence == False: print('[Info] Make data subsplits: %s - %s' % (nStart, nEnd))
             list_sSubSplits = self.records[nStart:nEnd]
             sSplit_fastq_DIR = '%s/idx_%s-%s' % (self.sTEMP_DIR, nStart, nEnd)
             os.makedirs(sSplit_fastq_DIR, exist_ok=True)
-            SeqIO.write(list_sSubSplits, '%s/_subsplits.%s' % (sSplit_fastq_DIR, data_format), data_format)
-            self.list_sParameters.append([self.df_bc, barcode_pattern, nStart, nEnd, sSplit_fastq_DIR, data_format, silence])
+            SeqIO.write(list_sSubSplits, '%s/_subsplits.%s' % (sSplit_fastq_DIR, output_format), output_format)
+            self.list_sParameters.append([self.dict_barcode, self.df_bc, barcode_pattern, nStart, nEnd, sSplit_fastq_DIR, output_format, silence])
         
         del self.records
         del list_sSubSplits
 
-        # start multiprocessing 
-        print('\n[Info] Multiprocessing')
+        q = mp.Queue()
         p = mp.Pool(n_cores)
-        p.map_async(sort_barcode_mp, self.list_sParameters).get()
+        p.map_async(sort_barcode, self.list_sParameters).get()
 
+
+        '''Lagacy scripts
         # combine all temp files
         sOUT_DIR = '%s/%s_results' % (output_path, output_name)
         os.makedirs(sOUT_DIR, exist_ok=True)
 
         self.barcodes = ['_Not_matched'] + list(self.df_bc['barcode'])
         self.counts = {}
+        self.nBarcodeCnt = len(self.barcodes)
+        
+
+        list_barcode_nBins = [[int(self.nBarcodeCnt * (i + 0) / n_cores), int(self.nBarcodeCnt * (i + 1) / n_cores)] for i in range(n_cores)]
+
+        # 이 아랫부분도 multiprocessing으로 할 수 있게 변경하기
+
+
+        for nStart, nEnd in list_barcode_nBins:
+            if silence == False: print('[Info] Make barcode subsplits: %s - %s' % (nStart, nEnd))
+
+        self.list_combine_param = [[self.sTEMP_DIR, output_format, sOUT_DIR, self.barcodes[nStart:nEnd]] for nStart, nEnd in list_barcode_nBins]
 
         for key in self.barcodes:
-            temp_fqs = glob.glob('%s/**/%s.%s' % (self.sTEMP_DIR, key, data_format))
+            temp_fqs = glob.glob('%s/**/%s.%s' % (self.sTEMP_DIR, key, output_format))
 
             list_fqs = []
             for fq in temp_fqs:
-                list_fqs.extend(list(SeqIO.parse(fq, data_format)))
+                list_fqs.extend(list(SeqIO.parse(fq, output_format)))
             
-            SeqIO.write(list_fqs, '%s/%s.%s' % (sOUT_DIR, key, data_format), data_format)
+            SeqIO.write(list_fqs, '%s/%s.%s' % (sOUT_DIR, key, output_format), output_format)
             self.counts[key] = len(list_fqs)
+        '''
 
         # finalize
         if remove_temp_files==True: shutil.rmtree(self.sTEMP_DIR)
@@ -136,17 +156,18 @@ class SortByBarcodes:
 
 
 
-def sort_barcode_mp(list_sParameters):
+def sort_barcode(list_sParameters):
     '''Sorting the fastq file by barcode list
     '''
-        
-    df_bc            = list_sParameters[0]
-    barcode_pattern  = list_sParameters[1]
-    nStart           = list_sParameters[2]
-    nEnd             = list_sParameters[3]
-    sSplit_fastq_DIR = list_sParameters[4]
-    data_format      = list_sParameters[5]
-    silence          = list_sParameters[6]
+
+    dict_barcode     = list_sParameters[0]    
+    df_bc            = list_sParameters[1]
+    barcode_pattern  = list_sParameters[2]
+    nStart           = list_sParameters[3]
+    nEnd             = list_sParameters[4]
+    sSplit_fastq_DIR = list_sParameters[5]
+    output_format    = list_sParameters[6]
+    silence          = list_sParameters[7]
     
     if silence == False: print('[Info] Barcode sorting - subsplits: %s - %s' % (nStart, nEnd))
 
@@ -154,8 +175,8 @@ def sort_barcode_mp(list_sParameters):
     for key in df_bc['barcode']:
         dict_barcode[key] = []
     
-    fq_file = '%s/_subsplits.%s' % (sSplit_fastq_DIR, data_format)
-    record_iter = SeqIO.parse(open(fq_file), data_format)
+    fq_file = '%s/_subsplits.%s' % (sSplit_fastq_DIR, output_format)
+    record_iter = SeqIO.parse(open(fq_file), output_format)
 
     for rec in record_iter:
         seq = str(rec.seq)
@@ -181,12 +202,92 @@ def sort_barcode_mp(list_sParameters):
             
         dict_barcode['_Not_matched'].append(rec)
     
-    if silence == False: print('Make temp sorted %s file: %s - %s' % (data_format, nStart, nEnd))
+    if silence == False: print('Make temp sorted %s file: %s - %s' % (output_format, nStart, nEnd))
     
     for barcode, seq_rec in dict_barcode.items():
-        SeqIO.write(seq_rec, '%s/%s.%s' % (sSplit_fastq_DIR, barcode, data_format), data_format)
+        SeqIO.write(seq_rec, '%s/%s.%s' % (sSplit_fastq_DIR, barcode, output_format), output_format)
+
+# def END: sort_barcode
+
+
+def sort_barcode_mp(list_sParameters):
+    '''Sorting the fastq file by barcode list
+    Using multiprocessing.manager() for common variable (dictionary).
+
+    '''
+        
+    df_bc            = list_sParameters[0]
+    barcode_pattern  = list_sParameters[1]
+    nStart           = list_sParameters[2]
+    nEnd             = list_sParameters[3]
+    sSplit_fastq_DIR = list_sParameters[4]
+    output_format    = list_sParameters[5]
+    silence          = list_sParameters[6]
+    
+    if silence == False: print('[Info] Barcode sorting - subsplits: %s - %s' % (nStart, nEnd))
+
+    dict_barcode = {'_Not_matched': []}
+    for key in df_bc['barcode']:
+        dict_barcode[key] = []
+    
+    fq_file = '%s/_subsplits.%s' % (sSplit_fastq_DIR, output_format)
+    record_iter = SeqIO.parse(open(fq_file), output_format)
+
+    for rec in record_iter:
+        seq = str(rec.seq)
+        
+        if barcode_pattern == None:
+            for k in dict_barcode.keys():
+                if k not in seq: continue
+                else:
+                    dict_barcode[k].append(rec)
+                    break
+            
+        else:
+            try:
+                for sReIndex in regex.finditer(barcode_pattern, seq, overlapped=True):
+                    nIndexStart = sReIndex.start()
+                    nIndexEnd = sReIndex.end()
+                    window = seq[nIndexStart:nIndexEnd]
+                    
+                    try: dict_barcode[window].append(rec)
+                    except KeyError: continue
+                
+            except KeyError: continue
+            
+        dict_barcode['_Not_matched'].append(rec)
+    
+    if silence == False: print('Make temp sorted %s file: %s - %s' % (output_format, nStart, nEnd))
+    
+    for barcode, seq_rec in dict_barcode.items():
+        SeqIO.write(seq_rec, '%s/%s.%s' % (sSplit_fastq_DIR, barcode, output_format), output_format)
 
 # def END: sort_barcode_mp
+
+'''
+def combine_files(list_combine_param):
+    """Combine files by name
+
+    """
+
+    sTEMP_DIR     = list_combine_param[0]
+    output_format = list_combine_param[1]
+    sOUT_DIR      = list_combine_param[2]
+    barcodes      = list_combine_param[3]
+
+
+    
+    for key in barcodes:
+        temp_fqs = glob.glob('%s/**/%s.%s' % (sTEMP_DIR, key, output_format))
+
+        list_fqs = []
+        for fq in temp_fqs:
+            list_fqs.extend(list(SeqIO.parse(fq, output_format)))
+        
+        SeqIO.write(list_fqs, '%s/%s.%s' % (sOUT_DIR, key, output_format), output_format)
+        counts[key] = len(list_fqs)
+
+'''
 
 def loadseq():
     '''
