@@ -34,6 +34,17 @@ pip install genet -f https://download.pytorch.org/whl/cu113/torch_stable.html gi
 conda install viennarna
 ```
 
+## Trouble shooting for installation
+1/ GLIBCXX ImportError  
+```
+ImportError: /lib64/libstdc++.so.6: version `GLIBCXX_3.4.20' not found (required by /home/hkim/.miniconda3/envs/genet/lib/python3.8/site-packages/RNA/_RNA.cpython-38-x86_64-linux-gnu.so)'
+```  
+If the above error message appears in the process of loading the Vienna RNA, install  'libgcc' using mamba ([see alse](https://pypi.org/project/ViennaRNA/)).  
+```
+conda activate genet
+conda install -c conda-forge mamba
+mamba install libgcc
+```
 
 ## Who should use GenET?
 GenET was developed for anyone interested in the field of genome editing. Especially, Genet can provide aid to those with the following objectives.: <br />
