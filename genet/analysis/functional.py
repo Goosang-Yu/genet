@@ -185,7 +185,9 @@ def sort_barcode(list_sParameters):
                     nIndexEnd = sReIndex.end()
                     window = seq[nIndexStart:nIndexEnd]
                     
-                    try: dict_barcode[window].append(rec)
+                    try: 
+                        dict_barcode[window].append(rec)
+                        break
                     except KeyError: continue
                 
             except KeyError: continue
