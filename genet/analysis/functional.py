@@ -170,9 +170,9 @@ def sort_barcode(list_sParameters):
 
     for rec in record_iter:
         seq = str(rec.seq)
+        check_match = False
         
         if barcode_pattern == None:
-            check_match = False
             for k in dict_barcode.keys():
                 if k not in seq: continue
                 else:
@@ -183,7 +183,6 @@ def sort_barcode(list_sParameters):
 
         else:
             try:
-                check_match = False
                 for sReIndex in regex.finditer(barcode_pattern, seq, overlapped=True):
                     nIndexStart = sReIndex.start()
                     nIndexEnd = sReIndex.end()
