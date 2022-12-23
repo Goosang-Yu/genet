@@ -146,6 +146,7 @@ def sort_barcode(list_sParameters):
     '''Sorting the fastq file by barcode list
     '''
 
+    # parameters
     df_bc            = list_sParameters[0]
     barcode_pattern  = list_sParameters[1]
     nStart           = list_sParameters[2]
@@ -204,6 +205,7 @@ def combine_files(list_combine_param):
 
     """
 
+    # parameters
     sTEMP_DIR     = list_combine_param[0]
     output_format = list_combine_param[1]
     sOUT_DIR      = list_combine_param[2]
