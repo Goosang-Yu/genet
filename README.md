@@ -34,8 +34,8 @@ pip install genet -f https://download.pytorch.org/whl/cu113/torch_stable.html gi
 conda install viennarna
 ```
 
-## Trouble shooting for installation
-1/ GLIBCXX ImportError  
+### Trouble shooting for installation
+#### 1/ GLIBCXX ImportError  
 ```
 ImportError: /lib64/libstdc++.so.6: version `GLIBCXX_3.4.20' not found (required by /home/hkim/.miniconda3/envs/genet/lib/python3.8/site-packages/RNA/_RNA.cpython-38-x86_64-linux-gnu.so)'
 ```  
