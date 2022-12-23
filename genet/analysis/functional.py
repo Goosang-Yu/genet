@@ -111,11 +111,6 @@ class SortByBarcodes:
         p.join()
 
         # finalize
-        '''mp 안에서 진행될 내용. 문제 없으면 삭제 가능
-        for barcode, seq_rec in tqdm(self.dict_barcode_record.items(), ncols=100):
-            SeqIO.write(seq_rec, '%s/%s.%s' % (sOUT_DIR, barcode, output_format), output_format)
-        '''
-
         if remove_temp_files==True:
             if silence == False: print('[Info] Removing temp files')
             shutil.rmtree(self.sTEMP_DIR)
@@ -179,7 +174,6 @@ def sort_barcode(list_sParameters):
                     dict_barcode[k].append(rec)
                     check_match=True
                     break
-            if check_match==False: dict_barcode['_Not_matched'].append(rec)
 
         else:
             try:
@@ -193,9 +187,9 @@ def sort_barcode(list_sParameters):
                         check_match = True
                         break
                     except KeyError: continue
-                if check_match==False: dict_barcode['_Not_matched'].append(rec)
-                
             except KeyError: continue
+        
+        if check_match==False: dict_barcode['_Not_matched'].append(rec)
             
     if silence == False: print('Make temp sorted %s file: %s - %s' % (output_format, nStart, nEnd))
     
