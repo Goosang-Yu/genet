@@ -1,8 +1,10 @@
+import genet
 import os, sys, regex, glob, shutil, itertools, time, subprocess
 import pandas as pd
 import multiprocessing as mp
 from Bio import SeqIO
 from tqdm import tqdm
+
 
 '''
 TODO
@@ -44,7 +46,7 @@ class SortByBarcodes:
                  output_path:str = './',
                  data_format:str = 'fastq',
                  output_format:str = 'fastq',
-                 n_cores:int = int(mp.cpu_count())*0.5,
+                 n_cores:int = int(mp.cpu_count()*0.5),
                  remove_temp_files:bool = True,
                  silence:bool = False,
                  ):
@@ -60,6 +62,8 @@ class SortByBarcodes:
 
         # load barcode and data files
         self.df_bc    = pd.read_csv(barcode_file, names=['id', 'barcode'])
+        
+        '''legacy code - 문제 없으면 삭제 예정
         self.records  = list(SeqIO.parse(open(seq_file), data_format))
         self.total    = len(self.records)
         
@@ -77,6 +81,10 @@ class SortByBarcodes:
             del list_sSubSplits
         
         del self.records
+        '''
+
+        genet.utils.split_fastq(
+            seq_file, n_cores, out_path=output_path, out_name=output_name, silence=silence)
 
         # sorting barcodes from subsplit files
         p = mp.Pool(n_cores)
@@ -217,11 +225,22 @@ def combine_files(list_combine_param):
         if silence == False: print('Make combined file: %s' % key)
         temp_fqs = glob.glob('%s/**/%s.%s' % (sTEMP_DIR, key, output_format))
 
+        output_file_name = '%s/%s.%s' % (sOUT_DIR, key, output_format)
+
+        '''
         list_fqs = []
         for fq in temp_fqs:
             list_fqs.extend(list(SeqIO.parse(fq, output_format)))
-            SeqIO.write(list_fqs, '%s/%s.%s' % (sOUT_DIR, key, output_format), output_format)
+            SeqIO.write(list_fqs, output_file_name, output_format)
         counts[key] = len(list_fqs)
+        '''
+
+        with open(output_file_name, 'w') as outfile:
+            for filename in sorted(temp_fqs):
+                with open(filename) as file:        
+                    outfile.write(file.read())
+            counts[key] = len(outfile.readlines)
+
         
 
 def loadseq():
