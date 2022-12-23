@@ -172,14 +172,18 @@ def sort_barcode(list_sParameters):
         seq = str(rec.seq)
         
         if barcode_pattern == None:
+            check_match = False
             for k in dict_barcode.keys():
                 if k not in seq: continue
                 else:
                     dict_barcode[k].append(rec)
+                    check_match=True
                     break
-            
+            if check_match==False: dict_barcode['_Not_matched'].append(rec)
+
         else:
             try:
+                check_match = False
                 for sReIndex in regex.finditer(barcode_pattern, seq, overlapped=True):
                     nIndexStart = sReIndex.start()
                     nIndexEnd = sReIndex.end()
@@ -187,12 +191,13 @@ def sort_barcode(list_sParameters):
                     
                     try: 
                         dict_barcode[window].append(rec)
+                        check_match = True
                         break
                     except KeyError: continue
+                if check_match==False: dict_barcode['_Not_matched'].append(rec)
                 
             except KeyError: continue
             
-        dict_barcode['_Not_matched'].append(rec)
     if silence == False: print('Make temp sorted %s file: %s - %s' % (output_format, nStart, nEnd))
     
     for barcode, seq_rec in dict_barcode.items():
