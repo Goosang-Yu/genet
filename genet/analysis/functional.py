@@ -246,10 +246,12 @@ def combine_files(list_combine_param):
         counts[key] = len(list_fqs)
         '''
 
-        with open(output_file_name, 'r+') as outfile:
+        with open(output_file_name, 'w') as outfile:
             for filename in sorted(temp_fqs):
                 with open(filename) as file:        
                     outfile.write(file.read())
+        
+        with open(output_file_name, 'r') as outfile:
             counts[key] = len(outfile.readlines())
 
 
