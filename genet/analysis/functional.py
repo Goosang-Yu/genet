@@ -55,42 +55,14 @@ class SortByBarcodes:
         # check input types
         if n_cores > mp.cpu_count():
             sys.exit('n_core should be lower than the number of cores which your machine has')
-        
-        '''legacy code - 문제 없으면 삭제 예정
-        # make temp file directory to save split fastq files
-        self.sTEMP_DIR = '%s/%s_temp' % (output_path, output_name)
-        os.makedirs(output_path, exist_ok=True)
-        os.makedirs(self.sTEMP_DIR, exist_ok=True)
-        '''
 
         # load barcode and data files
         self.df_bc    = pd.read_csv(barcode_file, names=['id', 'barcode'])
-        
-        '''legacy code - 문제 없으면 삭제 예정
-        self.records  = list(SeqIO.parse(open(seq_file), data_format))
-        self.total    = len(self.records)
-        
-        # split fastq file
-        list_nBins = [[int(self.total * (i + 0) / n_cores), int(self.total * (i + 1) / n_cores)] for i in range(n_cores)]
-        self.list_sParameters = []
-        
-        for nStart, nEnd in list_nBins:
-            if silence == False: print('[Info] Make data subsplits: %s - %s' % (nStart, nEnd))
-            list_sSubSplits = self.records[nStart:nEnd]
-            sSplit_fastq_DIR = '%s/idx_%s-%s' % (self.sTEMP_DIR, nStart, nEnd)
-            os.makedirs(sSplit_fastq_DIR, exist_ok=True)
-            SeqIO.write(list_sSubSplits, '%s/_subsplits.%s' % (sSplit_fastq_DIR, output_format), output_format)
-            self.list_sParameters.append([self.df_bc, barcode_pattern, nStart, nEnd, sSplit_fastq_DIR, output_format, silence])
-            del list_sSubSplits
-        
-        del self.records
-        '''
-        
-        self.list_sParameters = []
 
         splits = genet.utils.SplitFastq(
             seq_file, n_cores, out_path=output_path, out_name=output_name, silence=silence)
         
+        self.list_sParameters = []
         for s in splits.names:
             self.list_sParameters.append([self.df_bc, barcode_pattern, s, splits.dir, output_format, silence])
 
@@ -237,14 +209,6 @@ def combine_files(list_combine_param):
         temp_fqs = glob.glob('%s/**/%s.%s' % (splits_dir, key, output_format))
 
         output_file_name = '%s/%s.%s' % (sOUT_DIR, key, output_format)
-
-        '''legacy code - 문제 없으면 삭제 예정
-        list_fqs = []
-        for fq in temp_fqs:
-            list_fqs.extend(list(SeqIO.parse(fq, output_format)))
-            SeqIO.write(list_fqs, output_file_name, output_format)
-        counts[key] = len(list_fqs)
-        '''
 
         with open(output_file_name, 'w') as outfile:
             for filename in sorted(temp_fqs):
