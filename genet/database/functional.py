@@ -2,10 +2,6 @@ import os, sys
 import genet.utils
 from Bio import Entrez, GenBank, SeqIO
 
-def test_branch():
-    print('this is testing')
-
-    return None
 
 class GetGene:
     '''
