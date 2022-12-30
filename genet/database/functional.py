@@ -2,6 +2,9 @@ import os, sys
 import genet.utils
 from Bio import Entrez, GenBank, SeqIO
 
+'''
+Branch test 221230
+'''
 
 class GetGene:
     '''
