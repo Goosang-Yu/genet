@@ -10,7 +10,7 @@ import inspect
 from genet.predict.models import DeepSpCas9, DeepPrime
 
 
-import os, sys, time, regex
+import os, sys, time, regex, logging
 import numpy as np
 import pandas as pd
 
@@ -1022,3 +1022,156 @@ def pecv_score(cv_record,
         print('There are no available pegRNAs, please check your input sequences\n')
 
     return df
+
+
+class DeepPrime:
+    '''
+    DeepPrime: pegRNA activity prediction models\n
+    Input  = 121 nt DNA sequence without edit\n
+    Output = 121 nt DNA sequence with edit\n
+    
+    ### Available Edit types\n
+    sub1, sub2, sub3, ins1, ins2, ins3, del1, del2, del3\n
+    
+    ### Available PE systems\n
+    PE2, PE2max, PE4max, NRCH_PE2, NRCH_PE2max, NRCH_PE4max\n
+    
+    ### Available Cell types\n
+    HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3
+    
+    '''
+    def __init__(self, sID:str, Ref_seq: str, ED_seq: str, edit_type: str, edit_len: int,
+                pam:str = 'NGG', pbs_min:int = 7, pbs_max:int = 15,
+                rtt_min:int = 0, rtt_max:int = 40, silence:bool = False,
+                out_dir:str=os.getcwd(),
+                ):
+        
+        # input parameters
+        self.nAltIndex = 60
+        self.sID, self.Ref_seq, self.ED_seq = sID, Ref_seq, ED_seq
+        self.edit_type, self.edit_len, self.pam = edit_type, edit_len, pam
+        self.pbs_min, self.pbs_max = pbs_min, pbs_max
+        self.pbs_range = [pbs_min, pbs_max]
+        self.rtt_min, self.rtt_max   = rtt_min, rtt_max
+        self.silence = silence
+        
+        # output directory
+        self.OUT_PATH = '%s/%s/'  % (out_dir, self.sID)
+        self.TEMP_DIR = '%s/temp' % self.OUT_PATH
+        
+        # initializing
+        self.set_logging()
+        self.check_input()
+
+        ## FeatureExtraction Class
+        cFeat = FeatureExtraction()
+
+        cFeat.input_id = sID
+        cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
+
+        cFeat.get_sAltNotation(self.nAltIndex)
+        cFeat.get_all_RT_PBS(self.nAltIndex, nMinPBS= self.pbs_min-1, nMaxPBS=self.pbs_max, nMaxRT=rtt_max, pam=self.pam)
+        cFeat.make_rt_pbs_combinations()
+        cFeat.determine_seqs()
+        cFeat.determine_secondary_structure()
+
+        self.features = cFeat.make_output_df()
+        
+        del cFeat
+
+        self.logger.info('Created an instance of DeepPrime')
+
+    # def __init__: END
+
+
+    def submit(self, pe_system:str, cell_type:str = 'HEK293T'):
+        print('start pe_scre', self.Ref_seq, self.ED_seq, )
+
+        return None
+
+    # def submit: END
+
+
+    def set_logging(self):
+
+        self.logger = logging.getLogger(self.OUT_PATH)
+        self.logger.setLevel(logging.DEBUG)
+
+        self.formatter = logging.Formatter(
+            '%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n',
+            datefmt='%a, %d %b %Y %H:%M:%S',
+            )
+        
+        self.error = self.logger.error
+        self.warn  = self.logger.warn
+        self.debug = self.logger.debug
+        self.info  = self.logger.info
+
+        try:
+            os.makedirs(self.OUT_PATH, exist_ok=True)
+            os.makedirs(self.TEMP_DIR, exist_ok=True)
+            self.info('Creating Folder %s' % self.OUT_PATH)
+        except:
+            self.error('Creating Folder failed')
+            sys.exit(1)
+            
+        self.file_handler = logging.FileHandler('%s/log_%s.log' % (self.OUT_PATH, self.sID))
+        self.file_handler.setLevel(logging.DEBUG)
+        self.file_handler.setFormatter(self.formatter)
+        self.logger.addHandler(self.file_handler)
+        
+        if self.silence != True:
+            self.console_handler = logging.StreamHandler()
+            self.console_handler.setLevel(logging.DEBUG)
+            self.console_handler.setFormatter(self.formatter)
+            self.logger.addHandler(self.console_handler)
+
+        self.info('DeepPrime: pegRNA activity prediction models\n\t version: %s' % genet.__version__)
+
+
+        return None
+
+    # def set_logging: END
+
+
+    def check_input(self):
+        
+        if self.pbs_min < 1:
+            self.error('sID:%s\nPlease set PBS max length at least 1nt' % self.sID)
+            raise ValueError('Please check your input: pbs_min')
+        
+        if self.pbs_max > 17:
+            self.error('sID:%s\nPlease set PBS max length upto 17nt' % self.sID)
+            raise ValueError('Please check your input: pbs_max')
+        
+        if self.rtt_max > 40:
+            self.error('sID:%s\nPlease set RTT max length upto 40nt' % self.sID)
+            raise ValueError('Please check your input: rtt_max')
+
+        if self.edit_type not in ['sub', 'ins', 'del']:
+            self.error('sID:%s\n\t Please select proper edit type.\n\t Available edit tyle: sub, ins, del' % self.sID)
+            raise ValueError('Please check your input: edit_type')
+
+        if self.edit_len > 3:
+            self.error('sID:%s\n\t Please set edit length upto 3nt. Available edit length range: 1~3nt' % self.sID)
+            raise ValueError('Please check your input: edit_len')
+        
+        if self.edit_len < 1:
+            self.error('sID:%s\n\t Please set edit length at least 1nt. Available edit length range: 1~3nt' % self.sID)
+            raise ValueError('Please check your input: edit_len')
+
+        self.info('Input information\n\t ID: %s\n\t Refseq: %s\n\t EDseq :%s' % (self.sID, self.Ref_seq, self.ED_seq))
+
+        return None
+    
+    # def check_input: END
+
+
+    def do_something(self):
+        self.logger.info('Something happened.')
+
+        return None
+
+    # def do_something: END
+    
+
