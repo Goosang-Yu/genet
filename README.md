@@ -76,7 +76,7 @@ list_out
 >>> [2.80322408676147, 2.25273704528808, 53.4233360290527]
 ```
 
-## Tutorial 2: Predict Prime editing efficiency (by DeepPrime)
+## Tutorial 2: Predict Prime editing efficiency (by DeepPrime and DeepPrime-FT)
 DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs) that target specific target sites for prime editing ([Yu et al. Cell 2023](https://doi.org/10.1016/j.cell.2023.03.034)). DeepSpCas9 prediction score is calculated simultaneously and requires tensorflow (version >=2.6). DeepPrime was developed on pytorch.
 
 ```python
