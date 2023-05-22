@@ -74,6 +74,15 @@ def test_score_data(example_id:str) -> dict:
             'cds_start' : 0,
             'cds_end'   : 121,
         },
+        
+        'example_5': {
+            'file'      : './tests/test_data/ABL1_ex4_pos40T_C_output.parquet',
+            'test_idx'  : 148,
+            'ref_seq'   : 'CCATTATCCAGCCCCAAAGCGCAACAAGCCCACTGTCTATGGTGTGTCCCCCAACTACGACAAGTGGGAGATGGAACGCACGGACATCACCATGAAGCACAAGCTGGGCGGGGGCCAGTAC',
+            'frame'     : 2,
+            'cds_start' : 0,
+            'cds_end'   : 121,
+        },
 
     }
 
