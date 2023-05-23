@@ -77,6 +77,7 @@ list_out
 ```
 
 ## Tutorial 2: Predict Prime editing efficiency (by DeepPrime and DeepPrime-FT)
+![](docs/images/Fig3_DeepPrime_architecture.svg)
 DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs) that target specific target sites for prime editing ([Yu et al. Cell 2023](https://doi.org/10.1016/j.cell.2023.03.034)). DeepSpCas9 prediction score is calculated simultaneously and requires tensorflow (version >=2.6). DeepPrime was developed on pytorch.
 
 ```python
@@ -153,8 +154,28 @@ cv_record = db.GetClinVar('VCV000428864.3')
 prd.pecv_score(cv_record)
 ```
 
+## Tutorial 4: Make additional synonymous mutations in pegRNA (GenET design module)
+```python
+from genet import predict
+from genet import design
 
-## Tutorial 4: Get Gene information from NCBI (GenET database module)
+seq_wt   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATGTCAACTGAAACCTTAAAGTGAGTATTTAATTGAGCTGAAGT'
+seq_ed   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGACGAACTATAACCTGCAAATGTCAACTGAAACCTTAAAGTGAGTATTTAATTGAGCTGAAGT'
+alt_type = 'sub1'
+
+df_pe = predict.pe_score(seq_wt, seq_ed, alt_type)
+
+# Select pegRNA that you want to add synonymous mutation 
+# The record type should be pd.Series
+dp_record = df_pe.iloc[20]
+
+synony_pegrna = design.SynonymousPE(dp_record, ref_seq=seq_wt, frame=1)
+
+pegrna_ext = synony_pegrna.extension
+```
+
+
+## Tutorial 5: Get Gene information from NCBI (GenET database module)
 The database module is used to retrieve sequence and feature information regarding the target gene of interest. This process is based on the Entrez module on biopython. Currently, obtaining only the meta data cooresponding to each feature is available, but in the future, we plan to implement sequence retreival followed by full preprocessing of neccesary information required for genome editing.
 
 ex) Retrieve gene info from NCBI
@@ -175,24 +196,8 @@ list_exons
  SeqFeature(FeatureLocation(ExactPosition(102204), ExactPosition(102258), strand=1), type='exon'),
  SeqFeature(FeatureLocation(ExactPosition(111450), ExactPosition(111528), strand=1), type='exon'),
  SeqFeature(FeatureLocation(ExactPosition(113027), ExactPosition(113116), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(113722), ExactPosition(113862), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(118103), ExactPosition(118209), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(120694), ExactPosition(120740), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(122061), ExactPosition(122138), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(123123), ExactPosition(126549), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(126951), ExactPosition(127040), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(135408), ExactPosition(135580), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(141369), ExactPosition(141496), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(143462), ExactPosition(143653), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(146745), ExactPosition(147056), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(150288), ExactPosition(150376), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(154032), ExactPosition(154110), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(154610), ExactPosition(154651), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(160848), ExactPosition(160932), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(166866), ExactPosition(166921), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(168789), ExactPosition(168863), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(170280), ExactPosition(170341), strand=1), type='exon'),
- SeqFeature(FeatureLocation(ExactPosition(172181), ExactPosition(173689), strand=1), type='exon')]
+......
+]
 ```
 
 Please send all comments and questions to gsyu93@gmail.com

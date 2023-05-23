@@ -48,8 +48,8 @@ setuptools.setup(
         'protobuf==3.20.*',
         'silence_tensorflow',
         'genet-models',
-        'pyarrow'
-        'fastparquet'
+        'pyarrow',
+        'fastparquet',
         ],
 
     dependency_links=[
