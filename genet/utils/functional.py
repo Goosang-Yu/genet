@@ -6,10 +6,6 @@ def lower_dict(input: dict):
     return dict((k.lower(), v.lower) for k, v in input.items())
 
 class SplitFastq:
-    '''fastq file을 원하는 수 만큼 균등하게 나눠주는 함수.
-
-    
-    '''
     def __init__(
         self,
         file:str,
@@ -18,6 +14,15 @@ class SplitFastq:
         out_path:str='./',
         silence:bool=False,
         ):
+        """fastq file을 원하는 수 만큼 균등하게 나눠주는 함수.
+
+        Args:
+            file (str): fastq 파일 경로
+            n_split (int): 몇 등분 할 것인지 적는 칸
+            out_name (str): 나눴을 때 저장되는 파일들의 prefix
+            out_path (str, optional): Output이 저장 될 경로. Defaults to './'.
+            silence (bool, optional): Logging을 위한 print 되는 메시지를 끄는 용도. Defaults to False.
+        """        
         
         output_format = 'fastq'
         lineset = 4
