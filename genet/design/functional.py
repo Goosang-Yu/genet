@@ -130,6 +130,8 @@ class SynonymousPE:
         self.frame     = frame
         self.cds_start = cds_start
         self.cds_end   = cds_end
+        
+        self.splicing_adaptor = [i for i in range(cds_start-5, cds_start)] + [i for i in range(cds_end, cds_end+5)]
 
         # step 2: pegRNA의 strand 방향에 따라 synonymous Mut 생성 함수 결정
         if self.wt_seq in self.ref_seq:
@@ -224,6 +226,7 @@ class SynonymousPE:
             pd.DataFrame: PAM 위치에 가능한 synonymous mutation 정보들
         """   
         
+        ep = self.edit_pos
         dict_codon_pamPos = self.make_dict_codon_pamPos(strand, rtt_frame, rtt_dna)
 
         self.dict_codon_pamPos = dict_codon_pamPos
@@ -237,6 +240,7 @@ class SynonymousPE:
             'AminoAcid_Mut' : [],
             'Silent_check'  : [],
             'Mut_pos'       : [],
+            'Mut_refpos'    : [],
             'PAM_Mut'       : [],
             'Priority'      : [],
             'Edit_class'    : [],
@@ -270,24 +274,31 @@ class SynonymousPE:
                             if PAM_G_pos == 5: pam_mut = mut_codon[snv_pos] + ext_rtt_dna[5]
                             else             : pam_mut = ext_rtt_dna[4] + mut_codon[snv_pos]
                             rtt_dna_mut = self.rtt_dna[:PAM_G_pos-1] + mut_codon[snv_pos] + self.rtt_dna[PAM_G_pos:]
+                            mut_refpos  = 60 + (PAM_G_pos - ep)
                         
                         else:
                             if PAM_G_pos == 6: pam_mut = ext_rtt_dna[4] + reverse_complement(mut_codon[snv_pos])
                             else             : pam_mut = reverse_complement(mut_codon[snv_pos]) + ext_rtt_dna[5]
                             rtt_dna_mut = self.rtt_dna[:PAM_G_pos-1] + reverse_complement(mut_codon[snv_pos]) + self.rtt_dna[PAM_G_pos:]
+                            mut_refpos  = 60 - (PAM_G_pos - ep)
                         
+                        if mut_refpos in self.splicing_adaptor: silent_check = False
+                        else                                  : silent_check = aa_wt==aa_mut
+
                         self.dict_mut['Codon_WT'].append(codon)
                         self.dict_mut['Codon_Mut'].append(mut_codon)
                         self.dict_mut['RTT_DNA_frame'].append(rtt_frame)
                         self.dict_mut['RTT_DNA_Strand'].append(strand)
                         self.dict_mut['AminoAcid_WT'].append(aa_wt)
                         self.dict_mut['AminoAcid_Mut'].append(aa_mut)
-                        self.dict_mut['Silent_check'].append(aa_wt==aa_mut)
+                        self.dict_mut['Silent_check'].append(silent_check)
                         self.dict_mut['Mut_pos'].append(PAM_G_pos)
+                        self.dict_mut['Mut_refpos'].append(mut_refpos)
                         self.dict_mut['PAM_Mut'].append(pam_mut)
                         self.dict_mut['Priority'].append(dict_pam_disrup_rank[pam_mut])
                         self.dict_mut['RTT_DNA_Mut'].append(rtt_dna_mut)
                         self.dict_mut['Edit_class'].append('PAM_edit')
+
                     
                     if strand == '+': PAM_G_pos += 1
                     else            : PAM_G_pos -= 1
@@ -361,8 +372,16 @@ class SynonymousPE:
                     priority = ep - mut_pos
                     if gc_fraction(codon) != gc_fraction(mut_codon): priority += 1
                     
-                    if strand == '+': rtt_dna_mut = mut_LHA + rtt_dna[ep-1:]
-                    else            : rtt_dna_mut = reverse_complement(mut_LHA) + rtt_dna[ep-1:]
+                    if strand == '+':
+                        rtt_dna_mut = mut_LHA + rtt_dna[ep-1:]
+                        mut_refpos  = 60 + (mut_pos - ep)
+                        
+                    else:
+                        rtt_dna_mut = reverse_complement(mut_LHA) + rtt_dna[ep-1:]
+                        mut_refpos  = 60 - (mut_pos - ep)
+
+                    if mut_refpos in self.splicing_adaptor: silent_check = False
+                    else                                  : silent_check = aa_wt==aa_mut
                     
                     self.dict_mut['Codon_WT'].append(codon)
                     self.dict_mut['Codon_Mut'].append(mut_codon)
@@ -370,8 +389,9 @@ class SynonymousPE:
                     self.dict_mut['RTT_DNA_Strand'].append(strand)
                     self.dict_mut['AminoAcid_WT'].append(aa_wt)
                     self.dict_mut['AminoAcid_Mut'].append(aa_mut)
-                    self.dict_mut['Silent_check'].append(aa_wt==aa_mut)
+                    self.dict_mut['Silent_check'].append(silent_check)
                     self.dict_mut['Mut_pos'].append(mut_pos)
+                    self.dict_mut['Mut_refpos'].append(mut_refpos)
                     self.dict_mut['Priority'].append(priority) # intended edit (PAM) 위치에 가까울수록 우선
                     self.dict_mut['PAM_Mut'].append(rtt_dna_mut[4:6])
                     self.dict_mut['RTT_DNA_Mut'].append(rtt_dna_mut)
@@ -451,11 +471,17 @@ class SynonymousPE:
                     if strand == '+':
                         if codon_re == 0: mut_RHA = mut_codon[codon_le:]
                         else            : mut_RHA = mut_codon[codon_le:-codon_re]
+                        mut_refpos  = 60 + (mut_pos - ep)
+
                     else:
                         if codon_re == 0: mut_RHA = reverse_complement(mut_codon[codon_le:])
                         else            : mut_RHA = reverse_complement(mut_codon[codon_le:-codon_re])
+                        mut_refpos  = 60 - (mut_pos - ep)
 
                     rtt_dna_mut = self.rtt_dna[:ep] + mut_RHA
+
+                    if mut_refpos in self.splicing_adaptor: silent_check = False
+                    else                                  : silent_check = aa_wt==aa_mut
 
                     self.dict_mut['Codon_WT'].append(codon)
                     self.dict_mut['Codon_Mut'].append(mut_codon)
@@ -463,8 +489,9 @@ class SynonymousPE:
                     self.dict_mut['RTT_DNA_Strand'].append(strand)
                     self.dict_mut['AminoAcid_WT'].append(aa_wt)
                     self.dict_mut['AminoAcid_Mut'].append(aa_mut)
-                    self.dict_mut['Silent_check'].append(aa_wt==aa_mut)
+                    self.dict_mut['Silent_check'].append(silent_check)
                     self.dict_mut['Mut_pos'].append(mut_pos)
+                    self.dict_mut['Mut_refpos'].append(mut_refpos)
                     self.dict_mut['PAM_Mut'].append(rtt_dna_mut[4:6])
                     self.dict_mut['RTT_DNA_Mut'].append(rtt_dna_mut)
                     self.dict_mut['Edit_class'].append('RHA_edit')
