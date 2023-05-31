@@ -84,6 +84,7 @@ class SynonymousPE:
                  cds_start:int=0,
                  cds_end:int=121,
                  adj_rha:bool=True,
+                 mut_target:str=None,
                  ):
         """DeepPrime output으로 만들어진 파일에서 pegRNA들에 silent mutation을 함께 유발하는 것 중 최적의 pegRNA를 선택해주는 것
         모든 기능은 prime editing으로 1bp substitution을 했을 때를 가정하여 만들어졌다.
@@ -109,6 +110,7 @@ class SynonymousPE:
             * cds_start (int, optional): CDS가 시작되는 위치, 그 이전 위치에서부터는 silent mutation을 만들 수 없으므로 고르는 위치에서 제외. Defaults to 0.
             * cds_end (int, optional): CDS가 종료되는 위치, 그 이후 위치에서부터는 silent mutation을 만들 수 없으므로 고르는 위치에서 제외. Defaults to 121.
             * adj_rha (bool, optional): silent mutation이 RHA에 위치하는 경우, 기존의 pegRNA에서의 RHA 길이만큼을 유지하기 위해 RTT를 늘려주는 기능. Defaults to True.
+            * mut_target (str, optional): Synonymous mutation을 특정 패턴의 sequence에서 찾아서 하고 싶을 경우. 해당 sequence가 들어있는 codon에 만든다.
 
         Raises:
             ValueError: frame이 0, 1, 2 중에 하나로 입력되지 않은 경우
@@ -120,16 +122,17 @@ class SynonymousPE:
         if frame not in [0, 1, 2]              : raise ValueError('Frame should be 0, 1 or 2')
 
         # step 1: 각종 서열 정보들을 가져온다.
-        self.rec       = dp_record
-        self.sID       = dp_record.ID
-        self.wt_seq    = dp_record.WT74_On
-        self.pbs_dna   = dp_record.Edited74_On.replace('x', '')[:dp_record.PBSlen]
-        self.rtt_dna   = dp_record.Edited74_On.replace('x', '')[-dp_record.RTlen:]
-        self.edit_pos  = dp_record.Edit_pos
-        self.ref_seq   = ref_seq.upper()
-        self.frame     = frame
-        self.cds_start = cds_start
-        self.cds_end   = cds_end
+        self.rec        = dp_record
+        self.sID        = dp_record.ID
+        self.wt_seq     = dp_record.WT74_On
+        self.pbs_dna    = dp_record.Edited74_On.replace('x', '')[:dp_record.PBSlen]
+        self.rtt_dna    = dp_record.Edited74_On.replace('x', '')[-dp_record.RTlen:]
+        self.edit_pos   = dp_record.Edit_pos
+        self.ref_seq    = ref_seq.upper()
+        self.frame      = frame
+        self.cds_start  = cds_start
+        self.cds_end    = cds_end
+        self.mut_target = mut_target.upper()
         
         self.splicing_adaptor = [i for i in range(cds_start-5, cds_start)] + [i for i in range(cds_end, cds_end+5)]
 
@@ -143,8 +146,32 @@ class SynonymousPE:
             self.rtt_frame = (self.edit_pos + frame) % 3  # revcom_rtt_dna의 3' end가 위치하는 지점의 frame. 시작점이 거기이기 때문.
             
         else: raise ValueError('Reference sequence is not matched with pegRNA information!\nPlease chech your ref_seq')
+    
+        self.dict_mut = {
+            'Codon_WT'      : [],
+            'Codon_Mut'     : [],
+            'RTT_DNA_frame' : [],
+            'RTT_DNA_Strand': [],
+            'AminoAcid_WT'  : [],
+            'AminoAcid_Mut' : [],
+            'Silent_check'  : [],
+            'Mut_pos'       : [],
+            'Mut_refpos'    : [],
+            'PAM_Mut'       : [],
+            'Priority'      : [],
+            'Edit_class'    : [],
+            'RTT_DNA_Mut'   : [],
+        }
         
-        self.output = self.make_synonyPAM_RTT(self.rtt_frame, self.rtt_dna, self.strand) # edit position / Silent mut 고려해서 뽑은 것들
+        if self.mut_target==None:
+            # edit position / Silent mut 고려해서 뽑은 것들
+            self.output = self.make_synonyPAM_RTT(self.rtt_frame, self.rtt_dna, self.strand)
+        
+        else:
+            if (self.mut_target in self.rtt_dna) or (reverse_complement(self.mut_target) in self.rtt_dna):
+                self.output = self.make_synonySeqMut_RTT(self.rtt_frame, self.rtt_dna, self.strand, self.mut_target)
+            else:
+                self.output = self.make_synonyPAM_RTT(self.rtt_frame, self.rtt_dna, self.strand)
         
         # step 3: 만약 RHA 길이 조정 옵션이 True로 되어있으면, 조정해주기. (defualt)
         if adj_rha == True:
@@ -157,7 +184,6 @@ class SynonymousPE:
         self.extension = self.pbs_dna + self.output['RTT_DNA_Mut']
         
     # End def __init__:
-        
 
         
     def make_snv(self, seq:str, pos:int) -> list:
@@ -183,6 +209,105 @@ class SynonymousPE:
         return list_sSNV
     # def END: make_snv
 
+        
+    def make_synonySeqMut_RTT(self, rtt_frame:int, rtt_dna:str, strand:str, mut_target:str) -> pd.DataFrame:
+        """특정 sequence motif가 주어진다면, 그 sequence가 RTT에 있는지 확인해본다.
+        만약 RTT 안에 해당 sequence가 있으면 그 sequence 안에 silent mutation을 만드는 것을 최우선으로 한다. 
+
+        Args:
+            * rtt_frame (int): CDS에서 RTT의 frame을 의미함 (0, 1, 2).
+            * rtt_dna (str): pegRNA의 RTT 부분을 DNA로 가져온 것. cDNA와 동일.
+            * strand (str): Reference sequence 기준으로 pegRNA의 방향 (+ / -)
+            * mut_target (str): synonymous mutation을 만들 target 서열 (ex: restriction enzyme cut site)
+
+        Returns:
+            pd.DataFrame: PAM 위치에 가능한 synonymous mutation 정보들
+        """    
+
+        ep = self.edit_pos
+        mt = mut_target
+
+        if mt in rtt_dna: mt_dna = mt
+        else            : mt_dna = reverse_complement(mt)
+        
+        ext_rtt_dna = self.wt_seq[:21] + rtt_dna + self.wt_seq[21+len(rtt_dna):] # WT sequence before nick pos.
+        mt_pos      = rtt_dna.find(mt_dna)
+        mt_start    = 21 + mt_pos
+        mt_end      = 21 + mt_pos + len(mt)
+
+        if strand == '+':
+            mt_frame = (rtt_frame + mt_pos) % 3
+            codon_le = mt_frame
+            codon_re = (3 - (mt_frame + len(mt))) % 3
+            codon_mt = ext_rtt_dna[mt_start-codon_le:mt_start] + mt_dna + ext_rtt_dna[mt_end:mt_end+codon_re]
+
+        else:
+            mt_frame = (rtt_frame - mt_pos) % 3
+            codon_le = (mt_frame - len(mt)) % 3
+            codon_re = (mt_pos - rtt_frame) % 3
+            codon_mt =  reverse_complement(ext_rtt_dna[mt_start-codon_re:mt_start] + mt_dna + ext_rtt_dna[mt_end:mt_end+codon_le])
+
+        dict_codon_mtPos = {codon_mt: [i for i in range(codon_le, len(codon_mt) - codon_re)]}
+
+        self.dict_codon_mtPos = dict_codon_mtPos
+
+        # for loop: LHA 위치가 걸쳐있는 codon들을 가져온다.
+        for codon in dict_codon_mtPos:
+            # for loop: 각 codon들에서 mut_target에 해당하는 위치들을 가져온다.
+            for snv_pos in dict_codon_mtPos[codon]:
+                
+                if strand == '+': mut_pos = mt_pos - (codon_le - snv_pos) + 1
+                else            : mut_pos = mt_pos + (codon_le - snv_pos) + len(mt_dna)
+
+                if mut_pos == ep: continue
+                if mut_pos > self.rec.RTlen: continue
+
+                list_mut_codon = self.make_snv(codon, snv_pos)
+                
+                for mut_codon in list_mut_codon:
+                    
+                    aa_wt  = translate(codon)
+                    aa_mut = translate(mut_codon)
+                    
+                    if mut_pos in [5, 6]: priority = 0
+                    else:
+                        priority = abs(mut_pos - ep)
+                        if gc_fraction(codon) != gc_fraction(mut_codon): priority += 1
+
+                    if strand == '+':
+                        mut_refpos  = 60 + (mut_pos - ep)
+                        rtt_dna_mut = self.rtt_dna[:mut_pos-1] + mut_codon[snv_pos]+ self.rtt_dna[mut_pos:]
+
+                    else:
+                        mut_refpos  = 60 - (mut_pos - ep)
+                        rtt_dna_mut = self.rtt_dna[:mut_pos-1] + reverse_complement(mut_codon[snv_pos]) + self.rtt_dna[mut_pos:]
+
+                    if mut_refpos in self.splicing_adaptor: silent_check = False
+                    else                                  : silent_check = aa_wt==aa_mut
+
+                    self.dict_mut['Codon_WT'].append(codon)
+                    self.dict_mut['Codon_Mut'].append(mut_codon)
+                    self.dict_mut['RTT_DNA_frame'].append(rtt_frame)
+                    self.dict_mut['RTT_DNA_Strand'].append(strand)
+                    self.dict_mut['AminoAcid_WT'].append(aa_wt)
+                    self.dict_mut['AminoAcid_Mut'].append(aa_mut)
+                    self.dict_mut['Silent_check'].append(silent_check)
+                    self.dict_mut['Mut_pos'].append(mut_pos)
+                    self.dict_mut['Mut_refpos'].append(mut_refpos)
+                    self.dict_mut['PAM_Mut'].append(rtt_dna_mut[4:6])
+                    self.dict_mut['Priority'].append(priority)
+                    self.dict_mut['Edit_class'].append('MutSeq_edit')
+                    self.dict_mut['RTT_DNA_Mut'].append(rtt_dna_mut)
+
+        self.mutations  = pd.DataFrame(self.dict_mut) 
+
+        df_synonymous = self.mutations.groupby(by='Silent_check').get_group(True).sort_values(by='Priority').reset_index(drop=True)
+
+        return df_synonymous.iloc[0]
+
+    # def END: make_synonymousSeq_RTT
+
+
     def make_dict_codon_pamPos(self, strand:str, rtt_frame:int, rtt_dna:str) -> dict:
         """_summary_
 
@@ -194,6 +319,7 @@ class SynonymousPE:
         Returns:
             dict: _description_
         """       
+
 
         rtt_end = 21 + self.rec.RTlen
 
@@ -212,6 +338,8 @@ class SynonymousPE:
             else               : dict_codon_pamPos = {ext_rtt_dna[-8:-5]: [2], ext_rtt_dna[-5:-2]: [0]}
 
         return dict_codon_pamPos
+
+
     
     def make_synonyPAM_RTT(self, rtt_frame:int, rtt_dna:str, strand:str) -> pd.DataFrame:
         """PAM sequence (GG)에서 frame에 따라 가능한 synonymous mutation들을 만들고,
@@ -227,25 +355,9 @@ class SynonymousPE:
         """   
         
         ep = self.edit_pos
+
         dict_codon_pamPos = self.make_dict_codon_pamPos(strand, rtt_frame, rtt_dna)
 
-        self.dict_codon_pamPos = dict_codon_pamPos
-    
-        self.dict_mut = {
-            'Codon_WT'      : [],
-            'Codon_Mut'     : [],
-            'RTT_DNA_frame' : [],
-            'RTT_DNA_Strand': [],
-            'AminoAcid_WT'  : [],
-            'AminoAcid_Mut' : [],
-            'Silent_check'  : [],
-            'Mut_pos'       : [],
-            'Mut_refpos'    : [],
-            'PAM_Mut'       : [],
-            'Priority'      : [],
-            'Edit_class'    : [],
-            'RTT_DNA_Mut'   : [],
-        }
 
         if strand == '+': PAM_G_pos = 5
         else            : PAM_G_pos = 6
@@ -322,10 +434,9 @@ class SynonymousPE:
     def make_synonyLHA(self, rtt_dna:str, rtt_frame:int, strand:str) -> pd.DataFrame:
         """만약 PAM synonymous mutation이 불가능한 경우,
         silent mutation은 LHA에 만들어주는 함수
-        그 중, strand 방향이 (+)인 경우에 대한 함수이다. 
 
         Returns:
-            pd.DataFrame: _description_
+            pd.DataFrame: df_synonymous
         """
 
         ep = self.edit_pos
@@ -415,11 +526,10 @@ class SynonymousPE:
     def make_synonyRHA(self, rtt_dna:str, rtt_frame:int, strand:str) -> pd.DataFrame:
         """만약 LHA synonymous mutation이 불가능한 경우,
         silent mutation은 RHA에 만들어주는 함수
-        그 중, strand 방향이 (+)인 경우에 대한 함수이다. 
         최후의 방법이다...
 
         Returns:
-            pd.DataFrame: _description_
+            pd.DataFrame: df_synonymous
         """
         
         ep = self.edit_pos
