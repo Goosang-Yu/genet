@@ -223,7 +223,6 @@ class SynonymousPE:
         Returns:
             pd.DataFrame: PAM 위치에 가능한 synonymous mutation 정보들
         """    
-        print('SeqMut')
         ep = self.edit_pos
         mt = mut_target
 
