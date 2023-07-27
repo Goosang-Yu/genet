@@ -18,12 +18,24 @@ setuptools.setup(
     
     python_requires = ">=3.7",
     classifiers=[
+        "License :: OSI Approved :: MIT License",
+        "Operating System :: MacOS :: MacOS X",
+        "Operating System :: POSIX",
+        "Intended Audience :: Science/Research",
+        "Intended Audience :: Developers",
+        "Operating System :: Unix",
+        "Topic :: Software Development :: Libraries :: Application Frameworks",
+        "Topic :: Software Development :: Libraries :: Python Modules",
+        "Topic :: Software Development :: Libraries",
+        "Topic :: Software Development",
+        "License :: OSI Approved :: MIT License",
+        "Programming Language :: Python",
+        "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
-        "License :: OSI Approved :: MIT License",
-        "Operating System :: MacOS :: MacOS X",
-        "Operating System :: POSIX"
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
     ],
 
     
@@ -42,20 +54,12 @@ setuptools.setup(
         'regex',
         'biopython',
         'tensorflow==2.8.0',
-        'torch==1.11.0+cu113',
-        'torchvision==0.12.0+cu113',
-        'torchaudio==0.11.0',
         'protobuf==3.20.*',
         'silence_tensorflow',
-        'genet-models',
         'pyarrow',
         'fastparquet',
         ],
 
-    dependency_links=[
-        'https://download.pytorch.org/whl/cu113',
-        'git+https://github.com/Goosang-Yu/genet-models.git@main#egg=genet-models',
-        ],
 
     long_description = long_description,
     long_description_content_type = "text/markdown",
