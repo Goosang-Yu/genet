@@ -1,17 +1,12 @@
 # from genet.utils import *
 import genet
 import genet.utils
-from genet import models
 
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-import inspect
-from genet.predict.models import DeepSpCas9, DeepPrime
-
-
-import os, sys, time, regex, logging
+import os, sys, regex, logging
 import numpy as np
 import pandas as pd
 
@@ -117,7 +112,6 @@ def Model_Finaltest(sess, TEST_X, model):
     list_score = sum(TEST_Z.tolist(), [])
 
     return list_score
-
 
 # def end: Model_Finaltest
 
