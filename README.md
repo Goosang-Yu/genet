@@ -26,7 +26,7 @@ GenET can be run on either Mac or Linux system. GenET is currently available on 
 conda create -n genet python=3.8
 conda activate genet
 
-# Install genet ( >= ver. 0.6.3)
+# Install genet ( >= ver. 0.7.0)
 pip install genet
 ```
 
