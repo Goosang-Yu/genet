@@ -58,6 +58,7 @@ setuptools.setup(
         'silence_tensorflow',
         'pyarrow',
         'fastparquet',
+        'tqdm',
         ],
 
 
