@@ -867,8 +867,8 @@ def calculate_deepprime_score(df_input, pe_system='PE2max', cell_type='HEK293T')
     model_info = LoadModel(pe_system, cell_type)
     model_dir  = model_info.model_dir
 
-    mean = pd.read_csv('%s/DeepPrime_base/mean.csv' % model_dir, header=None, index_col=0).squeeze()
-    std  = pd.read_csv('%s/DeepPrime_base/std.csv' % model_dir, header=None, index_col=0).squeeze()
+    mean = pd.read_csv('%s/mean.csv' % model_dir, header=None, index_col=0).squeeze()
+    std  = pd.read_csv('%s/std.csv' % model_dir, header=None, index_col=0).squeeze()
 
     test_features = select_cols(df_input)
 
@@ -878,12 +878,12 @@ def calculate_deepprime_score(df_input, pe_system='PE2max', cell_type='HEK293T')
     g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
     x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
 
-    models = [m_files for m_files in glob('%s/%s/*.pt' % model_dir)]
+    models = [m_files for m_files in glob('%s/*.pt' % model_dir)]
     preds  = []
 
     for m in models:
         model = GeneInteractionModel(hidden_size=128, num_layers=1).to(device)
-        model.load_state_dict(torch.load(m))
+        model.load_state_dict(torch.load(m, map_location=device))
         model.eval()
         with torch.no_grad():
             g, x = g_test, x_test
