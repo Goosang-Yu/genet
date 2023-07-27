@@ -1,6 +1,7 @@
 # from genet.utils import *
 import genet
 import genet.utils
+from genet import models
 
 import torch
 import torch.nn.functional as F
@@ -172,14 +173,13 @@ def spcas9_score(list_target30:list , gpu_env=0):
 
     x_test = preprocess_seq(list_target30, 30)
 
-    from genet_models import load_deepspcas9
-
-    model_dir = load_deepspcas9()
-
-    best_model_path = model_dir
+    from genet.models import LoadModel
+    
+    model_info = LoadModel('SpCas9')
+    model_dir  = model_info.model_dir
     best_model = 'PreTrain-Final-3-5-7-100-70-40-0.001-550-80-60'
 
-    model_save = '%s/%s' % (best_model_path, best_model)
+    model_save = '%s/%s' % (model_dir, best_model)
     
     filter_size = [3, 5, 7]
     filter_num  = [100, 70, 40]
@@ -862,9 +862,10 @@ def calculate_deepprime_score(df_input, pe_system='PE2max', cell_type='HEK293T')
     os.environ['CUDA_VISIBLE_DEVICES']='0'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    from genet_models import load_deepprime
+    from genet.models import LoadModel
 
-    model_dir, model_type = load_deepprime(pe_system, cell_type)
+    model_info = LoadModel(pe_system, cell_type)
+    model_dir  = model_info.model_dir
 
     mean = pd.read_csv('%s/DeepPrime_base/mean.csv' % model_dir, header=None, index_col=0).squeeze()
     std  = pd.read_csv('%s/DeepPrime_base/std.csv' % model_dir, header=None, index_col=0).squeeze()
@@ -877,7 +878,7 @@ def calculate_deepprime_score(df_input, pe_system='PE2max', cell_type='HEK293T')
     g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
     x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
 
-    models = [m_files for m_files in glob('%s/%s/*.pt' % (model_dir, model_type))]
+    models = [m_files for m_files in glob('%s/%s/*.pt' % model_dir)]
     preds  = []
 
     for m in models:
