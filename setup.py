@@ -38,8 +38,6 @@ setuptools.setup(
         "Programming Language :: Python :: 3.11",
     ],
 
-    
-    
     package_data={
         'genet':[
             # DeepSpCas9
