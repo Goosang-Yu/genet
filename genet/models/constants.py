@@ -1,4 +1,6 @@
-
+'''Model path and list of files
+All models from GitHub repository: genet-models
+'''
 
 
 
@@ -9,6 +11,141 @@ dict_model_path = {
         'type': 'DeepSpCas9',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
         'path': 'DeepSpCas9'
+    },
+
+    # DeepSpCas9variants
+    'SpCas9-NG': {
+        'type': 'DeepSpCas9variants',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSpCas9variants/PAM_variant_NG'
+    },
+    'SpCas9-NRCH': {
+        'type': 'DeepSpCas9variants',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSpCas9variants/PAM_variant_NRCH'
+    },
+    'SpCas9-NRRH': {
+        'type': 'DeepSpCas9variants',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSpCas9variants/PAM_variant_NRRH'
+    },
+    'SpCas9-NRTH': {
+        'type': 'DeepSpCas9variants',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSpCas9variants/PAM_variant_NRTH'
+    },
+    'SpCas9-Sc++': {
+        'type': 'DeepSpCas9variants',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSpCas9variants/PAM_variant_Sc++'
+    },
+    'SpCas9-SpCas9': {
+        'type': 'DeepSpCas9variants',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSpCas9variants/PAM_variant_SpCas9'
+    },
+    'SpCas9-SpG': {
+        'type': 'DeepSpCas9variants',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSpCas9variants/PAM_variant_SpG'
+    },
+    'SpCas9-SpRY': {
+        'type': 'DeepSpCas9variants',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSpCas9variants/PAM_variant_SpRY'
+    },
+    'SpCas9-VRQR': {
+        'type': 'DeepSpCas9variants',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSpCas9variants/PAM_variant_VRQR'
+    },
+
+
+    # DeepSmallCas9
+    'CjCas9': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_NG'
+    },
+    'efSaCas9': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_NRCH'
+    },
+    'enCjCas9': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_NRRH'
+    },
+    'eSaCas9': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_NRTH'
+    },
+    'Nm1Cas9': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_Sc++'
+    },
+    'Nm2Cas9': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_SpCas9'
+    },
+    'SaCas9': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_SpG'
+    },
+    'SaCas9-HF': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_SpRY'
+    },
+    'SaCas9-KKH': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_VRQR'
+    },
+    'SaCas9-KKH-HF': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_VRQR'
+    },
+    'SaCas9-Slug': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_VRQR'
+    },
+    'SauriCas9': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_VRQR'
+    },
+    'SauriCas9-KKH': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_VRQR'
+    },
+    'SlugCas9': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_VRQR'
+    },
+    'SlugCas9-HF': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_VRQR'
+    },
+    'sRGN': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_VRQR'
+    },
+    'St1Cas9': {
+        'type': 'DeepSmallCas9',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepSmallCas9/PAM_variant_VRQR'
     },
 
     # DeepPrime / DeepPrime-FT models
