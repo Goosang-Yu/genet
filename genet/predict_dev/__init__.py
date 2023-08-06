@@ -1,4 +1,4 @@
-from genet.predict.functional_dev import *
+from genet.predict_dev.functional_dev import *
 from silence_tensorflow import silence_tensorflow
 import warnings
 
