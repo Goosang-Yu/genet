@@ -16,6 +16,7 @@ class LoadModel:
 
         if effector == 'SpCas9':
             model_type = effector
+            
         else: 
             model_type = effector + '-' + cell_type
         

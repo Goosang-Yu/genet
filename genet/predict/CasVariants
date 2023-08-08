@@ -20,10 +20,9 @@ class CasVariant:
 
         self.model_info = LoadModel(effector)
         self.model_dir  = self.model_info.model_dir
-        self.best_model = 'PreTrain-Final-3-5-7-100-70-40-0.001-550-80-60'
 
 
-    def get_score_list(self, list_target30: list):
+    def predict(self, list_target30: list) -> pd.DataFrame:
         '''Input으로 30nt target context sequence 들이 담긴 list가 들어오면,
         각 sequence 마다의 prediction score를 계산해서 list로 return 하는 함수
         '''
@@ -31,7 +30,7 @@ class CasVariant:
         dataset_['target + PAM'] = list_target30
 
         # TFLite model loading / allocate tensor
-        interpreter =  tf.lite.Interpreter('/media/2400_new/GS/DeepBE/models/PAM/PAM_variant_NG_model_WeightQuantization.tflite')
+        interpreter =  tf.lite.Interpreter('%s/DeepCas9variants_model_WeightQuantization.tflite' % self.model_dir)
         interpreter.allocate_tensors()
 
         # 입출력 텐서 가져오기
@@ -54,12 +53,15 @@ class CasVariant:
         # Get the predictions
         predictions = interpreter.get_tensor(output_details[0]['index'])
 
+        df_out = pd.DataFrame()
+        df_out[self.effector] = predictions
+
         # 'predictions' contains the predicted values for the input data using the TFLite model
-        return predictions   
+        return df_out   
 
 
 
-def cas_variant_score(list_target30:list, gpu_env=0):
+def cas_variant_score_original(list_target30:list, gpu_env=0):
     '''DeepSpCas9variants score function
     The list_target30 should have a 30bp sequence in the form of a list.
     
