@@ -1022,8 +1022,8 @@ def pe_score(Ref_seq: str,
         df['Target'] = df_all['WT74_On']
         df['Spacer'] = list_Guide30
         df['RT-PBS'] = df_all['Edited74_On'].apply(get_extension)
-        df['%s_score' % pe_system] = df_all['%s_score' % pe_system]
         df = pd.concat([df,df_all.iloc[:, 3:9]],axis=1)
+        df['%s_score' % pe_system] = df_all['%s_score' % pe_system]
 
         return df
 
