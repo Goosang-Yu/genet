@@ -67,7 +67,8 @@ class SpCas9:
             list_score = Model_Finaltest(sess, seq_processed, model)
         
         df_out = pd.DataFrame()
-        df_out['Sequence']    = list_target30
+        df_out['Target'] = list_target30
+        df_out['Spacer'] = [seq[4:24] for seq in list_target30]
         df_out['SpCas9'] = list_score
 
         return df_out
