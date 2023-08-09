@@ -4,21 +4,28 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 
-from PredUtils import *
+from genet.predict.PredUtils import *
 from genet.models import LoadModel
 
 
 class CasVariant:
     def __init__(self, effector:str):
         '''DeepSpCas9variants score function
+
         The list_target30 should have a 30bp sequence in the form of a list.
-        If you want to use a different GPU (based on nvidia-smi),
-        You can put the GPU number in the gpu_env. \n
+        
+        example) 
+        >>> list_target30 = [
+                        'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
+                        'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
+                        'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
+                        ]
+        \n
         '''
 
         self.effector = effector
 
-        self.model_info = LoadModel(effector)
+        self.model_info = LoadModel('DeepSpCas9variants', effector)
         self.model_dir  = self.model_info.model_dir
 
 
@@ -39,24 +46,29 @@ class CasVariant:
 
         # 입력값 만들기 (preprocessing)
         dataset_seq_masked = preprocess_seq(list_target30, 30)
-        dataset_seq_masked = pd.Series(list(dataset_seq_masked),name='seq')
-        dataset_all = pd.concat([dataset_,dataset_seq_masked],axis=1)
+        dataset_seq_masked = pd.Series(list(dataset_seq_masked), name='seq')
+        dataset_all = pd.concat([dataset_,dataset_seq_masked], axis=1)
 
         X_test_seq = np.stack(dataset_all['seq']).astype(np.float32)
+        list_out = []
 
-        # Set the input tensor data
-        interpreter.set_tensor(input_details[0]['index'], X_test_seq)
+        for input_seq in X_test_seq:
+            input_seq = np.reshape(input_seq, (1, 30, 4))
 
-        # Run the inference
-        interpreter.invoke()
+            # Set the input tensor data
+            interpreter.set_tensor(input_details[0]['index'], input_seq)
 
-        # Get the predictions
-        predictions = interpreter.get_tensor(output_details[0]['index'])
+            # Run the inference
+            interpreter.invoke()
+
+            # Get the predictions
+            predictions = interpreter.get_tensor(output_details[0]['index'])
+            list_out.append(predictions[0][0])
 
         df_out = pd.DataFrame()
-        df_out[self.effector] = predictions
+        df_out['Sequence']    = list_target30
+        df_out[self.effector] = list_out
 
-        # 'predictions' contains the predicted values for the input data using the TFLite model
         return df_out   
 
 
