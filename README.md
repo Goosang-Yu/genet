@@ -78,7 +78,39 @@ DeepSpCas9 is a prediction model developed to evaluate to indel frequency introd
 
 
 ```python
-from genet import predict as prd
+from genet.predict import SpCas9
+
+# Put the target context (30bp) that you want to find Cas9 activity in the list.
+# Input seq: 4bp 5' context + 20 guide + 3bp PAM + 3bp 3' context
+
+spcas = SpCas9()
+
+list_target = [
+                'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
+                'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
+                'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
+                ]
+                
+df_out = spcas.predict(list_target)
+
+>>> df_out
+```
+|   | Sequence                       | SpCas9   |
+| - | ------------------------------ | -------- |
+| 0 | TCACCTTCGTTTTTTTCCTTCTGCAGGAGG | 2.801168 |
+| 1 | CCTTCGTTTTTTTCCTTCTGCAGGAGGACA | 2.253283 |
+| 2 | CTTTCAAGAACTCTTCCACCTCCATGGTGT | 53.43183 |
+
+
+## Tutorial 2: Predict SpCas9variants activity (by DeepSpCas9variants)
+DeepSpCas9 is a prediction model developed to evaluate to indel frequency introduced by sgRNAs at specific target sites mediated by the SpCas9 PAM variants ([Kim et al. Nat.Biotechnol. 2020](https://doi.org/10.1038/s41587-020-0537-9)). The model was developed on tensorflow (version >= 2.6). Any dependent packages will be installed along with the GenET package.
+
+```python
+from genet.predict import CasVariant
+
+# Available Cas9 variants: 
+# SpCas9-NG, SpCas9-NRCH, SpCas9-NRRH, SpCas9-NRTH, SpCas9-Sc++, SpCas9-SpCas9, SpCas9-SpG, SpCas9-SpRY, SpCas9-VRQR
+cas_ng = CasVariant('SpCas9-NG')
 
 # Put the target context (30bp) that you want to find Cas9 activity in the list.
 # Input seq: 4bp 5' context + 20 guide + 3bp PAM + 3bp 3' context
@@ -89,13 +121,17 @@ list_target30 = [
                 'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
                 ]
                 
-list_out = prd.spcas9_score(list_target30)
+df_out = cas_ng.predict(list_target30)
 
-list_out
->>> [2.80322408676147, 2.25273704528808, 53.4233360290527]
+>>> df_out
 ```
+|   | Sequence                       | SpCas9-NG |
+| - | ------------------------------ | --------- |
+| 0 | TCACCTTCGTTTTTTTCCTTCTGCAGGAGG | 0.618299  |
+| 1 | CCTTCGTTTTTTTCCTTCTGCAGGAGGACA | 1.134845  |
+| 2 | CTTTCAAGAACTCTTCCACCTCCATGGTGT | 36.74358  |
 
-## Tutorial 2: Predict Prime editing efficiency (by DeepPrime and DeepPrime-FT)
+## Tutorial 3: Predict Prime editing efficiency (by DeepPrime and DeepPrime-FT)
 ![](docs/images/Fig3_DeepPrime_architecture.svg)
 DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs) that target specific target sites for prime editing ([Yu et al. Cell 2023](https://doi.org/10.1016/j.cell.2023.03.034)). DeepSpCas9 prediction score is calculated simultaneously and requires tensorflow (version >=2.6). DeepPrime was developed on pytorch.
 
@@ -137,7 +173,7 @@ df_pe = prd.pe_score(seq_wt, seq_ed, alt_type, sID='MyGene', pe_system='PE4max',
 ```
 
 
-## Tutorial 3: Get ClinVar record and DeepPrime score using GenET
+## Tutorial 4: Get ClinVar record and DeepPrime score using GenET
 ClinVar database contains mutations that are clinically evaluated to be pathogenic and related to human diseases([Laudrum et al. NAR 2018](https://academic.oup.com/nar/article/46/D1/D1062/4641904)). GenET utilized the NCBI efect module to access ClinVar records to retrieve related variant data such as the genomic sequence, position, and mutation pattern. Using this data, genET designs and evaluates pegRNAs that target the variant using DeepPrime.
 
 ```python
@@ -173,7 +209,7 @@ cv_record = db.GetClinVar('VCV000428864.3')
 prd.pecv_score(cv_record)
 ```
 
-## Tutorial 4: Make additional synonymous mutations in pegRNA (GenET design module)
+## Tutorial 5: Make additional synonymous mutations in pegRNA (GenET design module)
 ```python
 from genet import predict
 from genet import design
@@ -194,7 +230,7 @@ pegrna_ext = synony_pegrna.extension
 ```
 
 
-## Tutorial 5: Get Gene information from NCBI (GenET database module)
+## Tutorial 6: Get Gene information from NCBI (GenET database module)
 The database module is used to retrieve sequence and feature information regarding the target gene of interest. This process is based on the Entrez module on biopython. Currently, obtaining only the meta data cooresponding to each feature is available, but in the future, we plan to implement sequence retreival followed by full preprocessing of neccesary information required for genome editing.
 
 ex) Retrieve gene info from NCBI
