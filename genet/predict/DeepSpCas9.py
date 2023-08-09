@@ -1,4 +1,4 @@
-import os, sys
+import os, sys, regex
 import numpy as np
 import pandas as pd
 
@@ -26,10 +26,9 @@ class SpCas9:
                             'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
                             'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
                             ]
-
-        >>> list_out = spcas9_score(list_target30)
+        >>> deepspcas9 = genet.predict.SpCas9()
         
-        >>> list_out = [2.80322408676147, 2.25273704528808, 53.4233360290527]
+        >>> spcas_score = deepspcas9(list_target30)
         '''
 
         # TensorFlow config
@@ -37,8 +36,8 @@ class SpCas9:
         self.conf.gpu_options.allow_growth = True
         os.environ['CUDA_VISIBLE_DEVICES'] = '%d' % gpu_env
 
-        model_info = LoadModel('DeepSpCas9', 'SpCas9')
-        model_dir  = model_info.model_dir
+        self.model = LoadModel('DeepSpCas9', 'SpCas9')
+        model_dir  = self.model.model_dir
         best_model = 'PreTrain-Final-3-5-7-100-70-40-0.001-550-80-60'
 
         self.model_save = '%s/%s' % (model_dir, best_model)
@@ -59,18 +58,62 @@ class SpCas9:
 
         with tf.compat.v1.Session(config=self.conf) as sess:
             sess.run(tf.compat.v1.global_variables_initializer())
-            model = DeepCas9(self.params[0], self.params[1], 80, 60, self.params[2])
+            interpreter = DeepCas9(self.params[0], self.params[1], 80, 60, self.params[2])
 
             saver = tf.compat.v1.train.Saver()
             saver.restore(sess, self.model_save)
 
-            list_score = Model_Finaltest(sess, seq_processed, model)
+            list_score = Model_Finaltest(sess, seq_processed, interpreter)
         
         df_out = pd.DataFrame()
         df_out['Target'] = list_target30
         df_out['Spacer'] = [seq[4:24] for seq in list_target30]
         df_out['SpCas9'] = list_score
 
+        return df_out
+    
+    def search(self, seq: str) -> pd.DataFrame:
+        '''주어진 sequence 내에 가능한 모든 target sequence를 찾고, 
+        그 정보와 예측 점수를 계산하는 method
+        '''
+        
+        self.seq = seq.upper()
+        dict_re  = self.model.info['regex']
+        
+        seq_target, seq_guide, seq_strand, pos_start, pos_end = [], [], [], [], []
+        
+        for strand in ['+', '-']:
+            ptn = dict_re[strand]
+
+            for re_idx in regex.finditer(ptn, self.seq, overlapped=True):
+                if strand == '+': match = re_idx.group()
+                else            : match = reverse_complement(re_idx.group())
+        
+                seq_target.append(match)
+                seq_guide.append(match[4:24])
+                seq_strand.append(strand)
+                pos_start.append(re_idx.start())
+                pos_end.append(re_idx.end())
+                
+        
+        seq_processed = preprocess_seq(seq_target, 30)
+
+        with tf.compat.v1.Session(config=self.conf) as sess:
+            sess.run(tf.compat.v1.global_variables_initializer())
+            interpreter = DeepCas9(self.params[0], self.params[1], 80, 60, self.params[2])
+
+            saver = tf.compat.v1.train.Saver()
+            saver.restore(sess, self.model_save)
+
+            list_score = Model_Finaltest(sess, seq_processed, interpreter)
+        
+        df_out = pd.DataFrame({'Target': seq_target,
+                               'Spacer': seq_guide,
+                               'Strand': seq_strand,
+                               'Start' : pos_start,
+                               'End'   : pos_end,
+                               'SpCas9': list_score})
+        
         return df_out
     
 
