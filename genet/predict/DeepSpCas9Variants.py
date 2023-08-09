@@ -66,7 +66,9 @@ class CasVariant:
             list_out.append(predictions[0][0])
 
         df_out = pd.DataFrame()
-        df_out['Sequence']    = list_target30
+        df_out['Target'] = list_target30
+        df_out['Spacer'] = [seq[4:24] for seq in list_target30]
+
         df_out[self.effector] = list_out
 
         return df_out   

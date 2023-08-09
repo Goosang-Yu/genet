@@ -953,7 +953,8 @@ def pe_score(Ref_seq: str,
             cell_type:str = 'HEK293T',
             pbs_min:int   = 7,
             pbs_max:int   = 15,
-            rtt_max:int   = 40
+            rtt_max:int   = 40,
+            show_features = False,
             ):
     '''
     Function to score Deep Prime score.\n
@@ -998,19 +999,36 @@ def pe_score(Ref_seq: str,
     cFeat.determine_seqs()
     cFeat.determine_secondary_structure()
 
-    df = cFeat.make_output_df()
+    df_all = cFeat.make_output_df()
 
-    if len(df) > 0:
-        list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
-        df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
-        df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
+    if len(df_all) > 0:
+        list_Guide30 = [WT74[:30] for WT74 in df_all['WT74_On']]
+        df_all['DeepSpCas9_score'] = spcas9_score(list_Guide30)
+        df_all['%s_score' % pe_system]  = calculate_deepprime_score(df_all, pe_system, cell_type)
     
     else:
         print('\nsID:', sID)
         print('DeepPrime only support RTT length upto 40nt')
         print('There are no available pegRNAs, please check your input sequences\n')
 
-    return df
+    if show_features == False:
+
+        def get_extension(masked_seq:str):
+            ext_seq = masked_seq.replace('x', '')
+            ext_seq = reverse_complement(ext_seq)
+            return ext_seq
+        
+        df = pd.DataFrame()
+        df['Target'] = df_all['WT74_On']
+        df['Spacer'] = list_Guide30
+        df['RT-PBS'] = df_all['Edited74_On'].apply(get_extension)
+        df['%s_score' % pe_system] = df_all['%s_score' % pe_system]
+        df = pd.concat([df,df_all.iloc[:, 3:9]],axis=1)
+
+        return df
+
+    elif show_features == True:
+        return df_all
 
 def pecv_score(cv_record,
                sID:str       = 'Sample',
