@@ -9,20 +9,25 @@ Get your models from here!
 '''
 
 class LoadModel:
-    def __init__(self, effector, cell_type=None):
+    def __init__(self, model:str, effector:str, cell_type=None):
         '''
         self.model_dir: 모델 check point file들이 저장되어있는 위치
         '''
 
-        if effector == 'SpCas9':
+        if model == 'DeepSpCas9':
             model_type = effector
-            
+        elif model == 'DeepSpCas9variants':
+            model_type = effector
+        elif model == 'DeepSmallCas9':
+            model_type = effector
+        elif model == 'DeepPrime':
+            model_type = effector + '-' + cell_type
         else: 
             model_type = effector + '-' + cell_type
         
         # 이 모델이 genet에서 지원하는 것인지 확인하기
         try: 
-            self.model_info = models.constants.dict_model_path[model_type]
+            self.model_info = models.constants.dict_model_info[model_type]
         except:
             print('[Warning] Not available model in GenET!')
             sys.exit()
