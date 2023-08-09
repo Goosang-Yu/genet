@@ -27,13 +27,13 @@ class LoadModel:
         
         # 이 모델이 genet에서 지원하는 것인지 확인하기
         try: 
-            self.model_info = models.constants.dict_model_info[model_type]
+            self.info = models.constants.dict_model_info[model_type]
         except:
             print('[Warning] Not available model in GenET!')
             sys.exit()
         
         # model_dir: 
-        self.model_dir  = inspect.getfile(models).replace('__init__.py', '') + self.model_info['path']
+        self.model_dir  = inspect.getfile(models).replace('__init__.py', '') + self.info['path']
 
         # 만약 모델이 아직 다운로드 되지 않았다면, 다운로드 하기.
         if not os.path.exists(self.model_dir):
@@ -42,9 +42,9 @@ class LoadModel:
             dict_files = models.constants.dict_model_requests
 
             self.download_from_github(
-                repo      = self.model_info['repo'],
-                path      = self.model_info['path'],
-                files     = dict_files[self.model_info['type']],
+                repo      = self.info['repo'],
+                path      = self.info['path'],
+                files     = dict_files[self.info['type']],
                 save_dir  = self.model_dir,
                 )
 
