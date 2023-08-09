@@ -23,3 +23,12 @@ def preprocess_seq(data, seq_length):
                 sys.exit()
 
     return seq_onehot
+
+def reverse_complement(sSeq):
+    dict_sBases = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N', 'U': 'U', 'n': '',
+                   '.': '.', '*': '*', 'a': 't', 'c': 'g', 'g': 'c', 't': 'a'}
+    list_sSeq = list(sSeq)  # Turns the sequence in to a gigantic list
+    list_sSeq = [dict_sBases[sBase] for sBase in list_sSeq]
+    return ''.join(list_sSeq)[::-1]
+
+# def END: reverse_complement
