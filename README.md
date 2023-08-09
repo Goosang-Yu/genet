@@ -101,6 +101,26 @@ df_out = spcas.predict(list_target)
 | 1      | CCTTCGTTTTTTTCCTTCTGCAGGAGGACA | CGTTTTTTTCCTTCTGCAGG | 2.253288 |
 | 2      | CTTTCAAGAACTCTTCCACCTCCATGGTGT | CAAGAACTCTTCCACCTCCA | 53.43182 |
 
+Alternatively, you can identify all possible SpCas9 target sites within an extensive gene sequence and obtain predictive scores.
+```python
+from genet.predict import SpCas9
+
+# Put the whole sequence context that you want to find Cas9 target site.
+gene = 'ttcagctctacgtctcctccgagagccgcttcaacaccctggccgagttggttcatcatcattcaacggtggccgacgggctcatcaccacgctccattatccagccccaaagcgcaacaagcccactgtctatggtgtgtcccccaactacgacaagtgggagatggaacgcacggacatcaccatgaagcacaagctgggcgggggccagtacggggaggtgtacgagggcgtgtggaagaaatacagcctgacggtggccgtgaagaccttgaaggtagg'
+                
+spcas = SpCas9()
+df_out = spcas.search(gene)
+
+>>> df_out.head()
+```
+|   | Target                         | Spacer               | Strand | Start | End | SpCas9   |
+| - | ------------------------------ | -------------------- | ------ | ----- | --- | -------- |
+| 0 | CCTCCGAGAGCCGCTTCAACACCCTGGCCG | CGAGAGCCGCTTCAACACCC | +      | 15    | 45  | 67.39446 |
+| 1 | GCCGCTTCAACACCCTGGCCGAGTTGGTTC | CTTCAACACCCTGGCCGAGT | +      | 24    | 54  | 27.06508 |
+| 2 | CCGAGTTGGTTCATCATCATTCAACGGTGG | GTTGGTTCATCATCATTCAA | +      | 42    | 72  | 34.11356 |
+| 3 | AGTTGGTTCATCATCATTCAACGGTGGCCG | GGTTCATCATCATTCAACGG | +      | 45    | 75  | 76.43662 |
+| 4 | TCATCATCATTCAACGGTGGCCGACGGGCT | CATCATTCAACGGTGGCCGA | +      | 52    | 82  | 29.63767 |
+
 
 ## Tutorial 2: Predict SpCas9variants activity (by DeepSpCas9variants)
 DeepSpCas9 is a prediction model developed to evaluate to indel frequency introduced by sgRNAs at specific target sites mediated by the SpCas9 PAM variants ([Kim et al. Nat.Biotechnol. 2020](https://doi.org/10.1038/s41587-020-0537-9)). The model was developed on tensorflow (version >= 2.6). Any dependent packages will be installed along with the GenET package.
