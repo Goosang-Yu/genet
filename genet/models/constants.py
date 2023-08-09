@@ -10,14 +10,18 @@ dict_model_info = {
     'SpCas9': {
         'type': 'DeepSpCas9',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9'
+        'path': 'DeepSpCas9',
+        'regex': {'+': '[ATGC]{25}GG[ATGC]{3}',
+                  '-': '[ATGC]{3}CC[ATGC]{25}',},
     },
 
     # DeepSpCas9variants
     'SpCas9-NG': {
         'type': 'DeepSpCas9variants',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9variants/PAM_variant_NG'
+        'path': 'DeepSpCas9variants/PAM_variant_NG',
+        'regex': {'+': '[ATGC]{25}G[ATGC]{4}',
+                  '-': '[ATGC]{4}C[ATGC]{25}',},
     },
     'SpCas9-NRCH': {
         'type': 'DeepSpCas9variants',
