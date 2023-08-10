@@ -151,6 +151,29 @@ df_out = cas_ng.predict(list_target30)
 | 1 | CCTTCGTTTTTTTCCTTCTGCAGGAGGACA | CGTTTTTTTCCTTCTGCAGG | 1.134845  |
 | 2 | CTTTCAAGAACTCTTCCACCTCCATGGTGT | CAAGAACTCTTCCACCTCCA | 36.74358  |
 
+Similarly, in CasVariants, you can also utilize the 'search' method. It automatically identifies targets corresponding to each PAM variant and calculates predictive scores. For instance, SpCas9-NRCH identifies NG+NA+NNG PAMs.
+
+```python
+from genet.predict import CasVariant
+
+# Put the whole sequence context that you want to find Cas9Variants target site.
+gene = 'ttcagctctacgtctcctccgagagccgcttcaacaccctggccgagttggttcatcatcattcaacggtggccgacgggctcatcaccacgctccattatccagccccaaagcgcaacaagcccactgtctatggtgtgtcccccaactacgacaagtgggagatggaacgcacggacatcaccatgaagcacaagctgggcgggggccagtacggggaggtgtacgagggcgtgtggaagaaatacagcctgacggtggccgtgaagaccttgaaggtagg'
+                
+
+cas_ng = CasVariant('SpCas9-NRCH')
+df_out = cas_ng.search(gene)
+
+>>> df_out.head()
+```
+
+|   | Target                         | Spacer               | Strand | Start | End | SpCas9-NRCH |
+| - | ------------------------------ | -------------------- | ------ | ----- | --- | ----------- |
+| 0 | TCAGCTCTACGTCTCCTCCGAGAGCCGCTT | CTCTACGTCTCCTCCGAGAG | +      | 1     | 31  | 26.43327    |
+| 1 | CAGCTCTACGTCTCCTCCGAGAGCCGCTTC | TCTACGTCTCCTCCGAGAGC | +      | 2     | 32  | 40.16034    |
+| 2 | CTACGTCTCCTCCGAGAGCCGCTTCAACAC | GTCTCCTCCGAGAGCCGCTT | +      | 7     | 37  | 47.06001    |
+| 3 | TACGTCTCCTCCGAGAGCCGCTTCAACACC | TCTCCTCCGAGAGCCGCTTC | +      | 8     | 38  | 20.26012    |
+| 4 | CGTCTCCTCCGAGAGCCGCTTCAACACCCT | TCCTCCGAGAGCCGCTTCAA | +      | 10    | 40  | 45.58047    |
+
 ## Tutorial 3: Predict Prime editing efficiency (by DeepPrime and DeepPrime-FT)
 ![](docs/images/Fig3_DeepPrime_architecture.svg)
 DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs) that target specific target sites for prime editing ([Yu et al. Cell 2023](https://doi.org/10.1016/j.cell.2023.03.034)). DeepSpCas9 prediction score is calculated simultaneously and requires tensorflow (version >=2.6). DeepPrime was developed on pytorch.
