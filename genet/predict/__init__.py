@@ -1,6 +1,6 @@
 from genet.predict.functional import *
 from genet.predict.DeepSpCas9 import *
-from genet.predict.DeepSpCas9Variants import *
+from genet.predict.DeepCas9Variants import *
 
 #### Under development ###
 # from genet.predict.DeepSmallCas9 import *

@@ -16,7 +16,7 @@ class LoadModel:
 
         if model == 'DeepSpCas9':
             model_type = effector
-        elif model == 'DeepSpCas9variants':
+        elif model == 'DeepCas9variants':
             model_type = effector
         elif model == 'DeepSmallCas9':
             model_type = effector
