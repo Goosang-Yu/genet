@@ -2,66 +2,90 @@
 All models from GitHub repository: genet-models
 '''
 
-
-
 dict_model_info = {
     
     # DeepSpCas9 model
     'SpCas9': {
+        # PAM pattern: NGG + NGA + NAG
         'type': 'DeepSpCas9',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
         'path': 'DeepSpCas9',
-        'regex': {'+': '[ATGC]{25}GG[ATGC]{3}',
-                  '-': '[ATGC]{3}CC[ATGC]{25}',},
+        'regex': {'+': '[ATGC]{25}G[AG][ATGC]{3}|[ATGC]{25}AG[ATGC]{3}',
+                  '-': '[ATGC]{3}[CT]C[ATGC]{25}|[ATGC]{3}CT[ATGC]{25}',},
     },
 
-    # DeepSpCas9variants
+    # DeepCas9variants
     'SpCas9-NG': {
-        'type': 'DeepSpCas9variants',
+        # PAM pattern: NG + NA
+        'type': 'DeepCas9variants',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9variants/PAM_variant_NG',
-        'regex': {'+': '[ATGC]{25}G[ATGC]{4}',
-                  '-': '[ATGC]{4}C[ATGC]{25}',},
+        'path': 'DeepCas9variants/PAM_variant_NG',
+        'regex': {'+': '[ATGC]{25}[AG][ATGC]{4}',
+                  '-': '[ATGC]{4}[TC][ATGC]{25}',},
     },
     'SpCas9-NRCH': {
-        'type': 'DeepSpCas9variants',
+        # PAM pattern: NG + NA + NNG
+        'type': 'DeepCas9variants',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9variants/PAM_variant_NRCH'
+        'path': 'DeepCas9variants/PAM_variant_NRCH',
+        'regex': {'+': '[ATGC]{25}[AG][ATGC]{4}|[ATGC]{26}G[ATGC]{3}',
+                  '-': '[ATGC]{4}[TC][ATGC]{25}|[ATGC]{3}C[ATGC]{26}',},
     },
     'SpCas9-NRRH': {
-        'type': 'DeepSpCas9variants',
+        # PAM pattern: NG + NA
+        'type': 'DeepCas9variants',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9variants/PAM_variant_NRRH'
+        'path': 'DeepCas9variants/PAM_variant_NRRH',
+        'regex': {'+': '[ATGC]{25}[AG][ATGC]{4}',
+                  '-': '[ATGC]{4}[TC][ATGC]{25}',},
     },
     'SpCas9-NRTH': {
-        'type': 'DeepSpCas9variants',
+        # PAM pattern: NG + NA
+        'type': 'DeepCas9variants',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9variants/PAM_variant_NRTH'
+        'path': 'DeepCas9variants/PAM_variant_NRTH',
+        'regex': {'+': '[ATGC]{25}[AG][ATGC]{4}',
+                  '-': '[ATGC]{4}[TC][ATGC]{25}',},
     },
     'SpCas9-Sc++': {
-        'type': 'DeepSpCas9variants',
+        # PAM pattern: NNG[CGT]
+        'type': 'DeepCas9variants',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9variants/PAM_variant_Sc++'
+        'path': 'DeepCas9variants/PAM_variant_Sc++',
+        'regex': {'+': '[ATGC]{26}G[TGC][ATGC]{2}',
+                  '-': '[ATGC]{2}[AGC]C[ATGC]{26}',},
     },
     'SpCas9-SpCas9': {
-        'type': 'DeepSpCas9variants',
+        # PAM pattern: NGG + NGA + NAG
+        'type': 'DeepCas9variants',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9variants/PAM_variant_SpCas9'
+        'path': 'DeepCas9variants/PAM_variant_SpCas9',
+        'regex': {'+': '[ATGC]{25}G[AG][ATGC]{3}|[ATGC]{25}AG[ATGC]{3}',
+                  '-': '[ATGC]{3}[CT]C[ATGC]{25}|[ATGC]{3}CT[ATGC]{25}',},
     },
     'SpCas9-SpG': {
-        'type': 'DeepSpCas9variants',
+        # PAM pattern: NG + NA
+        'type': 'DeepCas9variants',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9variants/PAM_variant_SpG'
+        'path': 'DeepCas9variants/PAM_variant_SpG',
+        'regex': {'+': '[ATGC]{25}[AG][ATGC]{4}',
+                  '-': '[ATGC]{4}[TC][ATGC]{25}',},
     },
     'SpCas9-SpRY': {
-        'type': 'DeepSpCas9variants',
+        # PAM pattern: NNNG
+        'type': 'DeepCas9variants',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9variants/PAM_variant_SpRY'
+        'path': 'DeepCas9variants/PAM_variant_SpRY',
+        'regex': {'+': '[ATGC]{25}[AG][ATGC]{4}|[ATGC]{27}G[ATGC]{2}',
+                  '-': '[ATGC]{4}[CT][ATGC]{25}|[ATGC]{2}C[ATGC]{27}',},
     },
     'SpCas9-VRQR': {
-        'type': 'DeepSpCas9variants',
+        # PAM pattern: NG + NNAG
+        'type': 'DeepCas9variants',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
-        'path': 'DeepSpCas9variants/PAM_variant_VRQR'
+        'path': 'DeepCas9variants/PAM_variant_VRQR',
+        'regex': {'+': '[ATGC]{25}G[ATGC]{4}|[ATGC]{26}AG[ATGC]{2}',
+                  '-': '[ATGC]{4}C[ATGC]{25}|[ATGC]{2}CT[ATGC]{26}',},
     },
 
 
@@ -322,7 +346,7 @@ dict_model_requests = {
         'PreTrain-Final-3-5-7-100-70-40-0.001-550-80-60.meta',
     ],
     
-    'DeepSpCas9variants': [
+    'DeepCas9variants': [
         '__init__.py',
         'DeepCas9variants_model_WeightQuantization.tflite',
     ],

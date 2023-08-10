@@ -23,7 +23,7 @@ class CasVariant:
         '''
 
         self.effector  = effector
-        self.model     = LoadModel('DeepSpCas9variants', effector)
+        self.model     = LoadModel('DeepCas9variants', effector)
         self.model_dir = self.model.model_dir
 
 
@@ -95,23 +95,46 @@ class CasVariant:
                 pos_end.append(re_idx.end())
                 
         
-        seq_processed = preprocess_seq(seq_target, 30)
+        _dataset = pd.DataFrame()
+        _dataset['target + PAM'] = seq_target
 
-        with tf.compat.v1.Session(config=self.conf) as sess:
-            sess.run(tf.compat.v1.global_variables_initializer())
-            interpreter = DeepCas9(self.params[0], self.params[1], 80, 60, self.params[2])
+        # TFLite model loading / allocate tensor
+        interpreter =  tf.lite.Interpreter('%s/DeepCas9variants_model_WeightQuantization.tflite' % self.model_dir)
+        interpreter.allocate_tensors()
 
-            saver = tf.compat.v1.train.Saver()
-            saver.restore(sess, self.model_save)
+        # 입출력 텐서 가져오기
+        input_details  = interpreter.get_input_details()
+        output_details = interpreter.get_output_details()
 
-            list_score = Model_Finaltest(sess, seq_processed, interpreter)
-        
+        # 입력값 만들기 (preprocessing)
+        _dataset_seq_masked = preprocess_seq(seq_target, 30)
+        _dataset_seq_masked = pd.Series(list(_dataset_seq_masked), name='seq')
+        _dataset_all = pd.concat([_dataset,_dataset_seq_masked], axis=1)
+
+        X_test_seq = np.stack(_dataset_all['seq']).astype(np.float32)
+        list_out = []
+
+        for input_seq in X_test_seq:
+            input_seq = np.reshape(input_seq, (1, 30, 4))
+
+            # Set the input tensor data
+            interpreter.set_tensor(input_details[0]['index'], input_seq)
+
+            # Run the inference
+            interpreter.invoke()
+
+            # Get the predictions
+            predictions = interpreter.get_tensor(output_details[0]['index'])
+            list_out.append(predictions[0][0])
+
+
         df_out = pd.DataFrame({'Target': seq_target,
                                'Spacer': seq_guide,
                                'Strand': seq_strand,
                                'Start' : pos_start,
-                               'End'   : pos_end,
-                               'SpCas9': list_score})
+                               'End'   : pos_end,})
+        
+        df_out[self.effector] = list_out
         
         return df_out
 
