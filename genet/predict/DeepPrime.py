@@ -1,6 +1,8 @@
-# from genet.utils import *
 import genet
 import genet.utils
+from genet.predict.PredUtils import *
+from genet.predict.DeepSpCas9 import SpCas9
+from genet.models import LoadModel
 
 import torch
 import torch.nn.functional as F
@@ -9,14 +11,12 @@ import torch.nn as nn
 import os, sys, regex, logging
 import numpy as np
 import pandas as pd
-
-import tensorflow as tf
-# tf.disable_v2_behavior()
-
 from glob import glob
+
 from Bio.SeqUtils import MeltingTemp as mt
 from Bio.SeqUtils import gc_fraction as gc
 from Bio.Seq import Seq
+
 from RNA import fold_compound
 
 np.set_printoptions(threshold=sys.maxsize)
@@ -64,10 +64,10 @@ class DeepPrime:
 
         ## FeatureExtraction Class
         cFeat = FeatureExtraction()
+        self.logger.info('Make features of pegRNAs')
 
         cFeat.input_id = sID
         cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
-
         cFeat.get_sAltNotation(self.nAltIndex)
         cFeat.get_all_RT_PBS(self.nAltIndex, nMinPBS= self.pbs_min-1, nMaxPBS=self.pbs_max, nMaxRT=rtt_max, pam=self.pam)
         cFeat.make_rt_pbs_combinations()
@@ -78,17 +78,81 @@ class DeepPrime:
         
         del cFeat
 
+        if len(self.features) > 0:
+            self.list_Guide30 = [WT74[:30] for WT74 in self.features['WT74_On']]
+            self.features['DeepSpCas9_score'] = SpCas9().predict(self.list_Guide30)['SpCas9']
+        
+        else:
+            print('\nsID:', sID)
+            print('DeepPrime only support RTT length upto 40nt')
+            print('There are no available pegRNAs, please check your input sequences\n')
+
         self.logger.info('Created an instance of DeepPrime')
 
     # def __init__: END
 
 
-    def submit(self, pe_system:str, cell_type:str = 'HEK293T'):
-        print('start pe_scre', self.Ref_seq, self.ED_seq, )
+    def predict(self, pe_system:str, cell_type:str = 'HEK293T', show_features:bool = False, report=False):
 
-        return None
+        df_all = self.features.copy()
 
-    # def submit: END
+        os.environ['CUDA_VISIBLE_DEVICES']='0'
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        
+        model_info = LoadModel('DeepPrime', pe_system, cell_type)
+        model_dir  = model_info.model_dir
+
+        mean = pd.read_csv(f'{model_dir}/mean.csv', header=None, index_col=0).squeeze()
+        std  = pd.read_csv(f'{model_dir}/std.csv',  header=None, index_col=0).squeeze()
+
+        test_features = select_cols(df_all)
+
+        g_test = seq_concat(df_all)
+        x_test = (test_features - mean) / std
+
+        g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
+        x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
+
+        models = [m_files for m_files in glob(f'{model_dir}/*.pt')]
+        preds  = []
+
+        for m in models:
+            model = GeneInteractionModel(hidden_size=128, num_layers=1).to(device)
+            model.load_state_dict(torch.load(m, map_location=device))
+            model.eval()
+            with torch.no_grad():
+                g, x = g_test, x_test
+                g = g.permute((0, 3, 1, 2))
+                pred = model(g, x).detach().cpu().numpy()
+            preds.append(pred)
+        
+        # AVERAGE PREDICTIONS
+        preds = np.squeeze(np.array(preds))
+        preds = np.mean(preds, axis=0)
+        preds = np.exp(preds) - 1
+
+        df_all[f'{pe_system}_score'] = preds
+
+        if show_features == False:
+
+            def get_extension(masked_seq:str):
+                ext_seq = masked_seq.replace('x', '')
+                ext_seq = reverse_complement(ext_seq)
+                return ext_seq
+            
+            df = pd.DataFrame()
+            df['Target'] = df_all['WT74_On']
+            df['Spacer'] = self.list_Guide30
+            df['RT-PBS'] = df_all['Edited74_On'].apply(get_extension)
+            df = pd.concat([df,df_all.iloc[:, 3:9]],axis=1)
+            df[f'{pe_system}_score'] = df_all[f'{pe_system}_score']
+
+            return df
+
+        elif show_features == True:
+            return df_all
+
+    # def predict: END
 
 
     def set_logging(self):
@@ -135,45 +199,101 @@ class DeepPrime:
 
     def check_input(self):
         
+        if len(self.Ref_seq) != 121:
+            self.error(f'sID:{self.sID}\nThe length of Ref_seq should be 121nt')
+            raise ValueError('Please check your input: Ref_seq')
+        
+        if len(self.ED_seq) != 121:
+            self.error(f'sID:{self.sID}\nThe length of ED_seq should be 121nt')
+            raise ValueError('Please check your input: ED_seq')
+
         if self.pbs_min < 1:
-            self.error('sID:%s\nPlease set PBS max length at least 1nt' % self.sID)
+            self.error(f'sID:{self.sID}\nPlease set PBS max length at least 1nt')
             raise ValueError('Please check your input: pbs_min')
         
         if self.pbs_max > 17:
-            self.error('sID:%s\nPlease set PBS max length upto 17nt' % self.sID)
+            self.error(f'sID:{self.sID}\nPlease set PBS max length upto 17nt')
             raise ValueError('Please check your input: pbs_max')
         
         if self.rtt_max > 40:
-            self.error('sID:%s\nPlease set RTT max length upto 40nt' % self.sID)
+            self.error(f'sID:{self.sID}\nPlease set RTT max length upto 40nt')
             raise ValueError('Please check your input: rtt_max')
 
         if self.edit_type not in ['sub', 'ins', 'del']:
-            self.error('sID:%s\n\t Please select proper edit type.\n\t Available edit tyle: sub, ins, del' % self.sID)
+            self.error(f'sID:{self.sID}\n\t Please select proper edit type.\n\t Available edit style: sub, ins, del')
+            raise ValueError('Please check your input: edit_type')
+        
+        if self.pam not in ['NGG', 'NRCH']:
+            self.error(f'sID:{self.sID}\n\t Please select proper PAM type.\n\t Available PAM: NGG, NRCH')
             raise ValueError('Please check your input: edit_type')
 
         if self.edit_len > 3:
-            self.error('sID:%s\n\t Please set edit length upto 3nt. Available edit length range: 1~3nt' % self.sID)
+            self.error(f'sID:{self.sID}\n\t Please set edit length upto 3nt. Available edit length range: 1~3nt')
             raise ValueError('Please check your input: edit_len')
         
         if self.edit_len < 1:
-            self.error('sID:%s\n\t Please set edit length at least 1nt. Available edit length range: 1~3nt' % self.sID)
+            self.error(f'sID:{self.sID}\n\t Please set edit length at least 1nt. Available edit length range: 1~3nt')
             raise ValueError('Please check your input: edit_len')
 
-        self.info('Input information\n\t ID: %s\n\t Refseq: %s\n\t EDseq :%s' % (self.sID, self.Ref_seq, self.ED_seq))
+        self.info(f'Input information\n\t ID: {self.sID}\n\t Refseq: {self.Ref_seq}\n\t EDseq :{self.ED_seq}')
 
         return None
     
     # def check_input: END
 
 
-    def do_something(self):
-        self.logger.info('Something happened.')
 
-        return None
+def set_alt_position_window(sStrand, sAltKey, nAltIndex, nIndexStart, nIndexEnd, nAltLen):
+    if sStrand == '+':
 
-    # def do_something: END
-    
+        if sAltKey.startswith('sub'):
+            return (nAltIndex + 1) - (nIndexStart - 3)
+        else:
+            return (nAltIndex + 1) - (nIndexStart - 3)
 
+    else:
+        if sAltKey.startswith('sub'):
+            return nIndexEnd - nAltIndex + 3 - (nAltLen - 1)
+
+        elif sAltKey.startswith('del'):
+            return nIndexEnd - nAltIndex + 3 - nAltLen
+
+        else:
+            return nIndexEnd - nAltIndex + 3 + nAltLen
+        # if END:
+    # if END:
+
+# def END: set_alt_position_window
+
+
+def set_PAM_nicking_pos(sStrand, sAltType, nAltLen, nAltIndex, nIndexStart, nIndexEnd):
+    if sStrand == '-':
+        nPAM_Nick = nIndexEnd + 3
+    else:
+        nPAM_Nick = nIndexStart - 3
+
+    return nPAM_Nick
+
+# def END: set_PAM_Nicking_Pos
+
+
+def check_PAM_window(dict_sWinSize, sStrand, nIndexStart, nIndexEnd, sAltType, nAltLen, nAltIndex):
+    nUp, nDown = dict_sWinSize[sAltType][nAltLen]
+
+    if sStrand == '+':
+        nPAMCheck_min = nAltIndex - nUp + 1
+        nPAMCheck_max = nAltIndex + nDown + 1
+    else:
+        nPAMCheck_min = nAltIndex - nDown + 1
+        nPAMCheck_max = nAltIndex + nUp + 1
+    # if END:
+
+    if nIndexStart < nPAMCheck_min or nIndexEnd > nPAMCheck_max:
+        return 0
+    else:
+        return 1
+
+# def END: check_PAM_window
 
 class FeatureExtraction:
     def __init__(self):
@@ -248,7 +368,7 @@ class FeatureExtraction:
                     nMaxRT = 40,
                     nSetPBSLen = 0,
                     nSetRTLen = 0,
-                    pe_system = 'PE2'
+                    pam = 'NGG'
                     ):
         """
         nMinPBS: If you set specific number, lower than MinPBS will be not generated. Default=0
@@ -266,10 +386,10 @@ class FeatureExtraction:
                         'del': {1: [nMaxRT - 1 - 3, 6], 2: [nMaxRT - 1 - 3, 6], 3: [nMaxRT - 1 - 3, 6]}}
 
         
-        if 'NRCH' in pe_system: # for NRCH-PE PAM
+        if pam == 'NRCH': # for NRCH-PE PAM
             dict_sRE = {'+': '[ACGT][ACGT]G[ACGT]|[ACGT][CG]A[ACGT]|[ACGT][AG]CC|[ATCG]ATG', 
                         '-': '[ACGT]C[ACGT][ACGT]|[ACGT]T[CG][ACGT]|G[GT]T[ACGT]|ATT[ACGT]|CAT[ACGT]|GGC[ACGT]|GTA[ACGT]'} 
-        else:
+        elif pam == 'NGG':
             dict_sRE = {'+': '[ACGT]GG[ACGT]', '-': '[ACGT]CC[ACGT]'} # for Original-PE PAM
 
         for sStrand in ['+', '-']:
@@ -690,7 +810,6 @@ class FeatureExtraction:
 # def END: make_output
 
 
-
 class GeneInteractionModel(nn.Module):
 
 
@@ -771,63 +890,63 @@ def select_cols(data):
 
 
 
-def reverse_complement(sSeq):
-    dict_sBases = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N', 'U': 'U', 'n': '',
-                   '.': '.', '*': '*', 'a': 't', 'c': 'g', 'g': 'c', 't': 'a'}
-    list_sSeq = list(sSeq)  # Turns the sequence in to a gigantic list
-    list_sSeq = [dict_sBases[sBase] for sBase in list_sSeq]
-    return ''.join(list_sSeq)[::-1]
 
-# def END: reverse_complement
 
-def set_alt_position_window(sStrand, sAltKey, nAltIndex, nIndexStart, nIndexEnd, nAltLen):
-    if sStrand == '+':
+def pecv_score(cv_record,
+               sID:str       = 'Sample',
+               pe_system:str = 'PE2max',
+               cell_type:str = 'HEK293T',
+               pbs_min:int   = 7,
+               pbs_max:int   = 15,
+               rtt_max:int   = 40
+               ):
 
-        if sAltKey.startswith('sub'):
-            return (nAltIndex + 1) - (nIndexStart - 3)
-        else:
-            return (nAltIndex + 1) - (nIndexStart - 3)
+    '''
+    Using variants records from GetClinVar in the database module.\n
+    You don't have to bring a sequence input to DeepPrime, but you calculate the score right away.\n
+    If DeepPrime is an unpredictable form of variants, it sends out a message.\n
+    
+    '''
+    
+    # check input parameters
+    if pbs_max > 17: return print('sID:%s\nPlease set PBS max length upto 17nt' % sID)
+    if rtt_max > 40: return print('sID:%s\nPlease set RTT max length upto 40nt' % sID)
+    
+    print('DeepPrime score of ClinVar record')
 
+    Ref_seq, ED_seq = cv_record.seq()
+
+    nAltIndex   = 60
+    pbs_range   = [pbs_min, pbs_max]
+    rtt_max     = rtt_max
+    pe_system   = pe_system
+
+    edit_type   = cv_record.alt_type
+    edit_len    = int(cv_record.alt_len)
+
+    ## FeatureExtraction Class
+    cFeat = FeatureExtraction()
+
+    cFeat.input_id = sID
+    cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
+
+    cFeat.get_sAltNotation(nAltIndex)
+    cFeat.get_all_RT_PBS(nAltIndex, nMinPBS=pbs_range[0]-1, nMaxPBS=pbs_range[1], nMaxRT=rtt_max, pe_system=pe_system)
+    cFeat.make_rt_pbs_combinations()
+    cFeat.determine_seqs()
+    cFeat.determine_secondary_structure()
+
+    df = cFeat.make_output_df()
+
+    if len(df) > 0:
+        list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
+        df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
+        df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
+    
     else:
-        if sAltKey.startswith('sub'):
-            return nIndexEnd - nAltIndex + 3 - (nAltLen - 1)
+        print('\nsID:', sID)
+        print('DeepPrime only support RTT length upto 40nt')
+        print('There are no available pegRNAs, please check your input sequences\n')
 
-        elif sAltKey.startswith('del'):
-            return nIndexEnd - nAltIndex + 3 - nAltLen
+    return df
 
-        else:
-            return nIndexEnd - nAltIndex + 3 + nAltLen
-        # if END:
-    # if END:
-
-# def END: set_alt_position_window
-
-
-def set_PAM_nicking_pos(sStrand, sAltType, nAltLen, nAltIndex, nIndexStart, nIndexEnd):
-    if sStrand == '-':
-        nPAM_Nick = nIndexEnd + 3
-    else:
-        nPAM_Nick = nIndexStart - 3
-
-    return nPAM_Nick
-
-# def END: set_PAM_Nicking_Pos
-
-
-def check_PAM_window(dict_sWinSize, sStrand, nIndexStart, nIndexEnd, sAltType, nAltLen, nAltIndex):
-    nUp, nDown = dict_sWinSize[sAltType][nAltLen]
-
-    if sStrand == '+':
-        nPAMCheck_min = nAltIndex - nUp + 1
-        nPAMCheck_max = nAltIndex + nDown + 1
-    else:
-        nPAMCheck_min = nAltIndex - nDown + 1
-        nPAMCheck_max = nAltIndex + nUp + 1
-    # if END:
-
-    if nIndexStart < nPAMCheck_min or nIndexEnd > nPAMCheck_max:
-        return 0
-    else:
-        return 1
-
-# def END: check_PAM_window
