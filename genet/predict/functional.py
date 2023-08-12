@@ -1,257 +1,53 @@
-# from genet.utils import *
 import genet
 import genet.utils
 from genet.predict.PredUtils import *
+from genet.predict.DeepSpCas9 import SpCas9
+from genet.models import LoadModel
 
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-import os, sys, regex, logging
+import os, sys, regex
 import numpy as np
 import pandas as pd
-
-import tensorflow as tf
-
 from glob import glob
+
 from Bio.SeqUtils import MeltingTemp as mt
 from Bio.SeqUtils import gc_fraction as gc
 from Bio.Seq import Seq
+
 from RNA import fold_compound
 
 np.set_printoptions(threshold=sys.maxsize)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
-class Deep_xCas9(object):
-    def __init__(self, filter_size, filter_num, node_1=80, node_2=60, l_rate=0.005):
-        length = 30
-        self.inputs      = tf.compat.v1.placeholder(tf.float32, [None, 1, length, 4])
-        self.targets     = tf.compat.v1.placeholder(tf.float32, [None, 1])
-        self.is_training = tf.compat.v1.placeholder(tf.bool)
 
-        def create_new_conv_layer(input_data, num_input_channels, num_filters, filter_shape, pool_shape, name):
-            # setup the filter input shape for tf.compat.v1.nn.conv_2d
-            conv_filt_shape = [filter_shape[0], filter_shape[1], num_input_channels,
-                               num_filters]
-
-            # initialise weights and bias for the filter
-            w = tf.compat.v1.Variable(tf.compat.v1.truncated_normal(conv_filt_shape, stddev=0.03), name=name + '_W')
-            b = tf.compat.v1.Variable(tf.compat.v1.truncated_normal([num_filters]), name=name + '_b')
-
-            # setup the convolutional layer operation
-            out_layer = tf.nn.conv2d(input_data, w, [1, 1, 1, 1], padding='VALID')
-
-            # add the bias
-            out_layer += b
-
-            # apply a ReLU non-linear activation
-            out_layer = tf.keras.layers.Dropout(rate=0.3)(tf.nn.relu(out_layer))
-
-            # now perform max pooling
-            ksize = [1, pool_shape[0], pool_shape[1], 1]
-            strides = [1, 1, 2, 1]
-            out_layer = tf.nn.avg_pool(out_layer, ksize=ksize, strides=strides, padding='SAME')
-
-            return out_layer
-
-        # def end: create_new_conv_layer
-
-        L_pool_0 = create_new_conv_layer(self.inputs, 4, filter_num[0], [1, filter_size[0]], [1, 2], name='conv1')
-        L_pool_1 = create_new_conv_layer(self.inputs, 4, filter_num[1], [1, filter_size[1]], [1, 2], name='conv2')
-        L_pool_2 = create_new_conv_layer(self.inputs, 4, filter_num[2], [1, filter_size[2]], [1, 2], name='conv3')
-
-        with tf.compat.v1.variable_scope('Fully_Connected_Layer1'):
-            layer_node_0 = int((length - filter_size[0]) / 2) + 1
-            node_num_0   = layer_node_0 * filter_num[0]
-            layer_node_1 = int((length - filter_size[1]) / 2) + 1
-            node_num_1   = layer_node_1 * filter_num[1]
-            layer_node_2 = int((length - filter_size[2]) / 2) + 1
-            node_num_2   = layer_node_2 * filter_num[2]
-
-            L_flatten_0  = tf.reshape(L_pool_0, [-1, node_num_0])
-            L_flatten_1  = tf.reshape(L_pool_1, [-1, node_num_1])
-            L_flatten_2  = tf.reshape(L_pool_2, [-1, node_num_2])
-            L_flatten    = tf.concat([L_flatten_0, L_flatten_1, L_flatten_2], 1, name='concat')
-
-            node_num     = node_num_0 + node_num_1 + node_num_2
-            W_fcl1       = tf.compat.v1.get_variable("W_fcl1", shape=[node_num, node_1])
-            B_fcl1       = tf.compat.v1.get_variable("B_fcl1", shape=[node_1])
-            L_fcl1_pre   = tf.nn.bias_add(tf.matmul(L_flatten, W_fcl1), B_fcl1)
-            L_fcl1       = tf.nn.relu(L_fcl1_pre)
-            L_fcl1_drop  = tf.keras.layers.Dropout(rate=0.3)(L_fcl1)
-
-        with tf.compat.v1.variable_scope('Fully_Connected_Layer2'):
-            W_fcl2       = tf.compat.v1.get_variable("W_fcl2", shape=[node_1, node_2])
-            B_fcl2       = tf.compat.v1.get_variable("B_fcl2", shape=[node_2])
-            L_fcl2_pre   = tf.nn.bias_add(tf.matmul(L_fcl1_drop, W_fcl2), B_fcl2)
-            L_fcl2       = tf.nn.relu(L_fcl2_pre)
-            L_fcl2_drop  = tf.keras.layers.Dropout(rate=0.3)(L_fcl2)
-
-        with tf.compat.v1.variable_scope('Output_Layer'):
-            W_out        = tf.compat.v1.get_variable("W_out", shape=[node_2, 1])
-            B_out        = tf.compat.v1.get_variable("B_out", shape=[1])
-            self.outputs = tf.nn.bias_add(tf.matmul(L_fcl2_drop, W_out), B_out)
-
-        # Define loss function and optimizer
-        self.obj_loss    = tf.reduce_mean(tf.square(self.targets - self.outputs))
-        self.optimizer   = tf.compat.v1.train.AdamOptimizer(l_rate).minimize(self.obj_loss)
-
-    # def end: def __init__
-# class end: Deep_xCas9
-
-
-def Model_Finaltest(sess, TEST_X, model):
-    test_batch = 500
-    TEST_Z = np.zeros((TEST_X.shape[0], 1), dtype=float)
-
-    for i in range(int(np.ceil(float(TEST_X.shape[0]) / float(test_batch)))):
-        Dict = {model.inputs: TEST_X[i * test_batch:(i + 1) * test_batch], model.is_training: False}
-        TEST_Z[i * test_batch:(i + 1) * test_batch] = sess.run([model.outputs], feed_dict=Dict)[0]
-
-    list_score = sum(TEST_Z.tolist(), [])
-
-    return list_score
-
-# def end: Model_Finaltest
-
-
-
-
-def spcas9_score_tf2(list_target30:list, gpu_env=0):
-    '''Tensorflow2 version function
-    The list_target30 should have a 30bp sequence in the form of a list.
-    Also, sequence [24:27] should contain NGG PAM.
+def spcas9_score(list_target30:list=None, gpu_env=0):
+    '''The function "spcas9_score" is not longer supported from GenET ver 0.9.0 anymore.\n
+    Please use ```genet.predict.SpCas9``` instead.'''
     
-    If you want to use a different GPU (based on nvidia-smi),
-    You can put the GPU number in the gpu_env. \n
-    
-    example) 
-    >>> list_target30 = [
-                        'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
-                        'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
-                        'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
-                        ]
-
-    >>> list_out = spcas9_score(list_target30)
-    
-    >>> list_out = [2.80322408676147, 2.25273704528808, 53.4233360290527]
-    '''
-    
-    # TensorFlow config
-    conf = tf.ConfigProto()
-    conf.gpu_options.allow_growth = True
-    os.environ['CUDA_VISIBLE_DEVICES'] = '%d' % gpu_env
-
-    x_test = preprocess_seq(list_target30, 30)
-
-    from genet.models import LoadModel
-    
-    model_info = LoadModel('SpCas9')
-    model_dir  = model_info.model_dir
-    best_model = 'PreTrain-Final-3-5-7-100-70-40-0.001-550-80-60'
-
-    model_save = '%s/%s' % (model_dir, best_model)
-    final_model =  tf.keras.models.load_model(model_save,compile=False)
-
-    dataset_ = pd.DataFrame()
-    dataset_['target + PAM'] = list_target30
-
-    dataset_seq_masked = preprocess_seq(list_target30, 30)
-    dataset_seq_masked = pd.Series(list(dataset_seq_masked),name='seq')
-
-    dataset_all = pd.concat([dataset_,dataset_seq_masked],axis=1)
-
-    X_test_seq = np.stack(dataset_all['seq'])
-    hyperparameter_prediction = final_model.predict(X_test_seq, batch_size=128)
-    hyperparameter_prediction = pd.DataFrame(hyperparameter_prediction)
-
-    hyperparameter_prediction=pd.concat([dataset_all['target + PAM'].reset_index(drop=True),dataset_all['feature'].reset_index(drop=True),hyperparameter_prediction.reset_index(drop=True)],axis=1,ignore_index=True)
-
-    
-    return hyperparameter_prediction
-
-def spcas9_score(list_target30:list, gpu_env=0):
-    '''
-    The list_target30 should have a 30bp sequence in the form of a list.
-    Also, sequence [24:27] should contain NGG PAM.
-    
-    If you want to use a different GPU (based on nvidia-smi),
-    You can put the GPU number in the gpu_env. \n
-    
-    example) 
-    >>> list_target30 = [
-                        'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
-                        'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
-                        'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
-                        ]
-
-    >>> list_out = spcas9_score(list_target30)
-    
-    >>> list_out = [2.80322408676147, 2.25273704528808, 53.4233360290527]
-    '''
-    
-    # TensorFlow config
-    conf = tf.compat.v1.ConfigProto()
-    conf.gpu_options.allow_growth = True
-    os.environ['CUDA_VISIBLE_DEVICES'] = '%d' % gpu_env
-
-    x_test = preprocess_seq(list_target30, 30)
-
-    from genet.models import LoadModel
-    
-    model_info = LoadModel('DeepSpCas9', 'SpCas9')
-    model_dir  = model_info.model_dir
-    best_model = 'PreTrain-Final-3-5-7-100-70-40-0.001-550-80-60'
-
-    model_save = '%s/%s' % (model_dir, best_model)
-    
-    filter_size = [3, 5, 7]
-    filter_num  = [100, 70, 40]
-    args        = [filter_size, filter_num, 0.001, 550]
-
-    tf.compat.v1.reset_default_graph()
-
-    with tf.compat.v1.Session(config=conf) as sess:
-        sess.run(tf.compat.v1.global_variables_initializer())
-        model = Deep_xCas9(filter_size, filter_num, 80, 60, args[2])
-
-        saver = tf.compat.v1.train.Saver()
-        saver.restore(sess, model_save)
-
-        list_score = Model_Finaltest(sess, x_test, model)
-    
-    return list_score
+    print('''The function "spcas9_score" is not longer supported from GenET ver 0.9.0 anymore.\n
+          Please use genet.predict.SpCas9 instead.''')
 
 
 def set_alt_position_window(sStrand, sAltKey, nAltIndex, nIndexStart, nIndexEnd, nAltLen):
     if sStrand == '+':
-
-        if sAltKey.startswith('sub'):
-            return (nAltIndex + 1) - (nIndexStart - 3)
-        else:
-            return (nAltIndex + 1) - (nIndexStart - 3)
+        if sAltKey.startswith('sub'): return (nAltIndex + 1) - (nIndexStart - 3)
+        else                        : return (nAltIndex + 1) - (nIndexStart - 3)
 
     else:
-        if sAltKey.startswith('sub'):
-            return nIndexEnd - nAltIndex + 3 - (nAltLen - 1)
-
-        elif sAltKey.startswith('del'):
-            return nIndexEnd - nAltIndex + 3 - nAltLen
-
-        else:
-            return nIndexEnd - nAltIndex + 3 + nAltLen
-        # if END:
-    # if END:
+        if sAltKey.startswith('sub')  : return nIndexEnd - nAltIndex + 3 - (nAltLen - 1)
+        elif sAltKey.startswith('del'): return nIndexEnd - nAltIndex + 3 - nAltLen
+        else                          : return nIndexEnd - nAltIndex + 3 + nAltLen
 
 # def END: set_alt_position_window
 
 
 def set_PAM_nicking_pos(sStrand, sAltType, nAltLen, nAltIndex, nIndexStart, nIndexEnd):
-    if sStrand == '-':
-        nPAM_Nick = nIndexEnd + 3
-    else:
-        nPAM_Nick = nIndexStart - 3
+    if sStrand == '-': nPAM_Nick = nIndexEnd + 3
+    else             : nPAM_Nick = nIndexStart - 3
 
     return nPAM_Nick
 
@@ -278,10 +74,7 @@ def check_PAM_window(dict_sWinSize, sStrand, nIndexStart, nIndexEnd, sAltType, n
 
 class FeatureExtraction:
     def __init__(self):
-        self.sGuideKey = ''
-        self.sChrID = ''
         self.sStrand = ''
-        self.nGenomicPos = 0
         self.nEditIndex = 0
         self.nPBSLen = 0
         self.nRTTLen = 0
@@ -290,7 +83,6 @@ class FeatureExtraction:
         self.sPegRNASeq = ''
         self.sWTSeq = ''
         self.sEditedSeq = ''
-        self.list_sSeqs = []
         self.type_sub = 0
         self.type_ins = 0
         self.type_del = 0
@@ -548,10 +340,6 @@ class FeatureExtraction:
             nAltPosWin = int(nAltPosWin)
             nNickIndex = int(nPAM_Nick)
 
-            # if sStrand == '+':
-            #     sWTSeq74 = self.sWTSeq[nNickIndex - 21:nNickIndex + 53]
-            # else:
-            #     sWTSeq74 = reverse_complement(self.sWTSeq[nNickIndex - 53:nNickIndex + 21])
 
             for sSeqKey in self.dict_sCombos[sPAMKey]:
 
@@ -790,11 +578,7 @@ class FeatureExtraction:
 
 # def END: make_output
 
-
-
-
 class GeneInteractionModel(nn.Module):
-
 
     def __init__(self, hidden_size, num_layers, num_features=24, dropout=0.1):
         super(GeneInteractionModel, self).__init__()
@@ -878,7 +662,7 @@ def calculate_deepprime_score(df_input, pe_system='PE2max', cell_type='HEK293T')
     os.environ['CUDA_VISIBLE_DEVICES']='0'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    from genet.models import LoadModel
+    
 
     model_info = LoadModel('DeepPrime', pe_system, cell_type)
     model_dir  = model_info.model_dir
@@ -925,6 +709,7 @@ def pe_score(Ref_seq: str,
             pbs_max:int   = 15,
             rtt_max:int   = 40,
             show_features = False,
+            silence:bool  = False,
             ):
     '''
     Function to score Deep Prime score.\n
@@ -941,7 +726,11 @@ def pe_score(Ref_seq: str,
     HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3
     
     '''
-        
+    if silence != True:
+        print('''[Warnning] genet.predict.pe_score will be deprecated in future.\n
+            Please consider genet.predict.DeepPrime instead.\n
+            Run DeepPrime now anyway.\n''')
+            
     nAltIndex   = 60
     pbs_range   = [pbs_min, pbs_max]
     rtt_max     = rtt_max
@@ -973,7 +762,7 @@ def pe_score(Ref_seq: str,
 
     if len(df_all) > 0:
         list_Guide30 = [WT74[:30] for WT74 in df_all['WT74_On']]
-        df_all['DeepSpCas9_score'] = spcas9_score(list_Guide30)
+        df_all['DeepSpCas9_score'] = SpCas9().predict(list_Guide30)['SpCas9']
         df_all['%s_score' % pe_system]  = calculate_deepprime_score(df_all, pe_system, cell_type)
     
     else:
@@ -998,6 +787,7 @@ def pe_score(Ref_seq: str,
         return df
 
     elif show_features == True:
+        
         return df_all
 
 def pecv_score(cv_record,
@@ -1057,156 +847,4 @@ def pecv_score(cv_record,
         print('There are no available pegRNAs, please check your input sequences\n')
 
     return df
-
-
-class DeepPrime:
-    '''
-    DeepPrime: pegRNA activity prediction models\n
-    Input  = 121 nt DNA sequence without edit\n
-    Output = 121 nt DNA sequence with edit\n
-    
-    ### Available Edit types\n
-    sub1, sub2, sub3, ins1, ins2, ins3, del1, del2, del3\n
-    
-    ### Available PE systems\n
-    PE2, PE2max, PE4max, NRCH_PE2, NRCH_PE2max, NRCH_PE4max\n
-    
-    ### Available Cell types\n
-    HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3
-    
-    '''
-    def __init__(self, sID:str, Ref_seq: str, ED_seq: str, edit_type: str, edit_len: int,
-                pam:str = 'NGG', pbs_min:int = 7, pbs_max:int = 15,
-                rtt_min:int = 0, rtt_max:int = 40, silence:bool = False,
-                out_dir:str=os.getcwd(),
-                ):
-        
-        # input parameters
-        self.nAltIndex = 60
-        self.sID, self.Ref_seq, self.ED_seq = sID, Ref_seq, ED_seq
-        self.edit_type, self.edit_len, self.pam = edit_type, edit_len, pam
-        self.pbs_min, self.pbs_max = pbs_min, pbs_max
-        self.pbs_range = [pbs_min, pbs_max]
-        self.rtt_min, self.rtt_max   = rtt_min, rtt_max
-        self.silence = silence
-        
-        # output directory
-        self.OUT_PATH = '%s/%s/'  % (out_dir, self.sID)
-        self.TEMP_DIR = '%s/temp' % self.OUT_PATH
-        
-        # initializing
-        self.set_logging()
-        self.check_input()
-
-        ## FeatureExtraction Class
-        cFeat = FeatureExtraction()
-
-        cFeat.input_id = sID
-        cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
-
-        cFeat.get_sAltNotation(self.nAltIndex)
-        cFeat.get_all_RT_PBS(self.nAltIndex, nMinPBS= self.pbs_min-1, nMaxPBS=self.pbs_max, nMaxRT=rtt_max, pam=self.pam)
-        cFeat.make_rt_pbs_combinations()
-        cFeat.determine_seqs()
-        cFeat.determine_secondary_structure()
-
-        self.features = cFeat.make_output_df()
-        
-        del cFeat
-
-        self.logger.info('Created an instance of DeepPrime')
-
-    # def __init__: END
-
-
-    def submit(self, pe_system:str, cell_type:str = 'HEK293T'):
-        print('start pe_scre', self.Ref_seq, self.ED_seq, )
-
-        return None
-
-    # def submit: END
-
-
-    def set_logging(self):
-
-        self.logger = logging.getLogger(self.OUT_PATH)
-        self.logger.setLevel(logging.DEBUG)
-
-        self.formatter = logging.Formatter(
-            '%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n',
-            datefmt='%a, %d %b %Y %H:%M:%S',
-            )
-        
-        self.error = self.logger.error
-        self.warn  = self.logger.warn
-        self.debug = self.logger.debug
-        self.info  = self.logger.info
-
-        try:
-            os.makedirs(self.OUT_PATH, exist_ok=True)
-            os.makedirs(self.TEMP_DIR, exist_ok=True)
-            self.info('Creating Folder %s' % self.OUT_PATH)
-        except:
-            self.error('Creating Folder failed')
-            sys.exit(1)
-            
-        self.file_handler = logging.FileHandler('%s/log_%s.log' % (self.OUT_PATH, self.sID))
-        self.file_handler.setLevel(logging.DEBUG)
-        self.file_handler.setFormatter(self.formatter)
-        self.logger.addHandler(self.file_handler)
-        
-        if self.silence != True:
-            self.console_handler = logging.StreamHandler()
-            self.console_handler.setLevel(logging.DEBUG)
-            self.console_handler.setFormatter(self.formatter)
-            self.logger.addHandler(self.console_handler)
-
-        self.info('DeepPrime: pegRNA activity prediction models\n\t version: %s' % genet.__version__)
-
-
-        return None
-
-    # def set_logging: END
-
-
-    def check_input(self):
-        
-        if self.pbs_min < 1:
-            self.error('sID:%s\nPlease set PBS max length at least 1nt' % self.sID)
-            raise ValueError('Please check your input: pbs_min')
-        
-        if self.pbs_max > 17:
-            self.error('sID:%s\nPlease set PBS max length upto 17nt' % self.sID)
-            raise ValueError('Please check your input: pbs_max')
-        
-        if self.rtt_max > 40:
-            self.error('sID:%s\nPlease set RTT max length upto 40nt' % self.sID)
-            raise ValueError('Please check your input: rtt_max')
-
-        if self.edit_type not in ['sub', 'ins', 'del']:
-            self.error('sID:%s\n\t Please select proper edit type.\n\t Available edit tyle: sub, ins, del' % self.sID)
-            raise ValueError('Please check your input: edit_type')
-
-        if self.edit_len > 3:
-            self.error('sID:%s\n\t Please set edit length upto 3nt. Available edit length range: 1~3nt' % self.sID)
-            raise ValueError('Please check your input: edit_len')
-        
-        if self.edit_len < 1:
-            self.error('sID:%s\n\t Please set edit length at least 1nt. Available edit length range: 1~3nt' % self.sID)
-            raise ValueError('Please check your input: edit_len')
-
-        self.info('Input information\n\t ID: %s\n\t Refseq: %s\n\t EDseq :%s' % (self.sID, self.Ref_seq, self.ED_seq))
-
-        return None
-    
-    # def check_input: END
-
-
-    def do_something(self):
-        self.logger.info('Something happened.')
-
-        return None
-
-    # def do_something: END
-    
 
