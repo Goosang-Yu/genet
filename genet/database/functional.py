@@ -26,12 +26,12 @@ class GetGene:
     Mus caroli / Mus musculus / Mus pahari
     
     ## example:
-    >>> from genet import database as db
-
-    >>> # To get BRCA1 gene sequence information from mouse
-    >>> gene = db.GetGene('BRCA1', species='Mus musculus')
-
+    # >>> from genet import database as db
+    #
+    # >>> # To get BRCA1 gene sequence information from mouse
+    # >>> gene = db.GetGene('BRCA1', species='Mus musculus')
     '''
+
     def __init__(self, 
                  gene_name:str,
                  species:str = 'Homo sapiens',
