@@ -173,7 +173,7 @@ class SynonymousPE:
             else:
                 self.output = self.make_synonyPAM_RTT(self.rtt_frame, self.rtt_dna, self.strand)
         
-        # step 3: 만약 RHA 길이 조정 옵션이 True로 되어있으면, 조정해주기. (defualt)
+        # step 3: 만약 RHA 길이 조정 옵션이 True로 되어있으면, 조정해주기. (default)
         if adj_rha == True:
             adj_len = self.output['Mut_pos'] - self.edit_pos
             

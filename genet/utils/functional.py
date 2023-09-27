@@ -1,5 +1,12 @@
 import os
 
+def reverse_complement(seq):
+    dict_bases = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N', 'U': 'U', 'n': '',
+                  '.': '.', '*': '*', 'a': 't', 'c': 'g', 'g': 'c', 't': 'a', '>':'>'}
+    list_out  = [dict_bases[base] for base in list(seq)]
+    return ''.join(list_out)[::-1]
+# def END: reverse_complement
+
 def lower_list(input: list): return [v.lower() for v in input]
 
 def lower_dict(input: dict): 

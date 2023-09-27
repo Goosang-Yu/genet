@@ -4,7 +4,7 @@ from genet.database.functional import(
 
 from Bio import Entrez
 
-print('Please enter your email')
+#print('Please enter your email')
+#email = input('Please enter your email address to access NCBI database: ')
 
-email = input('Please enter your email address to access NCBI database: ')
-Entrez.email = email
+Entrez.email = 'josephjinpark@yonse.ac.kr'

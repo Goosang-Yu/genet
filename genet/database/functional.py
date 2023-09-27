@@ -6,6 +6,8 @@ from Bio import Entrez, GenBank, SeqIO
 Branch test 221230
 '''
 
+
+
 class GetGene:
     '''
     NCBI에서 reference gene을 찾기 위한 함수.
@@ -26,13 +28,12 @@ class GetGene:
     Mus caroli / Mus musculus / Mus pahari
     
     ## example:
-    # >>> from genet import database as db
-    #
-    # >>> # To get BRCA1 gene sequence information from mouse
-    # >>> gene = db.GetGene('BRCA1', species='Mus musculus')
-    '''
+    >>> from genet import database as db
 
-    def __init__(self, 
+    >>> # To get BRCA1 gene sequence information from mouse
+    >>> gene = db.GetGene('BRCA1', species='Mus musculus')
+    '''
+    def __init__(self,
                  gene_name:str,
                  species:str = 'Homo sapiens',
                  search_option:str = 'AND biomol_genomic[PROP] AND RefSeqGene[Filter]',
@@ -40,23 +41,26 @@ class GetGene:
 
 
         print('Find %s from NCBI nucleotide database' % gene_name)
-        search_string = '%s[Gene] AND %s[title] AND %s[Organism] %s' % (gene_name, gene_name, species, search_option)
-        
+        search_string    = '%s[Gene] AND %s[title] AND %s[Organism] %s' % (gene_name, gene_name, species, search_option)
+        self.genesym     = gene_name
         self.handle      = Entrez.esearch(db="nucleotide", term=search_string)
         self.gene_record = Entrez.read(self.handle)
         self.ids         = self.gene_record['IdList']
+
         if len(self.gene_record['IdList']) > 1:
             print('[Warnning] There are more than one ID from result. Please check your search options.')
 
-
         print('RefGenID found: ', self.ids)
         print('')
-
         self.fetch      = Entrez.efetch(db='nucleotide', id=self.gene_record['IdList'], rettype='gb', retmode='xlm')
         self.seq_record = SeqIO.read(self.fetch, 'genbank')
+        self.get_strand()
 
-    
     # def __init__: End
+    def get_strand(self):
+        for feat in self.seq_record.features:
+            if feat.type == 'CDS' and feat.qualifiers['gene'] == [self.genesym]:
+                self.strand = "+" if feat.location.strand == 1 else "-"  # Convert strand to "+" or "-"
 
     def is_misc_feat(self, feat): return feat.type == 'misc_feature'
     def is_source(self, feat):    return feat.type == 'source'
@@ -84,8 +88,10 @@ class GetGene:
 
         self.feat = self.seq_record.features
         list_transcripts = [f for f in filter(is_mrna, self.feat)]
-
-        return list_transcripts
+        list_mrna         = [ft for ft in list_transcripts if ft.qualifiers['gene'] == [self.genesym]]
+        if len(list_mrna) > 1:
+            print('Warning: Multiple mRNA objects in list. Please check gene information')
+        return list_mrna
 
     def cds(self):
         '''
@@ -96,10 +102,13 @@ class GetGene:
         def is_cds(feat):      return feat.type == 'CDS'
 
         self.feat = self.seq_record.features
+
         list_transcripts = [f for f in filter(is_cds, self.feat)]
 
-        return list_transcripts
-    
+        list_cds = [ft for ft in list_transcripts if ft.qualifiers['gene'] == [self.genesym]]
+        if len(list_cds) > 1:
+            print('Warning: Multiple CDS objects in list. Please check gene information')
+        return list_cds
 
     def misc(self):
         '''
@@ -126,8 +135,31 @@ class GetGene:
         list_transcripts = [f for f in filter(is_source, self.feat)]
 
         return list_transcripts
-    
+    def get_positions(self, genic_region):
 
+        # Extract exon positions from CDS features
+        positions = []
+        for loc in genic_region.location.parts:
+            start = loc.start + 1  # Add 1 to convert from 0-based to 1-based position
+            end   = loc.end
+            positions.append([start, end])
+        #loop END:
+
+        return positions
+
+    def get_sequences(self, genic_region):
+
+        # Extract exon positions from CDS features
+        sequences = []
+
+        for loc in genic_region.location.parts:
+            start    = loc.start
+            end      = loc.end
+            sequence = self.seq_record.seq[start:end]
+            sequences.append(sequence)
+        #loop END:
+
+        return sequences
 class GetClinVar:
     '''
     NCBI ClinVar에서 record를 찾기위한 function.\n

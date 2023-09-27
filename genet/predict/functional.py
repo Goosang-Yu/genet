@@ -662,8 +662,6 @@ def calculate_deepprime_score(df_input, pe_system='PE2max', cell_type='HEK293T')
     os.environ['CUDA_VISIBLE_DEVICES']='0'
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     
-    
-
     model_info = LoadModel('DeepPrime', pe_system, cell_type)
     model_dir  = model_info.model_dir
 
@@ -810,7 +808,7 @@ def pecv_score(cv_record,
     if pbs_max > 17: return print('sID:%s\nPlease set PBS max length upto 17nt' % sID)
     if rtt_max > 40: return print('sID:%s\nPlease set RTT max length upto 40nt' % sID)
     
-    print('DeepPrime score of ClinVar record')
+    print('DeepPrime score of ClinVar record', cv_record._record_id)
 
     Ref_seq, ED_seq = cv_record.seq()
 
@@ -838,7 +836,8 @@ def pecv_score(cv_record,
 
     if len(df) > 0:
         list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
-        df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
+        #df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
+        df['DeepSpCas9_score']      = SpCas9().predict(list_Guide30)['SpCas9']
         df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
     
     else:
