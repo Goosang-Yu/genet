@@ -907,9 +907,14 @@ class pegRNA:
         # loop END: nRTPos
 
         return [dict_sRT, dict_sPBS]
-
-
     # def END: determine_PBS_RT_seq
+
+
+
+
+
+
+
 
     def make_rt_pbs_combinations(self):
         for sPAMKey in self.dict_sSeqs:

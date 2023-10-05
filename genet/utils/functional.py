@@ -1,4 +1,4 @@
-import os
+import os, sys, re
 
 def reverse_complement(seq):
     dict_bases = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N', 'U': 'U', 'n': '',
@@ -11,6 +11,74 @@ def lower_list(input: list): return [v.lower() for v in input]
 
 def lower_dict(input: dict): 
     return dict((k.lower(), v.lower) for k, v in input.items())
+
+
+re_nonchr = re.compile('[^a-zA-Z]')
+
+class Fasta:
+    def __init__(self, fasta):
+
+        # V-S Check
+        if not os.path.isfile(fasta):
+            sys.exit('(): File does not exist')
+
+        self.fafile  = open(fasta, 'r')
+        self.chrlist = []
+        self.chrlen  = []
+        self.seekpos = []
+        self.len1    = []
+        self.len2    = []
+
+        # V-S Check
+        if not os.path.isfile('%s.fai' % fasta):
+            sys.exit('.fai file does not exist')
+
+        faifile = open('%s.fai' % fasta, 'r')
+        for line in faifile:
+            columns = line.strip('\n').split()  # Goes backwards, -1 skips the new line character
+
+            self.chrlist.append(columns[0])
+            self.chrlen.append(int(columns[1]))
+            self.seekpos.append(int(columns[2]))
+            self.len1.append(int(columns[3]))
+            self.len2.append(int(columns[4]))
+        #loop END: sLINE
+        faifile.close()
+        self.type = []
+
+    #def END: __init_
+
+    def fetch(self, chrom, start=None, end=None, strand='+'):
+
+        assert chrom in self.chrlist, chrom
+
+        index = self.chrlist.index(chrom)
+
+        if start == None: nFrom = 0
+        if end == None:   nTo   = self.chrlen[index]
+        # if nTo >= self.nChromLen[nChrom]: nTo = self.nChromLen[nChrom]-1
+
+        assert (0 <= start) and (start < end) and (end <= self.chrlen[index])
+
+        nBlank = self.len2[index] - self.len1[index]
+
+        start = int(start + (start / self.len1[index]) * nBlank)  # Start Fetch Position
+
+        end = int(end + (end / self.len1[index]) * nBlank)  # End Fetch Position
+
+        self.fafile.seek(self.seekpos[index] + start)  # Get Sequence
+
+        seq = re.sub(re_nonchr, '', self.fafile.read(end - start))
+
+        if strand == '+':   return seq
+        elif strand == '-': return reverse_complement(seq)
+        else: sys.exit('Invalid Strand')
+    #def END: fetch
+
+
+#class END: Fasta
+## endregion
+
 
 class SplitFastq:
     def __init__(

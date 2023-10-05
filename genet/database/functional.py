@@ -54,13 +54,20 @@ class GetGene:
         print('')
         self.fetch      = Entrez.efetch(db='nucleotide', id=self.gene_record['IdList'], rettype='gb', retmode='xlm')
         self.seq_record = SeqIO.read(self.fetch, 'genbank')
-        self.get_strand()
+
+        self.fullseq = str(self.seq_record.seq)
+        self.get_chrom_strand()
 
     # def __init__: End
-    def get_strand(self):
+    def get_chrom_strand(self):
         for feat in self.seq_record.features:
+
+            if feat.type == "source":
+                self.chrom = feat.qualifiers['chromosome'][0]
+
             if feat.type == 'CDS' and feat.qualifiers['gene'] == [self.genesym]:
                 self.strand = "+" if feat.location.strand == 1 else "-"  # Convert strand to "+" or "-"
+
 
     def is_misc_feat(self, feat): return feat.type == 'misc_feature'
     def is_source(self, feat):    return feat.type == 'source'
@@ -91,7 +98,7 @@ class GetGene:
         list_mrna         = [ft for ft in list_transcripts if ft.qualifiers['gene'] == [self.genesym]]
         if len(list_mrna) > 1:
             print('Warning: Multiple mRNA objects in list. Please check gene information')
-        return list_mrna
+        return list_mrna[0]
 
     def cds(self):
         '''
@@ -108,7 +115,10 @@ class GetGene:
         list_cds = [ft for ft in list_transcripts if ft.qualifiers['gene'] == [self.genesym]]
         if len(list_cds) > 1:
             print('Warning: Multiple CDS objects in list. Please check gene information')
-        return list_cds
+            for cds in list_cds:
+                print('Found', cds.qualifiers['gene'])
+
+        return list_cds[0]
 
     def misc(self):
         '''
@@ -140,7 +150,7 @@ class GetGene:
         # Extract exon positions from CDS features
         positions = []
         for loc in genic_region.location.parts:
-            start = loc.start + 1  # Add 1 to convert from 0-based to 1-based position
+            start = loc.start
             end   = loc.end
             positions.append([start, end])
         #loop END:
@@ -156,10 +166,14 @@ class GetGene:
             start    = loc.start
             end      = loc.end
             sequence = self.seq_record.seq[start:end]
-            sequences.append(sequence)
+            sequences.append(str(sequence))
         #loop END:
 
         return sequences
+
+
+
+
 class GetClinVar:
     '''
     NCBI ClinVar에서 record를 찾기위한 function.\n

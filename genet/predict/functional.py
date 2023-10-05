@@ -312,9 +312,111 @@ class FeatureExtraction:
         # loop END: nRTPos
 
         return [dict_sRT, dict_sPBS]
-
-
     # def END: determine_PBS_RT_seq
+
+
+
+    def determine_PBS_RT_seq_simp (self, sStrand, nMinPBS, nMaxPBS, nMaxRT, nSetPBSLen, nSetRTLen, nPAM_Nick,
+                            nAltPosWin, sForTempSeq):
+        dict_sPBS = {}
+        dict_sRT  = {}
+
+        list_nPBSLen = [nNo + 1 for nNo in range(nMinPBS, nMaxPBS)]
+        for nPBSLen in list_nPBSLen:
+
+            ## Set PBS Length ##
+            if nSetPBSLen:
+                if nPBSLen != nSetPBSLen: continue
+
+            if sStrand == '+':
+                nPBSStart = nPAM_Nick - nPBSLen  # 5' -> PamNick
+                nPBSEnd = nPAM_Nick
+                sPBSSeq = sForTempSeq[nPBSStart:nPBSEnd] # sForTempSeq = self.EditedSeq
+
+            else:
+                if self.sAltKey.startswith('sub'):
+                    nPBSStart = nPAM_Nick
+                elif self.sAltKey.startswith('ins'):
+                    nPBSStart = nPAM_Nick + self.nAltLen
+                elif self.sAltKey.startswith('del'):
+                    nPBSStart = nPAM_Nick - self.nAltLen
+
+                sPBSSeq = reverse_complement(sForTempSeq[nPBSStart:nPBSStart + nPBSLen]) # sForTempSeq = self.EditedSeq
+
+            # if END: sStrand
+
+            sKey = len(sPBSSeq)
+            if sKey not in dict_sPBS:
+                dict_sPBS[sKey] = ''
+            dict_sPBS[sKey] = sPBSSeq
+        # loop END: nPBSLen
+
+        if sStrand == '+':
+            if self.sAltKey.startswith('sub'):
+                list_nRTPos = [nNo + 1 for nNo in range(self.nAltIndex + self.nAltLen, (nPAM_Nick + nMaxRT))] # OK
+            elif self.sAltKey.startswith('ins'):
+                list_nRTPos = [nNo + 1 for nNo in range(self.nAltIndex + self.nAltLen, (nPAM_Nick + nMaxRT))] # OK
+            else:
+                list_nRTPos = [nNo + 1 for nNo in range(self.nAltIndex, (nPAM_Nick + nMaxRT))] ## 수정! ## del2 RHA 3 del1 RHA2
+        else:
+            if self.sAltKey.startswith('sub'):
+                list_nRTPos = [nNo for nNo in range(nPAM_Nick - 1 - nMaxRT, self.nAltIndex)] ## 수정! ## sub1 sub 3 RHA 0
+            else:
+                list_nRTPos = [nNo for nNo in range(nPAM_Nick - 3 - nMaxRT, self.nAltIndex + self.nAltLen - 1)] ## 수정! ## ins2 최소가 2까지 ins3 RHA 최소 3 #del2 RHA 2 del1 RHA1
+        for nRTPos in list_nRTPos:
+
+            if sStrand == '+':
+                nRTStart = nPAM_Nick  # PamNick -> 3'
+                nRTEnd = nRTPos
+                sRTSeq = sForTempSeq[nRTStart:nRTEnd]
+
+            else:
+                if self.sAltKey.startswith('sub'):
+                    nRTStart = nRTPos
+                    nRTEnd = nPAM_Nick  # PamNick -> 3'
+                elif self.sAltKey.startswith('ins'):
+                    nRTStart = nRTPos
+                    nRTEnd = nPAM_Nick + self.nAltLen  # PamNick -> 3'
+                elif self.sAltKey.startswith('del'):
+                    nRTStart = nRTPos
+                    nRTEnd = nPAM_Nick - self.nAltLen  # PamNick -> 3'
+
+                sRTSeq = reverse_complement(sForTempSeq[nRTStart:nRTEnd])
+
+                if not sRTSeq: continue
+            # if END: sStrand
+
+            sKey = len(sRTSeq)
+
+            ## Set RT Length ##
+            if nSetRTLen:
+                if sKey != nSetRTLen: continue
+
+            ## Limit Max RT len ##
+            if sKey > nMaxRT: continue
+
+            ## min RT from nick site to mutation ##
+            if self.sAltKey.startswith('sub'):
+                if sStrand == '+':
+                    if sKey < abs(self.nAltIndex - nPAM_Nick): continue
+                else:
+                    if sKey < abs(self.nAltIndex - nPAM_Nick + self.nAltLen - 1): continue ###
+            else:
+                if sStrand == '-':
+                    if sKey < abs(self.nAltIndex - nPAM_Nick + self.nAltLen - 1): continue
+
+            if self.sAltKey.startswith('ins'):
+                if sKey < nAltPosWin + 1: continue
+
+            if sKey not in dict_sRT:
+                dict_sRT[sKey] = ''
+            dict_sRT[sKey] = sRTSeq
+        # loop END: nRTPos
+
+        return [dict_sRT, dict_sPBS]
+    # def END: determine_PBS_RT_seq_simp
+
+
 
     def make_rt_pbs_combinations(self):
         for sPAMKey in self.dict_sSeqs:
