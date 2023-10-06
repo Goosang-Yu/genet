@@ -24,21 +24,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 class DeepPrime:
-    '''
-    DeepPrime: pegRNA activity prediction models\n
-    Input  = 121 nt DNA sequence without edit\n
-    Output = 121 nt DNA sequence with edit\n
-    
-    ### Available Edit types\n
-    sub1, sub2, sub3, ins1, ins2, ins3, del1, del2, del3\n
-    
-    ### Available PE systems\n
-    PE2, PE2max, PE4max, NRCH_PE2, NRCH_PE2max, NRCH_PE4max\n
-    
-    ### Available Cell types\n
-    HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3
-    
-    '''
     def __init__(self, sID:str, Ref_seq: str, ED_seq: str, edit_type: str, edit_len: int,
                 pam:str = 'NGG', pbs_min:int = 7, pbs_max:int = 15,
                 rtt_min:int = 0, rtt_max:int = 40, silence:bool = False,

@@ -10,17 +10,6 @@ from genet.models import LoadModel
 
 class CasVariant:
     def __init__(self, effector:str):
-        '''DeepSpCas9variants score function
-
-        The list_target30 should have a 30bp sequence in the form of a list.
-        
-        example) 
-        >>> list_target30 = [
-                        'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
-                        'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
-                        'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
-                        ]
-        '''
 
         self.effector  = effector
         self.model     = LoadModel('DeepCas9variants', effector)
@@ -28,9 +17,7 @@ class CasVariant:
 
 
     def predict(self, list_target30: list) -> pd.DataFrame:
-        '''Input으로 30nt target context sequence 들이 담긴 list가 들어오면,
-        각 sequence 마다의 prediction score를 계산해서 list로 return 하는 함수
-        '''
+        '''When a list containing 30nt target context sequences is inputted, a function calculates the prediction score for each sequence and returns it as a list.'''
         dataset_ = pd.DataFrame()
         dataset_['target + PAM'] = list_target30
 
@@ -72,10 +59,7 @@ class CasVariant:
         return df_out
     
     def search(self, seq: str) -> pd.DataFrame:
-        '''주어진 sequence 내에 가능한 모든 target sequence를 찾고, 
-        그 정보와 예측 점수를 계산하는 method
-        '''
-        
+        # The code is a method that finds all possible target sequences within a given sequence and calculates their information and prediction scores.
         self.seq = seq.upper()
         dict_re  = self.model.info['regex']
         
@@ -141,21 +125,6 @@ class CasVariant:
 
 
 def cas_variant_score_original(list_target30:list, gpu_env=0):
-    '''DeepSpCas9variants score function
-    The list_target30 should have a 30bp sequence in the form of a list.
-    
-    If you want to use a different GPU (based on nvidia-smi),
-    You can put the GPU number in the gpu_env. \n
-    
-    example) 
-    >>> list_target30 = [
-                        'TCACCTTCGTTTTTTTCCTTCTGCAGGAGG',
-                        'CCTTCGTTTTTTTCCTTCTGCAGGAGGACA',
-                        'CTTTCAAGAACTCTTCCACCTCCATGGTGT',
-                        ]
-
-    >>> list_out = cas_variant_score(list_target30)
-    '''
     header=['target + PAM','feature']
 
     dataset_ = pd.read_csv('/media/2400_new/GS/DeepBE/PAM/PAM_variant_NG/PAM_variant_input_example.csv',header=None,names=header)
