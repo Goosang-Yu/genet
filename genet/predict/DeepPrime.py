@@ -55,16 +55,17 @@ class DeepPrime:
         self.silence = silence
         
         # output directory
-        self.OUT_PATH = '%s/%s/'  % (out_dir, self.sID)
-        self.TEMP_DIR = '%s/temp' % self.OUT_PATH
+        self.OUT_PATH = out_dir
+        self.TEMP_DIR = '%s/temp/%s' % (self.OUT_PATH, self.sID)
         
         # initializing
-        self.set_logging()
-        self.check_input()
+        if silence != True:
+            self.set_logging()
+            self.check_input()
 
         ## FeatureExtraction Class
         cFeat = FeatureExtraction()
-        self.logger.info('Make features of pegRNAs')
+        if silence != True: self.logger.info('Make features of pegRNAs')
 
         cFeat.input_id = sID
         cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
@@ -79,15 +80,18 @@ class DeepPrime:
         del cFeat
 
         if len(self.features) > 0:
+
             self.list_Guide30 = [WT74[:30] for WT74 in self.features['WT74_On']]
             self.features['DeepSpCas9_score'] = SpCas9().predict(self.list_Guide30)['SpCas9']
+            self.pegRNAcnt = len(self.features)
         
         else:
             print('\nsID:', sID)
             print('DeepPrime only support RTT length upto 40nt')
-            print('There are no available pegRNAs, please check your input sequences\n')
+            print('There are no available pegRNAs, please check your input sequences.\n')
+            self.pegRNAcnt = 0
 
-        self.logger.info('Created an instance of DeepPrime')
+        if silence != True: self.logger.info('Created an instance of DeepPrime')
 
     # def __init__: END
 
@@ -157,7 +161,7 @@ class DeepPrime:
 
     def set_logging(self):
 
-        self.logger = logging.getLogger(self.OUT_PATH)
+        self.logger = logging.getLogger(self.TEMP_DIR)
         self.logger.setLevel(logging.DEBUG)
 
         self.formatter = logging.Formatter(
@@ -178,7 +182,7 @@ class DeepPrime:
             self.error('Creating Folder failed')
             sys.exit(1)
             
-        self.file_handler = logging.FileHandler('%s/log_%s.log' % (self.OUT_PATH, self.sID))
+        self.file_handler = logging.FileHandler('%s/log_%s.log' % (self.TEMP_DIR, self.sID))
         self.file_handler.setLevel(logging.DEBUG)
         self.file_handler.setFormatter(self.formatter)
         self.logger.addHandler(self.file_handler)
@@ -940,7 +944,7 @@ def pecv_score(cv_record,
 
     if len(df) > 0:
         list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
-        df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
+        df['DeepSpCas9_score']      = spcas9_score(list_Guide30)
         df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
     
     else:

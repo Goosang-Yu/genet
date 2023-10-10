@@ -6,8 +6,6 @@ from Bio import Entrez, GenBank, SeqIO
 Branch test 221230
 '''
 
-
-
 class GetGene:
     '''
     NCBI에서 reference gene을 찾기 위한 함수.
@@ -192,14 +190,12 @@ class GetClinVar:
     ref_seq = 'GGTCACTCACCTGGAGTGAGCCCTGCTCCCCCCTGGCTCCTTCCCAGCCTGGGCATCCTTGAGTTCCAAGGCCTCATTCAGCTCTCGGAACATCTCGAAGCGCTCACGCCCACGGATCTGC'
     alt_seq = 'GGTCACTCACCTGGAGTGAGCCCTGCTCCCCCCTGGCTCCTTCCCAGCCTGGGCATCCTTGTTCCAAGGCCTCATTCAGCTCTCGGAACATCTCGAAGCGCTCACGCCCACGGATCTGCAG'
 
-
     seq method에서 int 값을 넣어주면, context 길이를 조절할 수 있다.
     >>> ref_seq, alt_seq = cv_record.seq(80)
 
     '''
 
     def __init__(self, record_id:str):
-
 
         self._record_id = record_id
 
@@ -227,8 +223,8 @@ class GetClinVar:
         if   len(self.ref_nt) == len(self.alt_nt): self.alt_type = 'sub'
         elif len(self.ref_nt) <  len(self.alt_nt): self.alt_type = 'ins'
         elif len(self.ref_nt) >  len(self.alt_nt): self.alt_type = 'del'
-    
     # def __init__: End
+
 
     def seq(self, context:int = 60):
         '''

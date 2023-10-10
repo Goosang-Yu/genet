@@ -145,7 +145,7 @@ class SynonymousPE:
             self.strand = '-'
             self.rtt_frame = (self.edit_pos + frame) % 3  # revcom_rtt_dna의 3' end가 위치하는 지점의 frame. 시작점이 거기이기 때문.
             
-        else: raise ValueError('Reference sequence is not matched with pegRNA information!\nPlease chech your ref_seq')
+        else: raise ValueError('Reference sequence is not matched with pegRNA information!\nPlease check your ref_seq')
     
         self.dict_mut = {
             'Codon_WT'      : [],
@@ -908,12 +908,6 @@ class pegRNA:
 
         return [dict_sRT, dict_sPBS]
     # def END: determine_PBS_RT_seq
-
-
-
-
-
-
 
 
     def make_rt_pbs_combinations(self):
