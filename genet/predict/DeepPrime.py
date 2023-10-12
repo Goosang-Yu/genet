@@ -55,16 +55,17 @@ class DeepPrime:
         self.silence = silence
         
         # output directory
-        self.OUT_PATH = '%s/%s/'  % (out_dir, self.sID)
-        self.TEMP_DIR = '%s/temp' % self.OUT_PATH
+        self.OUT_PATH = out_dir
+        self.TEMP_DIR = '%s/temp/%s' % (self.OUT_PATH, self.sID)
         
         # initializing
-        self.set_logging()
-        self.check_input()
+        if silence != True:
+            self.set_logging()
+            self.check_input()
 
         ## FeatureExtraction Class
         cFeat = FeatureExtraction()
-        self.logger.info('Make features of pegRNAs')
+        if silence != True: self.logger.info('Make features of pegRNAs')
 
         cFeat.input_id = sID
         cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
@@ -79,15 +80,18 @@ class DeepPrime:
         del cFeat
 
         if len(self.features) > 0:
+
             self.list_Guide30 = [WT74[:30] for WT74 in self.features['WT74_On']]
             self.features['DeepSpCas9_score'] = SpCas9().predict(self.list_Guide30)['SpCas9']
+            self.pegRNAcnt = len(self.features)
         
         else:
             print('\nsID:', sID)
             print('DeepPrime only support RTT length upto 40nt')
-            print('There are no available pegRNAs, please check your input sequences\n')
+            print('There are no available pegRNAs, please check your input sequences.\n')
+            self.pegRNAcnt = 0
 
-        self.logger.info('Created an instance of DeepPrime')
+        if silence != True: self.logger.info('Created an instance of DeepPrime')
 
     # def __init__: END
 
@@ -157,7 +161,7 @@ class DeepPrime:
 
     def set_logging(self):
 
-        self.logger = logging.getLogger(self.OUT_PATH)
+        self.logger = logging.getLogger(self.TEMP_DIR)
         self.logger.setLevel(logging.DEBUG)
 
         self.formatter = logging.Formatter(
@@ -178,7 +182,7 @@ class DeepPrime:
             self.error('Creating Folder failed')
             sys.exit(1)
             
-        self.file_handler = logging.FileHandler('%s/log_%s.log' % (self.OUT_PATH, self.sID))
+        self.file_handler = logging.FileHandler('%s/log_%s.log' % (self.TEMP_DIR, self.sID))
         self.file_handler.setLevel(logging.DEBUG)
         self.file_handler.setFormatter(self.formatter)
         self.logger.addHandler(self.file_handler)
@@ -891,62 +895,4 @@ def select_cols(data):
 
 
 
-
-def pecv_score(cv_record,
-               sID:str       = 'Sample',
-               pe_system:str = 'PE2max',
-               cell_type:str = 'HEK293T',
-               pbs_min:int   = 7,
-               pbs_max:int   = 15,
-               rtt_max:int   = 40
-               ):
-
-    '''
-    Using variants records from GetClinVar in the database module.\n
-    You don't have to bring a sequence input to DeepPrime, but you calculate the score right away.\n
-    If DeepPrime is an unpredictable form of variants, it sends out a message.\n
-    
-    '''
-    
-    # check input parameters
-    if pbs_max > 17: return print('sID:%s\nPlease set PBS max length upto 17nt' % sID)
-    if rtt_max > 40: return print('sID:%s\nPlease set RTT max length upto 40nt' % sID)
-    
-    print('DeepPrime score of ClinVar record')
-
-    Ref_seq, ED_seq = cv_record.seq()
-
-    nAltIndex   = 60
-    pbs_range   = [pbs_min, pbs_max]
-    rtt_max     = rtt_max
-    pe_system   = pe_system
-
-    edit_type   = cv_record.alt_type
-    edit_len    = int(cv_record.alt_len)
-
-    ## FeatureExtraction Class
-    cFeat = FeatureExtraction()
-
-    cFeat.input_id = sID
-    cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
-
-    cFeat.get_sAltNotation(nAltIndex)
-    cFeat.get_all_RT_PBS(nAltIndex, nMinPBS=pbs_range[0]-1, nMaxPBS=pbs_range[1], nMaxRT=rtt_max, pe_system=pe_system)
-    cFeat.make_rt_pbs_combinations()
-    cFeat.determine_seqs()
-    cFeat.determine_secondary_structure()
-
-    df = cFeat.make_output_df()
-
-    if len(df) > 0:
-        list_Guide30 = [WT74[:30] for WT74 in df['WT74_On']]
-        df['DeepSpCas9_score'] = spcas9_score(list_Guide30)
-        df['%s_score' % pe_system]  = calculate_deepprime_score(df, pe_system, cell_type)
-    
-    else:
-        print('\nsID:', sID)
-        print('DeepPrime only support RTT length upto 40nt')
-        print('There are no available pegRNAs, please check your input sequences\n')
-
-    return df
-
+#pecv_score
