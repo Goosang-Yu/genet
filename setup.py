@@ -36,15 +36,6 @@ setuptools.setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
     ],
-
-    package_data={
-        'genet':[
-            # DeepSpCas9
-            'genet/predict/models/DeepSpCas9/DeepSpCas9_model.data-00000-of-00001',
-            'genet/predict/models/DeepSpCas9/DeepSpCas9_model.index',
-            'genet/predict/models/DeepSpCas9/DeepSpCas9_model.meta',
-        ]
-    },
     
     install_requires = [
         'pandas',

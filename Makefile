@@ -40,13 +40,13 @@ ifeq ($(CONDA_EXISTS),false)
 endif
 	conda create -n $(BINARY_NAME) python=3.11
 ifeq ($(USE_CPU),true)
-	$(CONDA_ACTIVATE) $(BINARY_NAME) && pip install torch==2.0.0+cpu -f https://download.pytorch.org/whl/cpu
+	$(CONDA_ACTIVATE) $(BINARY_NAME) && pip install torch==2.0.1+cpu -f https://download.pytorch.org/whl/cpu
 else ifeq ($(USE_CUDA),true)
-	$(CONDA_ACTIVATE) $(BINARY_NAME) && pip install torch==2.0.0+cu118 -f https://download.pytorch.org/whl/apple/cpu/torch_stable.html
+	$(CONDA_ACTIVATE) $(BINARY_NAME) && pip install torch==2.0.1+cu118 -f https://download.pytorch.org/whl/apple/cpu/torch_stable.html
 else ifeq ($(USE_ARM),true)
-	$(CONDA_ACTIVATE) $(BINARY_NAME) && pip install torch==2.0.0 -f https://download.pytorch.org/whl/torch_stable.html
+	$(CONDA_ACTIVATE) $(BINARY_NAME) && pip install torch==2.0.1 -f https://download.pytorch.org/whl/torch_stable.html
 endif
-	$(CONDA_ACTIVATE) $(BINARY_NAME) && pip install viennarna
+	$(CONDA_ACTIVATE) $(BINARY_NAME) && pip install viennarna && pip install .
 
 troubleshoot:
 	$(CONDA_ACTIVATE) $(BINARY_NAME) && conda install -c conda-forge mamba
