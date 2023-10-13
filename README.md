@@ -38,14 +38,14 @@ conda create -n genet python=3.11
 conda activate genet
   
 # For OSX (MacOS)
-pip install torch==2.0.0
+pip install torch==2.0.1
 
 # For Linux and Windows
 # CUDA 11.8
-pip install torch==2.0.0+cu118 -f https://download.pytorch.org/whl/apple/cpu/torch_stable.html
+pip install torch==2.0.1+cu118 -f https://download.pytorch.org/whl/apple/cpu/torch_stable.html
 
 # CPU only
-pip install torch==2.0.0+cpu -f https://download.pytorch.org/whl/cpu
+pip install torch==2.0.1+cpu -f https://download.pytorch.org/whl/cpu
 ```
 
 <hr>
