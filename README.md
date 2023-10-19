@@ -18,9 +18,7 @@
 GenET (Genome Editing Toolkit) is a library of various python functions for the purpose of analyzing and evaluating data from genome editing experiments. GenET is still in its early stages of development and continue to improve and expand. Currently planned functions include guideRNA design, saturation library design, deep sequenced data analysis, and guide RNA activity prediction.
 
 ## System requirement
-GenET can be run on either Mac or Linux system. GenET is currently available on Linux or Mac based systems as one of the dependent tools, ViennaRNA package, is limited to these operating systems. Windows users must establish a WSL, docker or virtual OS environment to use this tool.
-
-## ⚠️ This is a dev version of GenET "ntfargo-dev" branch, Please use main branch for stable version - [here](https://github.com/Goosang-Yu/genet/tree/main) ⚠️
+GenET can be run on either Mac or Linux system. GenET is currently available on Linux or Mac based systems as one of the dependent tools, ViennaRNA package, is limited to these operating systems. Windows users must establish a WSL, docker or virtual OS environment to use this tool. 
 
 Unfortunately, at this time, GenET is not compatible with the latest version of Torch, which is Torch 2.0.0.
 
