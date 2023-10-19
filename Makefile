@@ -1,4 +1,3 @@
-# genet currently is not compatible with torch 2.0.0!
 BINARY_NAME := genet
 
 CONDA_EXISTS := $(shell if [ -x "$$(command -v conda)" ]; then echo "true"; else echo "false"; fi)
