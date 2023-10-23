@@ -122,10 +122,10 @@ def collapse_umi(df_umi:pd.DataFrame, threshold:int=1, col_bc:str=None, col_umi:
     dict_collaped = {'Barcode':[], 'UMI':[], 'count'  :[]}
     
     for bc in tqdm(list_bc,
-            total = len(list_bc),
-            desc = 'Barcode collapsed',
-            ncols = 70,
-            ascii = ' =',
+            total = len(list_bc),       ## 전체 진행수
+            desc = 'Barcode collapsed', ## 진행률 앞쪽 출력 문장
+            ncols = 70,                 ## 진행률 출력 폭 조절
+            ascii = ' =',               ## 바 모양, 첫 번째 문자는 공백이어야 작동
             leave = True
             ):
     # for bc in list_bc:
@@ -149,11 +149,10 @@ def collapse_umi(df_umi:pd.DataFrame, threshold:int=1, col_bc:str=None, col_umi:
                     dict_collaped['count'][-1] += list_cnt[i+_i_res+1]
                     list_check.append(_res_umi)
                 
-        list_df.append(pd.DataFrame.from_dict(data=dict_collaped, orient='columns'))
+        # list_df.append(pd.DataFrame.from_dict(data=dict_collaped, orient='columns'))
     
-    print('Concat output files')
-    df_out = pd.concat(list_df)
+    print('Making final DataFrame')
+    df_out = pd.DataFrame.from_dict(data=dict_collaped, orient='columns')
         
     
-    return df_out
-
+    return df_out       
