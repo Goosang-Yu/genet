@@ -364,8 +364,9 @@ To run UMI deduplication for each barcode, please execute the following code:
 import pandas as pd
 from tqdm import tqdm
 from genet.analysis import *
-
-df_umi = pd.read_csv('Barcode_UMI_count.csv') # DataFrame as shown above.
+ 
+# DataFrame as shown above.
+df_umi = pd.read_csv('Barcode_UMI_count.csv')
 
 dict_out = {'Barcode': [], 'UMI_dedup': []}
 
@@ -373,6 +374,7 @@ for bc in tqdm(df_umi['Barcode'].unique()):
     
     umis_dupple = umi_group.get_group(bc)
     
+    # UMI-tools: ReadDeduplicator
     dedup = ReadDeduplicator()
     final_umis, umi_counts = dedup(umis_dupple, threshold=1)
 
