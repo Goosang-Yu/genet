@@ -369,6 +369,7 @@ from genet.analysis import *
 df_umi = pd.read_csv('Barcode_UMI_count.csv')
 
 dict_out = {'Barcode': [], 'UMI_dedup': []}
+umi_group = df_umi.groupby(by=['Barcode'])
 
 for bc in tqdm(df_umi['Barcode'].unique()):
     
