@@ -1,7 +1,11 @@
-from Bio import SeqIO
 import pandas as pd
 import numpy as np
+import editdistance
+
+from Bio import SeqIO
 from tqdm import tqdm
+
+
 
 
 def make_df_umi(list_barcode:list, data_path:str, len_umi:int) -> pd.DataFrame:
@@ -99,11 +103,39 @@ def count_mismatch(ref_seq:str, match_seq:str) -> int:
     for ref, m_seq in zip(ref_seq, match_seq):
         if ref != m_seq: mismatch_count += 1
     
-    return mismatch_count    
+    return mismatch_count
+
+def custom_edit_distance(a:str, b:str):
+    dp = [[0] * (len(b)+1) for _ in range(len(a) + 1)]
+    
+    for i in range(1, len(a)+1): dp[i][0] = i
+    for j in range(1, len(b)+1): dp[0][j] = j
+
+    for i in range(1, len(a)+1):
+        for j in range(1, len(b)+1):
+            if a[i-1] == b[j-1]: dp[i][j] = dp[i-1][j-1]
+            else               : dp[i][j] = min(dp[i-1][j-1], dp[i-1][j], dp[i][j-1]) + 1
+
+    return dp[-1][-1]
 
 
 def collapse_umi(df_umi:pd.DataFrame, threshold:int=1, col_bc:str=None, col_umi:str=None, col_count:str=None,):
+    """Combine different UMIs when they varied by only less or same nucleotide threshold. 
+    Input dataframe should contain barcode, UMI, and count informations.
+    
+    Args:
+        df_umi (pd.DataFrame): Barcode, UMI and count information. 
+        threshold (int, optional): UMI collapse threshold. Defaults to 1.
+        col_bc (str, optional): If Barcode is not in first column of df_umi, select the column name of barcode. Defaults to None.
+        col_umi (str, optional): If UMI is not in first column of df_umi, select the column name of UMI. Defaults to None.
+        col_count (str, optional): If UMI counts is not in first column of df_umi, select the column name of UMI counts. Defaults to None.
 
+    Raises:
+        ValueError: For col_bc, col_umi, and col_count. Not found error.
+
+    Returns:
+        _type_: pd.DataFrame
+    """    
     list_col_names = list(df_umi.columns)
 
     # Default Barcode column index location = 0 (first column)
@@ -155,4 +187,4 @@ def collapse_umi(df_umi:pd.DataFrame, threshold:int=1, col_bc:str=None, col_umi:
     df_out = pd.DataFrame.from_dict(data=dict_collaped, orient='columns')
         
     
-    return df_out       
+    return df_out

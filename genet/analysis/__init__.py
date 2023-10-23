@@ -4,4 +4,5 @@ from genet.analysis.functional import(
     
 )
 from genet.analysis.SGE_analysis import *
-from genet.analysis.UMI import *
+from genet.analysis.UMItools import *
+# from genet.analysis.UMIutils import *
