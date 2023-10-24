@@ -342,4 +342,60 @@ list_exons
 ]
 ```
 
+## Tutorial 7: UMI deduplication
+We can now perform UMI-tools([Smith et al. Genome Res. 2017](https://genome.cshlp.org/content/27/3/491.long)) functionality within GenET using a simple function. One of the powerful features of UMI-tools, deduplication, is available in the ```genet.analysis``` module. Additionally, we've made it compatible with our familiar format, ```pd.DataFrame```.
+
+Let's assume we have a DataFrame with UMI (duplicated) information ready. 
+
+|         | Barcode            | UMI      | count |
+| ------- | ------------------ | -------- | ----- |
+| 0       | CTCTCTCTCACTCTCATG | CTTGATCT | 2     |
+| 1       | CTCTCTCTCACTCTCATG | AAGCAAGT | 3     |
+| 2       | CTCTCTCTCACTCTCATG | GTGCGCTT | 5     |
+| 3       | CTCTCTCTCACTCTCATG | ACGCTCTG | 1     |
+| 4       | AGGCTGATGCTAGCGTTA | ATATAACT | 4     |
+| ...     | ...                | ...      | ...   |
+| 1437059 | TACGTAGCGTAGCTGCTG | AGATACAC | 1     |
+| 1437060 | TACGTAGCGTAGCTGCTG | ACATGGGG | 1     |
+
+To run UMI deduplication for each barcode, please execute the following code:
+
+```python
+import pandas as pd
+from tqdm import tqdm
+from genet.analysis import *
+ 
+# DataFrame as shown above.
+df_umi = pd.read_csv('Barcode_UMI_count.csv')
+
+dict_out = {'Barcode': [], 'UMI_dedup': []}
+umi_group = df_umi.groupby(by=['Barcode'])
+
+for bc in tqdm(df_umi['Barcode'].unique()):
+    
+    umis_dupple = umi_group.get_group(bc)
+    
+    # UMI-tools: ReadDeduplicator
+    dedup = ReadDeduplicator()
+    final_umis, umi_counts = dedup(umis_dupple, threshold=1)
+
+    dict_out['Barcode'].append(bc)
+    dict_out['UMI_dedup'].append(len(final_umis))
+
+df_dedup = pd.DataFrame.from_dict(data=dict_out, orient='columns')
+
+>>> df_dedup
+```
+
+|       | Barcode            | UMI_dedup |
+| ----- | ------------------ | --------- |
+| 0     | CTCTCTCTCACTCTCATG | 139       |
+| 1     | ATCATCATCACACTCTCA | 114       |
+| 2     | TCTCAGCTCGTACATCTC | 108       |
+| ...   | ...                | ...       |
+| 11995 | ATCTATGATACACACTGT | 219       |
+| 11996 | CTCATGTACTATCTCACA | 366       |
+
+
+
 Please send all comments and questions to gsyu93@gmail.com
