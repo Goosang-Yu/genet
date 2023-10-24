@@ -57,6 +57,7 @@ setuptools.setup(
         'pyarrow',
         'fastparquet',
         'tqdm',
+        'editdistance',
         ],
 
 
