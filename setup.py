@@ -14,6 +14,12 @@ setuptools.setup(
     author_email    = "gsyu93@gmail.com",
     description     = "GenET: Genome Editing Toolkit",
     url             = "https://github.com/Goosang-Yu/genet",
+    project_urls={
+        # "Documentation": "https://XXXXXXX.org/wiki/Documentation",
+        "Source": "https://github.com/Goosang-Yu/genet",
+        "Bug Tracker": "https://github.com/Goosang-Yu/genet/issues",
+    },
+    
     packages        = setuptools.find_packages(exclude = ['dev_ing', 'dev_ing.*']),
     
     python_requires = ">=3.7",
@@ -63,7 +69,6 @@ setuptools.setup(
 
     long_description = long_description,
     long_description_content_type = "text/markdown",
-    project_urls={"Bug Tracker": "https://github.com/Goosang-Yu/genet/issues"},
     
     include_package_data=True,
 )
