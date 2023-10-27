@@ -1,0 +1,82 @@
+[build-system]
+requires = ["hatchling >= 1.13.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "genet"
+description = "GenET: Genome Editing Toolkit"
+readme = "README.md"
+requires-python = ">=3.7"
+license = "MIT"
+authors = [
+    { name = "Goosang Yu", email = "gsyu93@gmail.com" },
+]
+keywords = [
+  "genome-editing",
+  "CRISPR",
+  "genetics",
+  "analysis",
+  "ai",
+  "deep-learning",
+  "bioinformatics",
+  "python",
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: MacOS :: MacOS X",
+    "Operating System :: POSIX",
+    "Intended Audience :: Science/Research",
+    "Intended Audience :: Developers",
+    "Operating System :: Unix",
+    "Topic :: Software Development :: Libraries :: Application Frameworks",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+]
+dependencies = [
+    'pandas',
+    'regex',
+    'biopython',
+    'tensorflow==2.8.0',
+    'protobuf==3.20.*',
+    'silence_tensorflow',
+    'pyarrow',
+    'fastparquet',
+    'tqdm',
+    'editdistance',
+    ]
+dynamic = ["version"]
+
+[project.urls]
+Homepage = "https://github.com/Goosang-Yu/genet"
+Repository = "https://github.com/Goosang-Yu/genet"
+Source = "https://github.com/Goosang-Yu/genet"
+Tracker = "https://github.com/Goosang-Yu/genet/issues"
+
+[tool.hatch.version]
+path = "genet/__init__.py"
+
+[tool.setuptools.package-data]
+myModule = [
+            'genet/predict/models/DeepSpCas9/DeepSpCas9_model.data-00000-of-00001',
+            'genet/predict/models/DeepSpCas9/DeepSpCas9_model.index',
+            'genet/predict/models/DeepSpCas9/DeepSpCas9_model.meta',
+            ]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "/.github",
+  "/docs",
+  "/dev_ing",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["genet"]
