@@ -6,7 +6,7 @@ from Bio import Entrez, GenBank
 from Bio.Seq import reverse_complement, translate
 # from Bio.SeqUtils import GC
 from Bio.SeqUtils import gc_fraction
-from genet.design.DesignUtils import dict_pam_disrup_rank, test_score_data
+from genet.design.DesignUtils import dict_pam_disrup_rank
 
 '''
 TODO
