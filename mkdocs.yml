@@ -1,30 +1,82 @@
+# Project information
 site_name: GenET
+site_url: https://Goosang-Yu.github.io/genet/dev/
+site_author: Goosang Yu
+
+# Repository
+repo_name: genet
+repo_url: https://github.com/Goosang-Yu/genet
+edit_uri: ""
+
+copyright: |
+  &copy; 2023 <a href="https://github.com/Goosang-Yu" target="_blank" rel="noopener">Goosang Yu</a>
+
 theme:
   name: material
+
+  # 404 page
+  static_templates:
+    - 404.html
+
+  language: en
+  
   features:
-    - navigation.tabs
-    - navigation.sections
-    - toc.integrate
-    - navigation.top
-    - search.suggest
-    - search.highlight
-    - content.tabs.link
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
     - content.code.annotation
     - content.code.copy
-  language: en
+    - content.tabs.link
+    - content.tooltips
+    - navigation.expand
+    - navigation.footer
+    - navigation.indexes
+    - navigation.sections
+    - navigation.tabs
+    - navigation.tracking
+    - navigation.top
+    - search.share
+    - search.suggest
+    - search.highlight
+    - toc.follow
+    - toc.integrate
+  
   palette:
     - scheme: default
+      primary: indigo
+      accent: indigo
       toggle:
         icon: material/toggle-switch-off-outline
-        name: Wsitch to dark mode
-      primary: teal
-      accent: purple
+        name: Switch to dark mode
+    
     - scheme: slate
+      primary: black
+      accent: indigo
       toggle:
         icon: material/toggle-switch
-        name: Wsitch to light mode
-      primary: teal
-      accent: lime
+        name: Switch to light mode
+
+  font:
+    text: Roboto
+    code: Roboto Mono
+  icon:
+    logo: logo
+
+# Plugins
+plugins:
+  - blog
+  - search:
+      separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+
+# Hooks
+# hooks:
+#   - material/overrides/hooks/shortcodes.py
+#   - material/overrides/hooks/translations.py
+
+
+
+
+
 
 extra:
   social:
@@ -50,5 +102,17 @@ markdown_extensions:
       emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_generator: !!python/name:materialx.emoji.to_svg
 
-copyright: |
-  &copy; 2023 <a href="https://github.com/Goosang-Yu" target="_blank" rel="noopener">Goosang Yu</a>
+
+  
+# Page tree
+nav:
+  - Home: index.md
+  - Getting started:
+    - Getting started: getting_started.md
+    - Introduction: introduction.md
+    - Installation: installation.md
+  - Predict:
+    - How it works: howworks.md
+    - Cas9 nuclease: predict_cas9.md
+    - Base editor: predict_be.md
+    - Prime editor: predict_pe.md
