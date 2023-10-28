@@ -2,15 +2,14 @@
   
   <img src="https://github.com/Goosang-Yu/genet/blob/main/docs/images/logo.png?raw=true" width="300"/>
 
-**Genome Editing Toolkit** </br>
-**Since 2022. 08. 19.** </br>
+  # Genome Editing Toolkit
+  
+  [![Python](https://img.shields.io/badge/Python-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10%20%7C%203.11-blue)](https://badge.fury.io/py/genet) 
+  [![PyPI version](https://badge.fury.io/py/genet.svg)](https://badge.fury.io/py/genet) 
+  [![Slack](https://img.shields.io/badge/slack-chat-blueviolet.svg?logo=slack)](https://genethq.slack.com/archives/C04DP727E4E)
+  [![License](https://img.shields.io/pypi/l/ansicolortags.svg)](https://img.shields.io/pypi/l/ansicolortags.svg) 
 
-[![Python](https://img.shields.io/badge/Python-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-blue)](https://badge.fury.io/py/genet) 
-[![PyPI version](https://badge.fury.io/py/genet.svg)](https://badge.fury.io/py/genet) 
-[![Slack](https://img.shields.io/badge/slack-chat-blueviolet.svg?logo=slack)](https://genethq.slack.com/archives/C04DP727E4E)
-[![Documentation Status](https://readthedocs.org/projects/genet/badge/?version=latest)](https://genet.readthedocs.io/en/latest/?badge=latest)
-[![License](https://img.shields.io/pypi/l/ansicolortags.svg)](https://img.shields.io/pypi/l/ansicolortags.svg) 
-
+</div>
 
 <div align="left">
 
