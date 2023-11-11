@@ -1,6 +1,6 @@
 # Project information
 site_name: GenET
-site_url: https://Goosang-Yu.github.io/genet/dev/
+site_url: https://Goosang-Yu.github.io/genet/
 site_author: Goosang Yu
 
 # Repository
@@ -59,8 +59,11 @@ theme:
   font:
     text: Roboto
     code: Roboto Mono
-  icon:
-    logo: logo
+  
+  logo: images/logo.png
+
+  # icon:
+    # logo: logo
 
 # Plugins
 plugins:
