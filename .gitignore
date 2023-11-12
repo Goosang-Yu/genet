@@ -5,6 +5,7 @@
 *.log
 *.pot
 *.pyc
+*.ipynb
 __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
