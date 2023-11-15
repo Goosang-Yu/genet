@@ -79,20 +79,24 @@ class SynPrime:
         return df_read_frequency
     
     
-    def significance(self, unedit_control:str, edit_control:str, var_list:str):
+    def significance(self, unedit_control:str, edit_control:str, var_info:str):
         '''Odds ratio, Fisher's t-test를 위한 control sample들을 넣고
         각 variants read에 따른 OR / p-value들을 가진 파일을 만든다.
         
         var_list는 screening에서 분석할 각 variants read들의 정보 (AA_var, mut_type 등)이 적힌 list
         이를 기준으로 synonymous mutation만 골라내고, 이들을 이용해서 OR/PV를 계산한다.
+
+        Variants           | cds_var   | AA_var | mut_type | seq_var
+        ABL1_ex8_pos1_ctot | c.5124T>C | Y185D  | missense | ACGATGCTAGTCAGTCGTAGCGCGATGC
         
         TODO
         figure를 자동으로 만들어서 보여주는 기능을 추가 예정 
         옵션으로 자동으로 저장하는 기능을 넣어주거나, figure custom 할 수 있는 기능 추가
         '''
         
-        df_ue = pd.read_csv(f'{self.dir_exp}/step1_align/CRISPResso_on_{unedit_control}/{unedit_control}_aligned.csv')
-        df_ed = pd.read_csv(f'{self.dir_exp}/step1_align/CRISPResso_on_{edit_control}/{edit_control}_aligned.csv')
+        df_ref = pd.read_csv(var_info)
+        df_ue  = pd.read_csv(f'{self.dir_exp}/step1_align/CRISPResso_on_{unedit_control}/{unedit_control}_aligned.csv')
+        df_ed  = pd.read_csv(f'{self.dir_exp}/step1_align/CRISPResso_on_{edit_control}/{edit_control}_aligned.csv')
         
         df_ue.columns = []
         df_ed.columns = []
