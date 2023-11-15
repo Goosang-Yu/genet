@@ -45,7 +45,7 @@ dependencies = [
     'pandas',
     'regex',
     'biopython',
-    'tensorflow==2.8.0',
+    'tensorflow < 2.14.0',
     'protobuf==3.20.*',
     'silence_tensorflow',
     'pyarrow',
