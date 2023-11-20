@@ -8,7 +8,7 @@ import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-import os, sys, regex, logging
+import os, sys, regex
 import numpy as np
 import pandas as pd
 from glob import glob
@@ -60,12 +60,10 @@ class DeepPrime:
         
         # initializing
         if silence != True:
-            self.set_logging()
             self.check_input()
 
         ## FeatureExtraction Class
         cFeat = FeatureExtraction()
-        if silence != True: self.logger.info('Make features of pegRNAs')
 
         cFeat.input_id = sID
         cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
@@ -91,7 +89,6 @@ class DeepPrime:
             print('There are no available pegRNAs, please check your input sequences.\n')
             self.pegRNAcnt = 0
 
-        if silence != True: self.logger.info('Created an instance of DeepPrime')
 
     # def __init__: END
 
@@ -158,47 +155,6 @@ class DeepPrime:
 
     # def predict: END
 
-
-    def set_logging(self):
-
-        self.logger = logging.getLogger(self.TEMP_DIR)
-        self.logger.setLevel(logging.DEBUG)
-
-        self.formatter = logging.Formatter(
-            '%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n',
-            datefmt='%a, %d %b %Y %H:%M:%S',
-            )
-        
-        self.error = self.logger.error
-        self.warn  = self.logger.warn
-        self.debug = self.logger.debug
-        self.info  = self.logger.info
-
-        try:
-            os.makedirs(self.OUT_PATH, exist_ok=True)
-            os.makedirs(self.TEMP_DIR, exist_ok=True)
-            self.info('Creating Folder %s' % self.OUT_PATH)
-        except:
-            self.error('Creating Folder failed')
-            sys.exit(1)
-            
-        self.file_handler = logging.FileHandler('%s/log_%s.log' % (self.TEMP_DIR, self.sID))
-        self.file_handler.setLevel(logging.DEBUG)
-        self.file_handler.setFormatter(self.formatter)
-        self.logger.addHandler(self.file_handler)
-        
-        if self.silence != True:
-            self.console_handler = logging.StreamHandler()
-            self.console_handler.setLevel(logging.DEBUG)
-            self.console_handler.setFormatter(self.formatter)
-            self.logger.addHandler(self.console_handler)
-
-        self.info('DeepPrime: pegRNA activity prediction models\n\t version: %s' % genet.__version__)
-
-
-        return None
-
-    # def set_logging: END
 
 
     def check_input(self):
