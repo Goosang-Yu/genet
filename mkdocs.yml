@@ -119,3 +119,5 @@ nav:
     - Cas9 nuclease: predict_cas9.md
     - Base editor: predict_be.md
     - Prime editor: predict_pe.md
+  - Application note:
+    - Genome-wide KO lIbrary: Genome-wide_KO_library.md

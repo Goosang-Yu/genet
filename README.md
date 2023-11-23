@@ -8,7 +8,7 @@
 [![Python](https://img.shields.io/badge/Python-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-blue)](https://badge.fury.io/py/genet) 
 [![PyPI version](https://badge.fury.io/py/genet.svg)](https://badge.fury.io/py/genet) 
 [![Slack](https://img.shields.io/badge/slack-chat-blueviolet.svg?logo=slack)](https://genethq.slack.com/archives/C04DP727E4E)
-[![docs](https://img.shields.io/badge/Docs-Tutorials-blue)](https://valdes-tresanco-ms.github.io/gmx_MMPBSA/dev/getting-started/)
+[![docs](https://img.shields.io/badge/Docs-Tutorials-blue)](https://goosang-yu.github.io/genet/getting_started/)
 [![License](https://img.shields.io/pypi/l/ansicolortags.svg)](https://img.shields.io/pypi/l/ansicolortags.svg) 
 
 
