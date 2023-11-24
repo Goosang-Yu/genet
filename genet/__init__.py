@@ -15,4 +15,4 @@ genet의 처음 init 부분
 # hatch build
 # hatch publish
 
-__version__ = '0.10.1'
+__version__ = '0.11.0'
