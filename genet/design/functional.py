@@ -125,9 +125,9 @@ class SynonymousPE:
         self.rec        = dp_record
         self.sID        = dp_record.ID
         self.wt_seq     = dp_record.Target
-        self.rtpbs_dna  = reverse_complement(dp_record.Masked_EditSeq)
-        self.pbs_dna    = dp_record.Masked_EditSeq.replace('x', '')[:dp_record.PBS_len]
-        self.rtt_dna    = dp_record.Masked_EditSeq.replace('x', '')[-dp_record.RTT_len:]
+        self.rtpbs_dna  = reverse_complement(dp_record['RT-PBS'])
+        self.pbs_dna    = self.rtpbs_dna[:dp_record.PBS_len]
+        self.rtt_dna    = self.rtpbs_dna[-dp_record.RTT_len:]
         self.edit_pos   = dp_record.Edit_pos
         self.ref_seq    = ref_seq.upper()
         self.frame      = frame
