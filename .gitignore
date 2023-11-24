@@ -10,6 +10,9 @@ __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
 
+## about package
+/genet/models/
+
 ## about build
 /build
 /dist

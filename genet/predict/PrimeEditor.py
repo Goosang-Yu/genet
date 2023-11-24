@@ -1,4 +1,3 @@
-import genet
 import genet.utils
 from genet.predict.PredUtils import *
 from genet.predict.Nuclease import SpCas9
@@ -142,42 +141,31 @@ class DeepPrime:
     def check_input(self):
         
         if len(self.Ref_seq) != 121:
-            self.error(f'sID:{self.sID}\nThe length of Ref_seq should be 121nt')
-            raise ValueError('Please check your input: Ref_seq')
+            raise ValueError('Please check your input: Ref_seq. The length of Ref_seq should be 121nt')
         
         if len(self.ED_seq) != 121:
-            self.error(f'sID:{self.sID}\nThe length of ED_seq should be 121nt')
-            raise ValueError('Please check your input: ED_seq')
+            raise ValueError('Please check your input: ED_seq. The length of ED_seq should be 121nt')
 
         if self.pbs_min < 1:
-            self.error(f'sID:{self.sID}\nPlease set PBS max length at least 1nt')
-            raise ValueError('Please check your input: pbs_min')
+            raise ValueError('Please check your input: pbs_min. Please set PBS max length at least 1nt')
         
         if self.pbs_max > 17:
-            self.error(f'sID:{self.sID}\nPlease set PBS max length upto 17nt')
-            raise ValueError('Please check your input: pbs_max')
+            raise ValueError('Please check your input: pbs_max. Please set PBS max length upto 17nt')
         
         if self.rtt_max > 40:
-            self.error(f'sID:{self.sID}\nPlease set RTT max length upto 40nt')
-            raise ValueError('Please check your input: rtt_max')
+            raise ValueError('Please check your input: rtt_max. Please set RTT max length upto 40nt')
 
         if self.edit_type not in ['sub', 'ins', 'del']:
-            self.error(f'sID:{self.sID}\n\t Please select proper edit type.\n\t Available edit style: sub, ins, del')
-            raise ValueError('Please check your input: edit_type')
+            raise ValueError('Please check your input: edit_type. Available edit style: sub, ins, del')
         
         if self.pam not in ['NGG', 'NRCH']:
-            self.error(f'sID:{self.sID}\n\t Please select proper PAM type.\n\t Available PAM: NGG, NRCH')
-            raise ValueError('Please check your input: edit_type')
+            raise ValueError('Please check your input: edit_type. Available PAM: NGG, NRCH')
 
         if self.edit_len > 3:
-            self.error(f'sID:{self.sID}\n\t Please set edit length upto 3nt. Available edit length range: 1~3nt')
-            raise ValueError('Please check your input: edit_len')
+            raise ValueError('Please check your input: edit_len. Please set edit length upto 3nt. Available edit length range: 1~3nt')
         
         if self.edit_len < 1:
-            self.error(f'sID:{self.sID}\n\t Please set edit length at least 1nt. Available edit length range: 1~3nt')
-            raise ValueError('Please check your input: edit_len')
-
-        self.info(f'Input information\n\t ID: {self.sID}\n\t Refseq: {self.Ref_seq}\n\t EDseq :{self.ED_seq}')
+            raise ValueError('Please check your input: edit_len. Please set edit length at least 1nt. Available edit length range: 1~3nt')
 
         return None
     
@@ -810,10 +798,8 @@ class GeneInteractionModel(nn.Module):
         g, _ = self.r(torch.transpose(g, 1, 2))
         g = self.s(g[:, -1, :])
 
-        x = self.d(x)
-
+        x = self.d(x) ## 여기가 문제
         out = self.head(torch.cat((g, x), dim=1))
-
         return F.softplus(out)
 
 def seq_concat(data, col1='Target', col2='Masked_EditSeq', seq_length=74):
