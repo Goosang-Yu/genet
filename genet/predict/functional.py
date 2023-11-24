@@ -1,7 +1,7 @@
 import genet
 import genet.utils
 from genet.predict.PredUtils import *
-from genet.predict.DeepSpCas9 import SpCas9
+from genet.predict.Nuclease import SpCas9
 from genet.models import LoadModel
 
 import torch
@@ -640,8 +640,8 @@ class GeneInteractionModel(nn.Module):
         return F.softplus(out)
 
 def seq_concat(data, col1='WT74_On', col2='Edited74_On', seq_length=74):
-    wt = preprocess_seq(data[col1], seq_length)
-    ed = preprocess_seq(data[col2], seq_length)
+    wt = preprocess_masked_seq(data[col1], seq_length)
+    ed = preprocess_masked_seq(data[col2], seq_length)
     g = np.concatenate((wt, ed), axis=1)
     g = 2 * g - 1
 
@@ -773,6 +773,7 @@ def pe_score(Ref_seq: str,
                 return ext_seq
             
             df = pd.DataFrame()
+            df['ID']     = df_all['ID']
             df['Target'] = df_all['WT74_On']
             df['Spacer'] = list_Guide30
             df['RT-PBS'] = df_all['Edited74_On'].apply(get_extension)

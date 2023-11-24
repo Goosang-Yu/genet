@@ -1,7 +1,7 @@
 import genet
 import genet.utils
 from genet.predict.PredUtils import *
-from genet.predict.DeepSpCas9 import SpCas9
+from genet.predict.Nuclease import SpCas9
 from genet.models import LoadModel
 
 import torch
@@ -78,8 +78,7 @@ class DeepPrime:
         del cFeat
 
         if len(self.features) > 0:
-
-            self.list_Guide30 = [WT74[:30] for WT74 in self.features['WT74_On']]
+            self.list_Guide30 = [WT74[:30] for WT74 in self.features['Target']]
             self.features['DeepSpCas9_score'] = SpCas9().predict(self.list_Guide30)['SpCas9']
             self.pegRNAcnt = len(self.features)
         
@@ -88,7 +87,6 @@ class DeepPrime:
             print('DeepPrime only support RTT length upto 40nt')
             print('There are no available pegRNAs, please check your input sequences.\n')
             self.pegRNAcnt = 0
-
 
     # def __init__: END
 
@@ -132,29 +130,13 @@ class DeepPrime:
         preds = np.mean(preds, axis=0)
         preds = np.exp(preds) - 1
 
-        df_all[f'{pe_system}_score'] = preds
+        df_all.insert(1, f'{pe_system}_score', preds)
 
-        if show_features == False:
 
-            def get_extension(masked_seq:str):
-                ext_seq = masked_seq.replace('x', '')
-                ext_seq = reverse_complement(ext_seq)
-                return ext_seq
-            
-            df = pd.DataFrame()
-            df['Target'] = df_all['WT74_On']
-            df['Spacer'] = self.list_Guide30
-            df['RT-PBS'] = df_all['Edited74_On'].apply(get_extension)
-            df = pd.concat([df,df_all.iloc[:, 3:9]],axis=1)
-            df[f'{pe_system}_score'] = df_all[f'{pe_system}_score']
-
-            return df
-
-        elif show_features == True:
-            return df_all
+        if   show_features == False: return df_all.iloc[:, :11]
+        elif show_features == True : return df_all
 
     # def predict: END
-
 
 
     def check_input(self):
@@ -527,11 +509,6 @@ class FeatureExtraction:
             nAltPosWin = int(nAltPosWin)
             nNickIndex = int(nPAM_Nick)
 
-            # if sStrand == '+':
-            #     sWTSeq74 = self.sWTSeq[nNickIndex - 21:nNickIndex + 53]
-            # else:
-            #     sWTSeq74 = reverse_complement(self.sWTSeq[nNickIndex - 53:nNickIndex + 21])
-
             for sSeqKey in self.dict_sCombos[sPAMKey]:
 
                 sRTSeq, sPBSSeq = sSeqKey.split(',')
@@ -587,11 +564,11 @@ class FeatureExtraction:
                 sForTm4 = [reverse_complement(sRTSeq.replace('A', 'U')), sRTSeq]
 
 
-                self.dict_sCombos[sPAMKey][sSeqKey] = {'Tm1': sForTm1,
-                                                        'Tm2': sForTm2,
-                                                        'Tm2new': sForTm2new,
-                                                        'Tm3': sForTm3,
-                                                        'Tm4': sForTm4}
+                self.dict_sCombos[sPAMKey][sSeqKey] = {'Tm1_PBS': sForTm1,
+                                                        'Tm2_RTT_cTarget_sameLength': sForTm2,
+                                                        'Tm3_RTT_cTarget_replaced': sForTm2new,
+                                                        'Tm4_cDNA_PAM-oppositeTarget': sForTm3,
+                                                        'Tm5_RTT_cDNA': sForTm4}
             # loop END: sSeqKey
         # loop END: sPAMKey
     # def END: determine_seqs
@@ -601,8 +578,9 @@ class FeatureExtraction:
         for sPAMKey in self.dict_sSeqs:
 
             sAltKey, sAltNotation, sStrand, nPAM_Nick, nAltPosWin, sPAMSeq, sGuideSeq = sPAMKey.split(',')
-            list_sOutputKeys = ['Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD', 'nGCcnt1', 'nGCcnt2', 'nGCcnt3',
-                        'fGCcont1', 'fGCcont2', 'fGCcont3', 'MFE3', 'MFE4']
+            list_sOutputKeys = ['Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 
+                                'Tm4_cDNA_PAM-oppositeTarget', 'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2', 'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS',
+                                'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 'MFE_RT-PBS-polyT', 'MFE_Spacer']
 
             if sPAMKey not in self.dict_sOutput:
                 self.dict_sOutput[sPAMKey] = {}
@@ -621,11 +599,11 @@ class FeatureExtraction:
 
 
     def determine_Tm(self, sPAMKey, sSeqKey):
-        sForTm1 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm1']
-        sForTm2 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm2']
-        sForTm2new = self.dict_sCombos[sPAMKey][sSeqKey]['Tm2new']
-        sForTm3 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm3']
-        sForTm4 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm4']
+        sForTm1 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm1_PBS']
+        sForTm2 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm2_RTT_cTarget_sameLength']
+        sForTm2new = self.dict_sCombos[sPAMKey][sSeqKey]['Tm3_RTT_cTarget_replaced']
+        sForTm3 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm4_cDNA_PAM-oppositeTarget']
+        sForTm4 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm5_RTT_cDNA']
 
         ## Tm1 DNA/RNA mm1 ##
         fTm1 = mt.Tm_NN(seq=Seq(sForTm1), nn_table=mt.R_DNA_NN1)
@@ -660,12 +638,12 @@ class FeatureExtraction:
         # Tm5 - Tm3 - Tm2
         fTm5 = fTm3 - fTm2
 
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm1'] = fTm1
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm2'] = fTm2
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm2new'] = fTm2new
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm3'] = fTm3
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm4'] = fTm4
-        self.dict_sOutput[sPAMKey][sSeqKey]['TmD'] = fTm5
+        self.dict_sOutput[sPAMKey][sSeqKey]['Tm1_PBS'] = fTm1
+        self.dict_sOutput[sPAMKey][sSeqKey]['Tm2_RTT_cTarget_sameLength'] = fTm2
+        self.dict_sOutput[sPAMKey][sSeqKey]['Tm3_RTT_cTarget_replaced'] = fTm2new
+        self.dict_sOutput[sPAMKey][sSeqKey]['Tm4_cDNA_PAM-oppositeTarget'] = fTm3
+        self.dict_sOutput[sPAMKey][sSeqKey]['Tm5_RTT_cDNA'] = fTm4
+        self.dict_sOutput[sPAMKey][sSeqKey]['deltaTm_Tm4-Tm2'] = fTm5
 
     # def END: determine_Tm
 
@@ -679,12 +657,12 @@ class FeatureExtraction:
         self.fGCcont1 = 100 * gc(sPBSSeq)
         self.fGCcont2 = 100 * gc(sRTSeqAlt)
         self.fGCcont3 = 100 * gc(sPBSSeq + sRTSeqAlt)
-        self.dict_sOutput[sPAMKey][sSeqKey]['nGCcnt1'] = self.nGCcnt1
-        self.dict_sOutput[sPAMKey][sSeqKey]['nGCcnt2'] = self.nGCcnt2
-        self.dict_sOutput[sPAMKey][sSeqKey]['nGCcnt3'] = self.nGCcnt3
-        self.dict_sOutput[sPAMKey][sSeqKey]['fGCcont1'] = self.fGCcont1
-        self.dict_sOutput[sPAMKey][sSeqKey]['fGCcont2'] = self.fGCcont2
-        self.dict_sOutput[sPAMKey][sSeqKey]['fGCcont3'] = self.fGCcont3
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_count_PBS'] = self.nGCcnt1
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_count_RTT'] = self.nGCcnt2
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_count_RT-PBS'] = self.nGCcnt3
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_contents_PBS'] = self.fGCcont1
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_contents_RTT'] = self.fGCcont2
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_contents_RT-PBS'] = self.fGCcont3
 
 
     # def END: determine_GC
@@ -704,16 +682,17 @@ class FeatureExtraction:
         sInputSeq = sGuideSeq
         sDBSeq, fMFE4 = fold_compound(sInputSeq).mfe()
 
-        self.dict_sOutput[sPAMKey][sSeqKey]['MFE3'] = round(fMFE3, 1)
-        self.dict_sOutput[sPAMKey][sSeqKey]['MFE4'] = round(fMFE4, 1)
+        self.dict_sOutput[sPAMKey][sSeqKey]['MFE_RT-PBS-polyT'] = round(fMFE3, 1)
+        self.dict_sOutput[sPAMKey][sSeqKey]['MFE_Spacer'] = round(fMFE4, 1)
 
     # def END: determine_MFE
 
     def make_output_df(self):
 
         list_output = []
-        list_sOutputKeys = ['Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD', 'nGCcnt1', 'nGCcnt2', 'nGCcnt3',
-                        'fGCcont1', 'fGCcont2', 'fGCcont3', 'MFE3', 'MFE4']
+        list_sOutputKeys = ['Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 'Tm4_cDNA_PAM-oppositeTarget', 
+                            'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2', 'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS',
+                            'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 'MFE_RT-PBS-polyT', 'MFE_Spacer']
 
         for sPAMKey in self.dict_sSeqs:
 
@@ -748,20 +727,25 @@ class FeatureExtraction:
                     RHA_len = len(sRTTSeq) - nEditPos - self.nAltLen + 1
 
 
-                list_sOut = [self.input_id, sWTSeq74, sEDSeq74, 
-                            len(sPBSSeq), len(sRTTSeq), len(sPBSSeq + sRTTSeq), nEditPos, self.nAltLen,
-                            RHA_len, self.type_sub, self.type_ins, self.type_del
+                list_sOut = [self.input_id, reverse_complement(sPBS_RTSeq), len(sPBSSeq), len(sRTTSeq), len(sPBSSeq + sRTTSeq), 
+                            nEditPos, self.nAltLen,RHA_len, sWTSeq74, sEDSeq74, 
+                            self.type_sub, self.type_ins, self.type_del
                             ] + [self.dict_sOutput[sPAMKey][sSeqKey][sKey] for sKey in list_sOutputKeys]
 
                 list_output.append(list_sOut)
             
             # loop END: sSeqKey
 
-        hder_essen = ['ID', 'WT74_On', 'Edited74_On', 'PBSlen', 'RTlen', 'RT-PBSlen', 'Edit_pos', 'Edit_len', 'RHA_len',
-                    'type_sub', 'type_ins', 'type_del','Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD',
-                    'nGCcnt1', 'nGCcnt2', 'nGCcnt3', 'fGCcont1', 'fGCcont2', 'fGCcont3', 'MFE3', 'MFE4']
+        hder_essen = ['ID', 'RT-PBS', 'PBS_len', 'RTT_len', 'RT-PBS_len', 'Edit_pos', 'Edit_len', 'RHA_len', 'Target', 'Masked_EditSeq', 
+                    'type_sub', 'type_ins', 'type_del','Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 
+                    'Tm4_cDNA_PAM-oppositeTarget', 'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2',
+                    'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS', 
+                    'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 'MFE_RT-PBS-polyT', 'MFE_Spacer']
 
         df_out = pd.DataFrame(list_output, columns=hder_essen)
+
+        list_spacer = [wt74[4:24] for wt74 in df_out.Target]
+        df_out.insert(1, 'Spacer', list_spacer)
         
         # loop END: sPAMKey
 
@@ -832,9 +816,9 @@ class GeneInteractionModel(nn.Module):
 
         return F.softplus(out)
 
-def seq_concat(data, col1='WT74_On', col2='Edited74_On', seq_length=74):
+def seq_concat(data, col1='Target', col2='Masked_EditSeq', seq_length=74):
     wt = preprocess_seq(data[col1], seq_length)
-    ed = preprocess_seq(data[col2], seq_length)
+    ed = preprocess_masked_seq(data[col2], seq_length)
     g = np.concatenate((wt, ed), axis=1)
     g = 2 * g - 1
 
@@ -842,13 +826,13 @@ def seq_concat(data, col1='WT74_On', col2='Edited74_On', seq_length=74):
 
 
 def select_cols(data):
-    features = data.loc[:, ['PBSlen', 'RTlen', 'RT-PBSlen', 'Edit_pos', 'Edit_len', 'RHA_len', 'type_sub',
-                            'type_ins', 'type_del', 'Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD',
-                            'nGCcnt1', 'nGCcnt2', 'nGCcnt3', 'fGCcont1', 'fGCcont2', 'fGCcont3', 'MFE3', 'MFE4', 'DeepSpCas9_score']]
+    features = data.loc[:, ['PBS_len', 'RTT_len', 'RT-PBS_len', 'Edit_pos', 'Edit_len', 'RHA_len', 'type_sub',
+                            'type_ins', 'type_del', 'Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 
+                            'Tm4_cDNA_PAM-oppositeTarget', 'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2',
+                            'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS', 
+                            'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 
+                            'MFE_RT-PBS-polyT', 'MFE_Spacer', 'DeepSpCas9_score']]
 
     return features
-
-
-
 
 #pecv_score

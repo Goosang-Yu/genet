@@ -14,3 +14,7 @@ __pycache__/
 /build
 /dist
 genet.egg-info
+
+
+## About test datasets
+*.parquet
