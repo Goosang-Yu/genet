@@ -100,8 +100,8 @@ class DeepPrime:
         model_info = LoadModel('DeepPrime', pe_system, cell_type)
         model_dir  = model_info.model_dir
 
-        mean = pd.read_csv(f'{model_dir}/mean.csv', header=None, index_col=0).squeeze()
-        std  = pd.read_csv(f'{model_dir}/std.csv',  header=None, index_col=0).squeeze()
+        mean = pd.read_csv(f'{model_dir}/mean_231124.csv', header=None, index_col=0).squeeze()
+        std  = pd.read_csv(f'{model_dir}/std_231124.csv',  header=None, index_col=0).squeeze()
 
         test_features = select_cols(df_all)
 
