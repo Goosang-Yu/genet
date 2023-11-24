@@ -1,7 +1,7 @@
 import sys
 import numpy as np
 
-def preprocess_seq(data, seq_length):
+def preprocess_masked_seq(data, seq_length):
 
     seq_onehot = np.zeros((len(data), 1, seq_length, 4), dtype=float)
 
@@ -23,6 +23,15 @@ def preprocess_seq(data, seq_length):
                 sys.exit()
 
     return seq_onehot
+
+def one_hot_encode(seq):
+    mapping = mapping = {"A": 0, "C": 1, "G": 2, "T": 3, "X": 0}
+    seq2 = [mapping[i] for i in seq]
+    return np.eye(4)[seq2]
+
+def preprocess_seq(data, length:int):
+    encoded_seq = [one_hot_encode(seq) for seq in data]
+    return np.stack(encoded_seq, axis=0).reshape(len(data), 1, length, 4)
 
 def reverse_complement(sSeq):
     dict_sBases = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N', 'U': 'U', 'n': '',

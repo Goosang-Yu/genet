@@ -1,7 +1,7 @@
 import genet
 import genet.utils
 from genet.predict.PredUtils import *
-from genet.predict.DeepSpCas9 import SpCas9
+from genet.predict.Nuclease import SpCas9
 from genet.models import LoadModel
 
 import torch
@@ -640,8 +640,8 @@ class GeneInteractionModel(nn.Module):
         return F.softplus(out)
 
 def seq_concat(data, col1='WT74_On', col2='Edited74_On', seq_length=74):
-    wt = preprocess_seq(data[col1], seq_length)
-    ed = preprocess_seq(data[col2], seq_length)
+    wt = preprocess_masked_seq(data[col1], seq_length)
+    ed = preprocess_masked_seq(data[col2], seq_length)
     g = np.concatenate((wt, ed), axis=1)
     g = 2 * g - 1
 
@@ -727,9 +727,9 @@ def pe_score(Ref_seq: str,
     
     '''
     if silence != True:
-        print('''[Warnning] genet.predict.pe_score will be deprecated in future.\n
-            Please consider genet.predict.DeepPrime instead.\n
-            Run DeepPrime now anyway.\n''')
+        print('''\n[Warnning] genet.predict.pe_score will be deprecated in future.
+            Please consider genet.predict.DeepPrime instead.
+            Run DeepPrime now anyway.''')
             
     nAltIndex   = 60
     pbs_range   = [pbs_min, pbs_max]
@@ -765,30 +765,31 @@ def pe_score(Ref_seq: str,
         df_all['DeepSpCas9_score'] = SpCas9().predict(list_Guide30)['SpCas9']
         df_all['%s_score' % pe_system]  = calculate_deepprime_score(df_all, pe_system, cell_type)
     
+        if show_features == False:
+
+            def get_extension(masked_seq:str):
+                ext_seq = masked_seq.replace('x', '')
+                ext_seq = reverse_complement(ext_seq)
+                return ext_seq
+            
+            df = pd.DataFrame()
+            df['ID']     = df_all['ID']
+            df['Target'] = df_all['WT74_On']
+            df['Spacer'] = list_Guide30
+            df['RT-PBS'] = df_all['Edited74_On'].apply(get_extension)
+            df = pd.concat([df,df_all.iloc[:, 3:9]],axis=1)
+            df['%s_score' % pe_system] = df_all['%s_score' % pe_system]
+
+            return df
+
+        elif show_features == True:
+            
+            return df_all
+
     else:
         print('\nsID:', sID)
         print('DeepPrime only support RTT length upto 40nt')
         print('There are no available pegRNAs, please check your input sequences\n')
-
-    if show_features == False:
-
-        def get_extension(masked_seq:str):
-            ext_seq = masked_seq.replace('x', '')
-            ext_seq = reverse_complement(ext_seq)
-            return ext_seq
-        
-        df = pd.DataFrame()
-        df['Target'] = df_all['WT74_On']
-        df['Spacer'] = list_Guide30
-        df['RT-PBS'] = df_all['Edited74_On'].apply(get_extension)
-        df = pd.concat([df,df_all.iloc[:, 3:9]],axis=1)
-        df['%s_score' % pe_system] = df_all['%s_score' % pe_system]
-
-        return df
-
-    elif show_features == True:
-        
-        return df_all
 
 def pecv_score(cv_record,
                sID:str       = 'Sample',

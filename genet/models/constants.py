@@ -6,12 +6,17 @@ dict_model_info = {
     
     # DeepSpCas9 model
     'SpCas9': {
-        # PAM pattern: NGG + NGA + NAG
+        # PAM pattern: NGG
         'type': 'DeepSpCas9',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
         'path': 'DeepSpCas9',
-        'regex': {'+': '[ATGC]{25}G[AG][ATGC]{3}|[ATGC]{25}AG[ATGC]{3}',
-                  '-': '[ATGC]{3}[CT]C[ATGC]{25}|[ATGC]{3}CT[ATGC]{25}',},
+        'regex': {'+': '[ATGC]{25}GG[ATGC]{3}',
+                  '-': '[ATGC]{3}CC[ATGC]{25}',},
+
+        # PAM pattern: NGG + NGA + NAG
+        # 'regex': {'+': '[ATGC]{25}G[AG][ATGC]{3}|[ATGC]{25}AG[ATGC]{3}',
+        #     '-': '[ATGC]{3}[CT]C[ATGC]{25}|[ATGC]{3}CT[ATGC]{25}',},
+
     },
 
     # DeepCas9variants

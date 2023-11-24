@@ -39,19 +39,19 @@ classifiers = [
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
 ]
 dependencies = [
     'pandas',
     'regex',
     'biopython',
-    'tensorflow==2.8.0',
-    'protobuf==3.20.*',
+    'tensorflow < 2.10.0',
+    'protobuf<=3.20.*',
     'silence_tensorflow',
     'pyarrow',
     'fastparquet',
     'tqdm',
     'editdistance',
+    'ncbi-datasets-pylib==13.*',
     ]
 dynamic = ["version"]
 
@@ -76,6 +76,7 @@ exclude = [
   "/.github",
   "/docs",
   "/dev_ing",
+  "/tests",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -5,11 +5,19 @@
 *.log
 *.pot
 *.pyc
+*.ipynb
 __pycache__/
 .pytest_cache/
 .ipynb_checkpoints/
+
+## about package
+/genet/models/*/
 
 ## about build
 /build
 /dist
 genet.egg-info
+
+
+## About test datasets
+*.parquet

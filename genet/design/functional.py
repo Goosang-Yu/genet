@@ -121,12 +121,13 @@ class SynonymousPE:
         if type(dp_record) != type(pd.Series()): raise TypeError("The type of 'dp_record' should be pd.Series.")
         if frame not in [0, 1, 2]              : raise ValueError('Frame should be 0, 1 or 2')
 
-        # step 1: 각종 서열 정보들을 가져온다.
+        # step 1: Get required features
         self.rec        = dp_record
         self.sID        = dp_record.ID
-        self.wt_seq     = dp_record.WT74_On
-        self.pbs_dna    = dp_record.Edited74_On.replace('x', '')[:dp_record.PBSlen]
-        self.rtt_dna    = dp_record.Edited74_On.replace('x', '')[-dp_record.RTlen:]
+        self.wt_seq     = dp_record.Target
+        self.rtpbs_dna  = reverse_complement(dp_record['RT-PBS'])
+        self.pbs_dna    = self.rtpbs_dna[:dp_record.PBS_len]
+        self.rtt_dna    = self.rtpbs_dna[-dp_record.RTT_len:]
         self.edit_pos   = dp_record.Edit_pos
         self.ref_seq    = ref_seq.upper()
         self.frame      = frame

@@ -1,14 +1,13 @@
-import genet
 import genet.utils
 from genet.predict.PredUtils import *
-from genet.predict.DeepSpCas9 import SpCas9
+from genet.predict.Nuclease import SpCas9
 from genet.models import LoadModel
 
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
 
-import os, sys, regex, logging
+import os, sys, regex
 import numpy as np
 import pandas as pd
 from glob import glob
@@ -60,12 +59,10 @@ class DeepPrime:
         
         # initializing
         if silence != True:
-            self.set_logging()
             self.check_input()
 
         ## FeatureExtraction Class
         cFeat = FeatureExtraction()
-        if silence != True: self.logger.info('Make features of pegRNAs')
 
         cFeat.input_id = sID
         cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
@@ -80,8 +77,7 @@ class DeepPrime:
         del cFeat
 
         if len(self.features) > 0:
-
-            self.list_Guide30 = [WT74[:30] for WT74 in self.features['WT74_On']]
+            self.list_Guide30 = [WT74[:30] for WT74 in self.features['Target']]
             self.features['DeepSpCas9_score'] = SpCas9().predict(self.list_Guide30)['SpCas9']
             self.pegRNAcnt = len(self.features)
         
@@ -90,8 +86,6 @@ class DeepPrime:
             print('DeepPrime only support RTT length upto 40nt')
             print('There are no available pegRNAs, please check your input sequences.\n')
             self.pegRNAcnt = 0
-
-        if silence != True: self.logger.info('Created an instance of DeepPrime')
 
     # def __init__: END
 
@@ -106,8 +100,8 @@ class DeepPrime:
         model_info = LoadModel('DeepPrime', pe_system, cell_type)
         model_dir  = model_info.model_dir
 
-        mean = pd.read_csv(f'{model_dir}/mean.csv', header=None, index_col=0).squeeze()
-        std  = pd.read_csv(f'{model_dir}/std.csv',  header=None, index_col=0).squeeze()
+        mean = pd.read_csv(f'{model_dir}/mean_231124.csv', header=None, index_col=0).squeeze()
+        std  = pd.read_csv(f'{model_dir}/std_231124.csv',  header=None, index_col=0).squeeze()
 
         test_features = select_cols(df_all)
 
@@ -135,111 +129,43 @@ class DeepPrime:
         preds = np.mean(preds, axis=0)
         preds = np.exp(preds) - 1
 
-        df_all[f'{pe_system}_score'] = preds
+        df_all.insert(1, f'{pe_system}_score', preds)
 
-        if show_features == False:
 
-            def get_extension(masked_seq:str):
-                ext_seq = masked_seq.replace('x', '')
-                ext_seq = reverse_complement(ext_seq)
-                return ext_seq
-            
-            df = pd.DataFrame()
-            df['Target'] = df_all['WT74_On']
-            df['Spacer'] = self.list_Guide30
-            df['RT-PBS'] = df_all['Edited74_On'].apply(get_extension)
-            df = pd.concat([df,df_all.iloc[:, 3:9]],axis=1)
-            df[f'{pe_system}_score'] = df_all[f'{pe_system}_score']
-
-            return df
-
-        elif show_features == True:
-            return df_all
+        if   show_features == False: return df_all.iloc[:, :11]
+        elif show_features == True : return df_all
 
     # def predict: END
-
-
-    def set_logging(self):
-
-        self.logger = logging.getLogger(self.TEMP_DIR)
-        self.logger.setLevel(logging.DEBUG)
-
-        self.formatter = logging.Formatter(
-            '%(levelname)-5s @ %(asctime)s:\n\t %(message)s \n',
-            datefmt='%a, %d %b %Y %H:%M:%S',
-            )
-        
-        self.error = self.logger.error
-        self.warn  = self.logger.warn
-        self.debug = self.logger.debug
-        self.info  = self.logger.info
-
-        try:
-            os.makedirs(self.OUT_PATH, exist_ok=True)
-            os.makedirs(self.TEMP_DIR, exist_ok=True)
-            self.info('Creating Folder %s' % self.OUT_PATH)
-        except:
-            self.error('Creating Folder failed')
-            sys.exit(1)
-            
-        self.file_handler = logging.FileHandler('%s/log_%s.log' % (self.TEMP_DIR, self.sID))
-        self.file_handler.setLevel(logging.DEBUG)
-        self.file_handler.setFormatter(self.formatter)
-        self.logger.addHandler(self.file_handler)
-        
-        if self.silence != True:
-            self.console_handler = logging.StreamHandler()
-            self.console_handler.setLevel(logging.DEBUG)
-            self.console_handler.setFormatter(self.formatter)
-            self.logger.addHandler(self.console_handler)
-
-        self.info('DeepPrime: pegRNA activity prediction models\n\t version: %s' % genet.__version__)
-
-
-        return None
-
-    # def set_logging: END
 
 
     def check_input(self):
         
         if len(self.Ref_seq) != 121:
-            self.error(f'sID:{self.sID}\nThe length of Ref_seq should be 121nt')
-            raise ValueError('Please check your input: Ref_seq')
+            raise ValueError('Please check your input: Ref_seq. The length of Ref_seq should be 121nt')
         
         if len(self.ED_seq) != 121:
-            self.error(f'sID:{self.sID}\nThe length of ED_seq should be 121nt')
-            raise ValueError('Please check your input: ED_seq')
+            raise ValueError('Please check your input: ED_seq. The length of ED_seq should be 121nt')
 
         if self.pbs_min < 1:
-            self.error(f'sID:{self.sID}\nPlease set PBS max length at least 1nt')
-            raise ValueError('Please check your input: pbs_min')
+            raise ValueError('Please check your input: pbs_min. Please set PBS max length at least 1nt')
         
         if self.pbs_max > 17:
-            self.error(f'sID:{self.sID}\nPlease set PBS max length upto 17nt')
-            raise ValueError('Please check your input: pbs_max')
+            raise ValueError('Please check your input: pbs_max. Please set PBS max length upto 17nt')
         
         if self.rtt_max > 40:
-            self.error(f'sID:{self.sID}\nPlease set RTT max length upto 40nt')
-            raise ValueError('Please check your input: rtt_max')
+            raise ValueError('Please check your input: rtt_max. Please set RTT max length upto 40nt')
 
         if self.edit_type not in ['sub', 'ins', 'del']:
-            self.error(f'sID:{self.sID}\n\t Please select proper edit type.\n\t Available edit style: sub, ins, del')
-            raise ValueError('Please check your input: edit_type')
+            raise ValueError('Please check your input: edit_type. Available edit style: sub, ins, del')
         
         if self.pam not in ['NGG', 'NRCH']:
-            self.error(f'sID:{self.sID}\n\t Please select proper PAM type.\n\t Available PAM: NGG, NRCH')
-            raise ValueError('Please check your input: edit_type')
+            raise ValueError('Please check your input: edit_type. Available PAM: NGG, NRCH')
 
         if self.edit_len > 3:
-            self.error(f'sID:{self.sID}\n\t Please set edit length upto 3nt. Available edit length range: 1~3nt')
-            raise ValueError('Please check your input: edit_len')
+            raise ValueError('Please check your input: edit_len. Please set edit length upto 3nt. Available edit length range: 1~3nt')
         
         if self.edit_len < 1:
-            self.error(f'sID:{self.sID}\n\t Please set edit length at least 1nt. Available edit length range: 1~3nt')
-            raise ValueError('Please check your input: edit_len')
-
-        self.info(f'Input information\n\t ID: {self.sID}\n\t Refseq: {self.Ref_seq}\n\t EDseq :{self.ED_seq}')
+            raise ValueError('Please check your input: edit_len. Please set edit length at least 1nt. Available edit length range: 1~3nt')
 
         return None
     
@@ -571,11 +497,6 @@ class FeatureExtraction:
             nAltPosWin = int(nAltPosWin)
             nNickIndex = int(nPAM_Nick)
 
-            # if sStrand == '+':
-            #     sWTSeq74 = self.sWTSeq[nNickIndex - 21:nNickIndex + 53]
-            # else:
-            #     sWTSeq74 = reverse_complement(self.sWTSeq[nNickIndex - 53:nNickIndex + 21])
-
             for sSeqKey in self.dict_sCombos[sPAMKey]:
 
                 sRTSeq, sPBSSeq = sSeqKey.split(',')
@@ -631,11 +552,11 @@ class FeatureExtraction:
                 sForTm4 = [reverse_complement(sRTSeq.replace('A', 'U')), sRTSeq]
 
 
-                self.dict_sCombos[sPAMKey][sSeqKey] = {'Tm1': sForTm1,
-                                                        'Tm2': sForTm2,
-                                                        'Tm2new': sForTm2new,
-                                                        'Tm3': sForTm3,
-                                                        'Tm4': sForTm4}
+                self.dict_sCombos[sPAMKey][sSeqKey] = {'Tm1_PBS': sForTm1,
+                                                        'Tm2_RTT_cTarget_sameLength': sForTm2,
+                                                        'Tm3_RTT_cTarget_replaced': sForTm2new,
+                                                        'Tm4_cDNA_PAM-oppositeTarget': sForTm3,
+                                                        'Tm5_RTT_cDNA': sForTm4}
             # loop END: sSeqKey
         # loop END: sPAMKey
     # def END: determine_seqs
@@ -645,8 +566,9 @@ class FeatureExtraction:
         for sPAMKey in self.dict_sSeqs:
 
             sAltKey, sAltNotation, sStrand, nPAM_Nick, nAltPosWin, sPAMSeq, sGuideSeq = sPAMKey.split(',')
-            list_sOutputKeys = ['Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD', 'nGCcnt1', 'nGCcnt2', 'nGCcnt3',
-                        'fGCcont1', 'fGCcont2', 'fGCcont3', 'MFE3', 'MFE4']
+            list_sOutputKeys = ['Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 
+                                'Tm4_cDNA_PAM-oppositeTarget', 'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2', 'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS',
+                                'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 'MFE_RT-PBS-polyT', 'MFE_Spacer']
 
             if sPAMKey not in self.dict_sOutput:
                 self.dict_sOutput[sPAMKey] = {}
@@ -665,11 +587,11 @@ class FeatureExtraction:
 
 
     def determine_Tm(self, sPAMKey, sSeqKey):
-        sForTm1 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm1']
-        sForTm2 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm2']
-        sForTm2new = self.dict_sCombos[sPAMKey][sSeqKey]['Tm2new']
-        sForTm3 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm3']
-        sForTm4 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm4']
+        sForTm1 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm1_PBS']
+        sForTm2 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm2_RTT_cTarget_sameLength']
+        sForTm2new = self.dict_sCombos[sPAMKey][sSeqKey]['Tm3_RTT_cTarget_replaced']
+        sForTm3 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm4_cDNA_PAM-oppositeTarget']
+        sForTm4 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm5_RTT_cDNA']
 
         ## Tm1 DNA/RNA mm1 ##
         fTm1 = mt.Tm_NN(seq=Seq(sForTm1), nn_table=mt.R_DNA_NN1)
@@ -704,12 +626,12 @@ class FeatureExtraction:
         # Tm5 - Tm3 - Tm2
         fTm5 = fTm3 - fTm2
 
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm1'] = fTm1
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm2'] = fTm2
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm2new'] = fTm2new
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm3'] = fTm3
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm4'] = fTm4
-        self.dict_sOutput[sPAMKey][sSeqKey]['TmD'] = fTm5
+        self.dict_sOutput[sPAMKey][sSeqKey]['Tm1_PBS'] = fTm1
+        self.dict_sOutput[sPAMKey][sSeqKey]['Tm2_RTT_cTarget_sameLength'] = fTm2
+        self.dict_sOutput[sPAMKey][sSeqKey]['Tm3_RTT_cTarget_replaced'] = fTm2new
+        self.dict_sOutput[sPAMKey][sSeqKey]['Tm4_cDNA_PAM-oppositeTarget'] = fTm3
+        self.dict_sOutput[sPAMKey][sSeqKey]['Tm5_RTT_cDNA'] = fTm4
+        self.dict_sOutput[sPAMKey][sSeqKey]['deltaTm_Tm4-Tm2'] = fTm5
 
     # def END: determine_Tm
 
@@ -723,12 +645,12 @@ class FeatureExtraction:
         self.fGCcont1 = 100 * gc(sPBSSeq)
         self.fGCcont2 = 100 * gc(sRTSeqAlt)
         self.fGCcont3 = 100 * gc(sPBSSeq + sRTSeqAlt)
-        self.dict_sOutput[sPAMKey][sSeqKey]['nGCcnt1'] = self.nGCcnt1
-        self.dict_sOutput[sPAMKey][sSeqKey]['nGCcnt2'] = self.nGCcnt2
-        self.dict_sOutput[sPAMKey][sSeqKey]['nGCcnt3'] = self.nGCcnt3
-        self.dict_sOutput[sPAMKey][sSeqKey]['fGCcont1'] = self.fGCcont1
-        self.dict_sOutput[sPAMKey][sSeqKey]['fGCcont2'] = self.fGCcont2
-        self.dict_sOutput[sPAMKey][sSeqKey]['fGCcont3'] = self.fGCcont3
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_count_PBS'] = self.nGCcnt1
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_count_RTT'] = self.nGCcnt2
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_count_RT-PBS'] = self.nGCcnt3
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_contents_PBS'] = self.fGCcont1
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_contents_RTT'] = self.fGCcont2
+        self.dict_sOutput[sPAMKey][sSeqKey]['GC_contents_RT-PBS'] = self.fGCcont3
 
 
     # def END: determine_GC
@@ -748,16 +670,17 @@ class FeatureExtraction:
         sInputSeq = sGuideSeq
         sDBSeq, fMFE4 = fold_compound(sInputSeq).mfe()
 
-        self.dict_sOutput[sPAMKey][sSeqKey]['MFE3'] = round(fMFE3, 1)
-        self.dict_sOutput[sPAMKey][sSeqKey]['MFE4'] = round(fMFE4, 1)
+        self.dict_sOutput[sPAMKey][sSeqKey]['MFE_RT-PBS-polyT'] = round(fMFE3, 1)
+        self.dict_sOutput[sPAMKey][sSeqKey]['MFE_Spacer'] = round(fMFE4, 1)
 
     # def END: determine_MFE
 
     def make_output_df(self):
 
         list_output = []
-        list_sOutputKeys = ['Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD', 'nGCcnt1', 'nGCcnt2', 'nGCcnt3',
-                        'fGCcont1', 'fGCcont2', 'fGCcont3', 'MFE3', 'MFE4']
+        list_sOutputKeys = ['Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 'Tm4_cDNA_PAM-oppositeTarget', 
+                            'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2', 'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS',
+                            'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 'MFE_RT-PBS-polyT', 'MFE_Spacer']
 
         for sPAMKey in self.dict_sSeqs:
 
@@ -792,20 +715,25 @@ class FeatureExtraction:
                     RHA_len = len(sRTTSeq) - nEditPos - self.nAltLen + 1
 
 
-                list_sOut = [self.input_id, sWTSeq74, sEDSeq74, 
-                            len(sPBSSeq), len(sRTTSeq), len(sPBSSeq + sRTTSeq), nEditPos, self.nAltLen,
-                            RHA_len, self.type_sub, self.type_ins, self.type_del
+                list_sOut = [self.input_id, reverse_complement(sPBS_RTSeq), len(sPBSSeq), len(sRTTSeq), len(sPBSSeq + sRTTSeq), 
+                            nEditPos, self.nAltLen,RHA_len, sWTSeq74, sEDSeq74, 
+                            self.type_sub, self.type_ins, self.type_del
                             ] + [self.dict_sOutput[sPAMKey][sSeqKey][sKey] for sKey in list_sOutputKeys]
 
                 list_output.append(list_sOut)
             
             # loop END: sSeqKey
 
-        hder_essen = ['ID', 'WT74_On', 'Edited74_On', 'PBSlen', 'RTlen', 'RT-PBSlen', 'Edit_pos', 'Edit_len', 'RHA_len',
-                    'type_sub', 'type_ins', 'type_del','Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD',
-                    'nGCcnt1', 'nGCcnt2', 'nGCcnt3', 'fGCcont1', 'fGCcont2', 'fGCcont3', 'MFE3', 'MFE4']
+        hder_essen = ['ID', 'RT-PBS', 'PBS_len', 'RTT_len', 'RT-PBS_len', 'Edit_pos', 'Edit_len', 'RHA_len', 'Target', 'Masked_EditSeq', 
+                    'type_sub', 'type_ins', 'type_del','Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 
+                    'Tm4_cDNA_PAM-oppositeTarget', 'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2',
+                    'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS', 
+                    'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 'MFE_RT-PBS-polyT', 'MFE_Spacer']
 
         df_out = pd.DataFrame(list_output, columns=hder_essen)
+
+        list_spacer = [wt74[4:24] for wt74 in df_out.Target]
+        df_out.insert(1, 'Spacer', list_spacer)
         
         # loop END: sPAMKey
 
@@ -870,15 +798,13 @@ class GeneInteractionModel(nn.Module):
         g, _ = self.r(torch.transpose(g, 1, 2))
         g = self.s(g[:, -1, :])
 
-        x = self.d(x)
-
+        x = self.d(x) ## 여기가 문제
         out = self.head(torch.cat((g, x), dim=1))
-
         return F.softplus(out)
 
-def seq_concat(data, col1='WT74_On', col2='Edited74_On', seq_length=74):
+def seq_concat(data, col1='Target', col2='Masked_EditSeq', seq_length=74):
     wt = preprocess_seq(data[col1], seq_length)
-    ed = preprocess_seq(data[col2], seq_length)
+    ed = preprocess_masked_seq(data[col2], seq_length)
     g = np.concatenate((wt, ed), axis=1)
     g = 2 * g - 1
 
@@ -886,13 +812,13 @@ def seq_concat(data, col1='WT74_On', col2='Edited74_On', seq_length=74):
 
 
 def select_cols(data):
-    features = data.loc[:, ['PBSlen', 'RTlen', 'RT-PBSlen', 'Edit_pos', 'Edit_len', 'RHA_len', 'type_sub',
-                            'type_ins', 'type_del', 'Tm1', 'Tm2', 'Tm2new', 'Tm3', 'Tm4', 'TmD',
-                            'nGCcnt1', 'nGCcnt2', 'nGCcnt3', 'fGCcont1', 'fGCcont2', 'fGCcont3', 'MFE3', 'MFE4', 'DeepSpCas9_score']]
+    features = data.loc[:, ['PBS_len', 'RTT_len', 'RT-PBS_len', 'Edit_pos', 'Edit_len', 'RHA_len', 'type_sub',
+                            'type_ins', 'type_del', 'Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 
+                            'Tm4_cDNA_PAM-oppositeTarget', 'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2',
+                            'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS', 
+                            'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 
+                            'MFE_RT-PBS-polyT', 'MFE_Spacer', 'DeepSpCas9_score']]
 
     return features
-
-
-
 
 #pecv_score

@@ -29,7 +29,7 @@ class LoadModel:
         try: 
             self.info = models.constants.dict_model_info[model_type]
         except:
-            print('[Warning] Not available model in GenET!')
+            print('\n[Warning] Not available model in GenET!')
             sys.exit()
         
         # model_dir: 
