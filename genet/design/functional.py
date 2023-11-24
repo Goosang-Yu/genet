@@ -1,10 +1,8 @@
 # from genet.utils import *
 import os, sys, regex
-import genet.utils
 import pandas as pd
 from Bio import Entrez, GenBank
 from Bio.Seq import reverse_complement, translate
-# from Bio.SeqUtils import GC
 from Bio.SeqUtils import gc_fraction
 from genet.design.DesignUtils import dict_pam_disrup_rank, test_score_data
 
@@ -15,10 +13,6 @@ TODO
 3. python 기본적으로 python 3.6~3.10까지 호환되는 것을 목표로 하고, 3.11도 테스트하기
 
 '''
-
-def loadseq():
-    print('This is loadseq function')
-
 
 
 class MakeStop:
@@ -36,9 +30,6 @@ class MakeStop:
     '''
     def __init__(self, gene_name:str):
         print('Start MakeStop')
-
-
-
 
 # class END: MakeStop
 
@@ -74,6 +65,7 @@ class MakeSNVs:
             if seq!=snv_temp: self.list_sSNV.append(snv_temp)
 
 # class END: MakeSNVs
+
 
 class SynonymousPE:
 
@@ -122,12 +114,26 @@ class SynonymousPE:
         if frame not in [0, 1, 2]              : raise ValueError('Frame should be 0, 1 or 2')
 
         # step 1: Get required features
+        '''
+        cds_start / end / frame 등을 variants마다 각각 따로 넣어줘야 하는 것이 복잡한 것 같음
+        Exon의 길이 (fixed), exon의 frame, SNV의 position만 넣으면, 
+        각 SNV의 frame, CDS start, CDS end를 내부적으로 만들어서 계산하는 것으로 수정하기
+
+        예를 들어, cds_end는 다음과 같이 구할 수 있음
+        cds_end = 66 + exon_len - pos 
+        if cds_end > 121: cds_end=121
+        
+        '''
+
         self.rec        = dp_record
         self.sID        = dp_record.ID
         self.wt_seq     = dp_record.Target
         self.rtpbs_dna  = reverse_complement(dp_record['RT-PBS'])
         self.pbs_dna    = self.rtpbs_dna[:dp_record.PBS_len]
         self.rtt_dna    = self.rtpbs_dna[-dp_record.RTT_len:]
+
+        self.rtt_len    = dp_record.RTT_len
+
         self.edit_pos   = dp_record.Edit_pos
         self.ref_seq    = ref_seq.upper()
         self.frame      = frame
@@ -179,7 +185,7 @@ class SynonymousPE:
             adj_len = self.output['Mut_pos'] - self.edit_pos
             
             if adj_len > 0: 
-                rtt_end = 21 + dp_record.RTlen
+                rtt_end = 21 + self.rtt_len
                 self.output['RTT_DNA_Mut'] = self.output['RTT_DNA_Mut'] + self.wt_seq[rtt_end:rtt_end+adj_len]
 
         self.extension = self.pbs_dna + self.output['RTT_DNA_Mut']
@@ -260,7 +266,7 @@ class SynonymousPE:
                 else            : mut_pos = mt_pos + (codon_le - snv_pos) + len(mt_dna)
 
                 if mut_pos == ep: continue
-                if mut_pos > self.rec.RTlen: continue
+                if mut_pos > self.rtt_len: continue
 
                 list_mut_codon = self.make_snv(codon, snv_pos)
                 
@@ -321,7 +327,7 @@ class SynonymousPE:
         """       
 
 
-        rtt_end = 21 + self.rec.RTlen
+        rtt_end = 21 + self.rtt_len
 
         if strand == '+':
             ext_rtt_dna = rtt_dna+self.wt_seq[rtt_end:]
@@ -367,7 +373,7 @@ class SynonymousPE:
             for codon in dict_codon_pamPos:
                 # for loop: 각 codon들에서 GG PAM에 해당하는 위치들을 가져온다.
                 for snv_pos in dict_codon_pamPos[codon]:
-                    if PAM_G_pos > self.rec.RTlen:
+                    if PAM_G_pos > self.rtt_len:
                         if strand == '+': PAM_G_pos += 1
                         else            : PAM_G_pos -= 1
                         continue
@@ -379,7 +385,7 @@ class SynonymousPE:
                         aa_wt  = translate(codon)
                         aa_mut = translate(mut_codon)
                         
-                        rtt_end = 21 + self.rec.RTlen
+                        rtt_end = 21 + self.rtt_len
                         ext_rtt_dna = rtt_dna+self.wt_seq[rtt_end:]
 
                         if strand == '+':
@@ -469,6 +475,7 @@ class SynonymousPE:
                 else            : mut_pos = ep - snv_pos
 
                 if mut_pos >= ep: continue
+                if mut_pos <  1 : continue
 
                 list_mut_codon = self.make_snv(codon, snv_pos)
                 
@@ -533,18 +540,18 @@ class SynonymousPE:
         """
         
         ep = self.edit_pos
-        rtt_end   = 21 + self.rec.RTlen
+        rtt_end   = 21 + self.rtt_len
         ext_dna   = self.wt_seq[:21] + rtt_dna # WT sequence before nick pos.
 
         if strand == '+':
             RHA_frame = (rtt_frame + ep) % 3
             codon_le  = RHA_frame
-            codon_re  = (3 - (RHA_frame + self.rec.RTlen - ep)) % 3 # (+) strand인 경우, codon 기준으로 RTT -> RTT end 방향이 RE 방향
+            codon_re  = (3 - (RHA_frame + self.rtt_len - ep)) % 3 # (+) strand인 경우, codon 기준으로 RTT -> RTT end 방향이 RE 방향
             codon_RHA = ext_dna[21+ep-codon_le:21+ep]+ rtt_dna[ep:] + self.wt_seq[rtt_end:rtt_end+codon_re]
 
         else:
             RHA_frame = rtt_frame
-            codon_le  = (3 - (self.rec.RTlen - rtt_frame)) % 3
+            codon_le  = (3 - (self.rtt_len - rtt_frame)) % 3
             codon_re  = (ep - rtt_frame) % 3 # (-) strand인 경우, codon 기준으로 RTT -> Nick 방향이 RE 방향
             codon_RHA = ext_dna[22+ep-codon_re:22+ep]+ rtt_dna[ep:] + self.wt_seq[rtt_end:rtt_end+codon_le]
             codon_RHA = reverse_complement(codon_RHA)
@@ -561,10 +568,10 @@ class SynonymousPE:
             for snv_pos in dict_codon_RHAPos[codon]:
                 
                 if strand == '+': mut_pos = ep + snv_pos - codon_le + 1
-                else            : mut_pos = self.rec.RTlen + codon_le - snv_pos
+                else            : mut_pos = self.rtt_len + codon_le - snv_pos
 
                 if mut_pos <= ep: continue
-                if mut_pos > self.rec.RTlen: continue
+                if mut_pos > self.rtt_len: continue
 
                 list_mut_codon = self.make_snv(codon, snv_pos)
                 

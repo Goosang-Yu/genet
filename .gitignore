@@ -21,3 +21,4 @@ genet.egg-info
 
 ## About test datasets
 *.parquet
+*.csv
