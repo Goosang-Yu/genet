@@ -12,6 +12,7 @@ __pycache__/
 
 ## about package
 /genet/models/*/
+/genet/database/metadata/
 
 ## about build
 /build
