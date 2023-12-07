@@ -158,8 +158,8 @@ class DeepPrime:
         if self.edit_type not in ['sub', 'ins', 'del']:
             raise ValueError('Please check your input: edit_type. Available edit style: sub, ins, del')
         
-        if self.pam not in ['NGG', 'NRCH']:
-            raise ValueError('Please check your input: edit_type. Available PAM: NGG, NRCH')
+        if self.pam not in ['NGG', 'NRCH', 'NAG', 'NGA']:
+            raise ValueError('Please check your input: pam. Available PAM: NGG, NGA, NAG, NRCH')
 
         if self.edit_len > 3:
             raise ValueError('Please check your input: edit_len. Please set edit length upto 3nt. Available edit length range: 1~3nt')
@@ -321,6 +321,10 @@ class FeatureExtraction:
                         '-': '[ACGT]C[ACGT][ACGT]|[ACGT]T[CG][ACGT]|G[GT]T[ACGT]|ATT[ACGT]|CAT[ACGT]|GGC[ACGT]|GTA[ACGT]'} 
         elif pam == 'NGG':
             dict_sRE = {'+': '[ACGT]GG[ACGT]', '-': '[ACGT]CC[ACGT]'} # for Original-PE PAM
+        elif pam == 'NAG':
+            dict_sRE = {'+': '[ACGT]AG[ACGT]', '-': '[ACGT]CT[ACGT]'} # for Original-PE PAM
+        elif pam == 'NGA':
+            dict_sRE = {'+': '[ACGT]GA[ACGT]', '-': '[ACGT]TC[ACGT]'} # for Original-PE PAM
 
         for sStrand in ['+', '-']:
 
