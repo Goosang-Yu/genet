@@ -5,8 +5,8 @@ genet.database.config에서
 
 '''
 
-
-from typing import Any
+import genet
+import inspect
 
 
 def config(db_type:str):
@@ -21,25 +21,29 @@ def config(db_type:str):
 
 class DBconfig:
     def __init__(self) -> None:
-        pass
+                
+        # model_dir: 
+        self.genet_path = inspect.getfile(genet).replace('__init__.py', '')
+        
 
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        pass
+
 
 
 class Ensemblconfig(DBconfig):
     def __init__(self) -> None:
         pass
 
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        pass
+
 
 
 class NCBIconfig(DBconfig):
     def __init__(self) -> None:
-        self.ftp = 'ftp.ncbi.nlm.nih.gov'
+        self.ftp_server  = "ftp.ncbi.nlm.nih.gov"
+        self.ftp_user    = "your_username"
+        self.remote_path = "/genomes/ASSEMBLY_REPORTS/"
+        self.local_path  = f"{self.genet_path}/database/metadata/NCBI/"
+        self.target_file = 'assembly_summary_refseq.txt'
+        
 
 
 
-    def __call__(self, *args: Any, **kwds: Any) -> Any:
-        pass
