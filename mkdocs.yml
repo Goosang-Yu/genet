@@ -114,10 +114,23 @@ nav:
     - Getting started: getting_started.md
     - Introduction: introduction.md
     - Installation: installation.md
+
   - Predict:
-    - How it works: howworks.md
-    - Cas9 nuclease: predict_cas9.md
-    - Base editor: predict_be.md
-    - Prime editor: predict_pe.md
+    - How it works: 1_Predict/howworks.md
+    - Cas9 nuclease: 1_Predict/predict_cas9.md
+    - Base editor: 1_Predict/predict_be.md
+    - Prime editor: 1_Predict/predict_pe.md
+
+  
+  - Database:
+    - Introduction: 3_Database/database_intro.md
+
+  - Analysis:
+    - Introduction: 4_Analysis/analysis_intro.md
+  
+  - Utils:
+    - Introduction: 5_Utils/utils_intro.md
+    - Download from server: 5_Utils/download_files.md
+
   - Application note:
-    - Genome-wide KO lIbrary: Genome-wide_KO_library.md
+    - Genome-wide KO lIbrary: 6_Application_notes/Genome-wide_KO_library.md
