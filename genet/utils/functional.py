@@ -87,6 +87,8 @@ def download_file_ftp(server:str, remote_path:str, local_path:str, target_file:s
     os.makedirs(local_path, exist_ok=True)
 
     try:
+        
+            
         # FTP Connect
         with FTP(server) as ftp:
             ftp.login()
@@ -102,11 +104,14 @@ def download_file_ftp(server:str, remote_path:str, local_path:str, target_file:s
                     unit_scale=True,
                     unit_divisor=1024,
             ) as pbar:
+                
                 def callback(data):
                     local_file.write(data)
                     pbar.update(len(data))
 
                 ftp.retrbinary(f"RETR {remote_filepath}", callback)
+            
+            print('FTP download Done!')
 
     except Exception as e:
         print(f"Error: {e}")

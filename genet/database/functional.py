@@ -24,11 +24,6 @@ class NCBI(db.config.NCBIconfig):
             'organism_name',
         ]
 
-    def search_refseq(self,):
-        '''database/meta/NCBI 안에 metadata가 있는지 확인
-        '''
-        conf = db.config.NCBIconfig
-
     def check_metadata(self,):
         conf = db.config.NCBIconfig
 
@@ -46,6 +41,7 @@ class GetGenome(NCBI):
             raise ValueError('''[Error] Not valid category. Please check your category input.
                              Available categories: #assembly_accession, taxid, organism_name''')
         
+        # 카테고리로 지정된 column을 index로 지정한 dataframe
         self._idx_meta = self.meta.set_index(category)
 
         try   : self.data = self._idx_meta.loc[[id]]
