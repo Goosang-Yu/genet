@@ -123,7 +123,8 @@ nav:
 
   
   - Database:
-    - Introduction: 3_Database/database_intro.md
+    - Introduction: 3_Database/3_1_database_intro.md
+    - Metadata    : 3_Database/3_2_Metadata from databases.md
 
   - Analysis:
     - Introduction: 4_Analysis/analysis_intro.md
