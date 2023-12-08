@@ -9,7 +9,7 @@ class DownloadNCBImeta(config.NCBIconfig):
 
     # End: __init__
         
-    def download(self, download_path:str=None):
+    def download(self, download_path:str=None, convert=True):
         '''Download files from FTP server to local path.
         If download_path pointed, metadata file will be downloaded at pointed path.
         '''
@@ -27,7 +27,7 @@ class DownloadNCBImeta(config.NCBIconfig):
             )
         
         # File will be converted to parquet format automatically
-        self._convert_to_parquet()
+        if convert==True: self._convert_to_parquet()
         
         print(f'[Info] Complete')
 
@@ -42,7 +42,7 @@ class DownloadNCBImeta(config.NCBIconfig):
         original_file  = f'{self.local_path}/assembly_summary_refseq.txt'
         converted_file = f'{self.local_path}/assembly_summary_refseq.parquet'
 
-        print('Converting format: .txt to .parquet')
+        print('[Info] Converting format: .txt to .parquet')
         meta = pd.read_csv(original_file, sep='\t', header=1, low_memory=False)
         meta.to_parquet(converted_file, index=False)
 

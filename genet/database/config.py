@@ -27,14 +27,6 @@ class DBconfig:
 
 
 
-class Ensemblconfig(DBconfig):
-    def __init__(self) -> None:
-        super().__init__()
-        pass
-
-
-
-
 class NCBIconfig(DBconfig):
     def __init__(self) -> None:
         super().__init__()
@@ -47,13 +39,25 @@ class NCBIconfig(DBconfig):
 
         self.target_file = 'assembly_summary_refseq.txt'
         self.local_file  = 'assembly_summary_refseq.parquet'
-        
+
         try:
             self.version = self.get_file_version(f'{self.local_path}/{self.local_file}')
+            self.isexist = True
         except:
             self.version = '[Error] NCBI metadata file not found.'
+            self.isexist = False
 
+    def update(self, ):
+        pass
         
+
+
+
+
+class Ensemblconfig(DBconfig):
+    def __init__(self) -> None:
+        super().__init__()
+        pass
 
 
 
