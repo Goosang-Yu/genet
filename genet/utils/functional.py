@@ -96,7 +96,7 @@ def download_file_ftp(server:str, remote_path:str, local_path:str, target_file:s
 
             # Progress bar 
             with open(local_filepath, "wb") as local_file, tqdm(
-                    desc=f"Downloading {target_file}",
+                    desc=f"[Info] Downloading {target_file}",
                     total=file_size,
                     unit="B",
                     unit_scale=True,
@@ -108,7 +108,6 @@ def download_file_ftp(server:str, remote_path:str, local_path:str, target_file:s
 
                 ftp.retrbinary(f"RETR {remote_filepath}", callback)
 
-            print(f"Download Doen: {local_filepath}")
     except Exception as e:
         print(f"Error: {e}")
 

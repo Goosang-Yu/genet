@@ -6,31 +6,30 @@ genet.database.config에서
 '''
 
 import genet
-import inspect
-
-
-def config(db_type:str):
-    '''각 database마다의 설정을 지정할 수 있는 함수
-    
-
-    '''
-
-    print('Config changed.')
-
-
+import inspect, os
+from datetime import datetime
 
 class DBconfig:
     def __init__(self) -> None:
-                
-        # model_dir: 
-        self.genet_path = inspect.getfile(genet).replace('__init__.py', '')
-        
 
+        self.genet_path = inspect.getfile(genet).replace('__init__.py', '')
+
+    def get_file_version(self, file_path):
+
+        # 파일의 생성일자 및 수정일자 가져오기
+        created_time  = os.path.getctime(file_path)
+
+        # 생성일자와 수정일자를 날짜 및 시간 형식으로 변환
+        created_date  = datetime.fromtimestamp(created_time).strftime('%Y-%m-%d')
+
+        return created_date
+  
 
 
 
 class Ensemblconfig(DBconfig):
     def __init__(self) -> None:
+        super().__init__()
         pass
 
 
@@ -38,11 +37,22 @@ class Ensemblconfig(DBconfig):
 
 class NCBIconfig(DBconfig):
     def __init__(self) -> None:
+        super().__init__()
+
         self.ftp_server  = "ftp.ncbi.nlm.nih.gov"
         self.ftp_user    = "your_username"
+
         self.remote_path = "/genomes/ASSEMBLY_REPORTS/"
         self.local_path  = f"{self.genet_path}/database/metadata/NCBI/"
+
         self.target_file = 'assembly_summary_refseq.txt'
+        self.local_file  = 'assembly_summary_refseq.parquet'
+        
+        try:
+            self.version = self.get_file_version(f'{self.local_path}/{self.local_file}')
+        except:
+            self.version = '[Error] NCBI metadata file not found.'
+
         
 
 

@@ -4,18 +4,20 @@ import genet.utils as U
 from genet.database import config
 
 class DownloadNCBImeta(config.NCBIconfig):
-    def __init__(self, db:str) -> None:
-        print('')
+    def __init__(self) -> None:
+        super().__init__()
 
-
-
-
-
-    def _download_ncbi_metadata(self, ):
-        '''만약 NCBI refseq metadata가 지정된 경로에 없다면, 
-        FTP 서버에 접속해서 다운로드 받는다. 
-        '''
+    # End: __init__
         
+    def download(self, download_path:str=None):
+        '''Download files from FTP server to local path.
+        If download_path pointed, metadata file will be downloaded at pointed path.
+        '''
+
+        print('[Info] Downloading NCBI assembly summary of reference sequence')
+
+        if download_path != None: self.local_path = download_path
+
         U.download_file_ftp(
             server      = self.ftp_server,
             remote_path = self.remote_path,
@@ -23,10 +25,31 @@ class DownloadNCBImeta(config.NCBIconfig):
             target_file = self.target_file, 
             user_name   = self.ftp_user
             )
+        
+        # File will be converted to parquet format automatically
+        self._convert_to_parquet()
+        
+        print(f'[Info] Complete')
+
+    # End: download
     
-    def _convert_parquet(self):
+    def _convert_to_parquet(self):
+        '''txt 파일은 너무 무겁고 data loading이 느린 것 같아서, 
+        pandas에서 빠르게 읽고 용량도 가벼운 parquet (파케이) 형식으로 변환.
+        처음 한번만 변환하면, 나중에 언제든 불러올 때 매우 빠르다. 
+        '''        
 
-        meta = pd.read_csv(f'{self.local_path}/assembly_summary_refseq.txt', sep='\t', header=1, low_memory=False)
+        original_file  = f'{self.local_path}/assembly_summary_refseq.txt'
+        converted_file = f'{self.local_path}/assembly_summary_refseq.parquet'
 
-        meta.to_parquet(f'{self.local_path}/assembly_summary_refseq.parquet', index=False)
+        print('Converting format: .txt to .parquet')
+        meta = pd.read_csv(original_file, sep='\t', header=1, low_memory=False)
+        meta.to_parquet(converted_file, index=False)
 
+        # remove original text file
+        os.remove(original_file)
+
+        print(f'[Info] Removed summary text file: {original_file}')
+        print(f'[Info] Converted metadata file: {converted_file}')
+
+    # End: _convert_to_parquet
