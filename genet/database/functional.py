@@ -1,7 +1,8 @@
-import os, sys
+import os, requests
 import pandas as pd
 import genet.database as db
 import genet.utils as U
+from ftplib import FTP
 
 class NCBI(db.config.NCBIconfig):
     def __init__(self, ):
@@ -15,7 +16,7 @@ class NCBI(db.config.NCBIconfig):
             self.meta = pd.read_parquet(f'{self.local_path}/{self.local_file}')
         else:
             print('[Info] NCBI reference genome assembly metadata is not found. This message appears only once when starting the NCBI database for the first time.')
-            self.download()
+            self.download(download_path=self.local_path)
             self.meta = pd.read_parquet(f'{self.local_path}/{self.local_file}')
 
         self.category_available = [
@@ -32,14 +33,11 @@ class NCBI(db.config.NCBIconfig):
 
         print('[Info] Downloading NCBI assembly summary of reference sequence')
 
-        self.local_path = download_path
-
-        U.download_file_ftp(
+        U.request_file(
             server      = self.ftp_server,
             remote_path = self.remote_path,
-            local_path  = self.local_path, 
+            local_path  = download_path, 
             target_file = self.target_file, 
-            user_name   = self.ftp_user
             )
         
         # File will be converted to parquet format automatically
@@ -47,32 +45,8 @@ class NCBI(db.config.NCBIconfig):
         
         print(f'[Info] Complete')
 
-    # End: download
-    
-    def download_v2(self, download_path:str, convert=True):
-        '''Download files from FTP server to local path.
-        If download_path pointed, metadata file will be downloaded at pointed path.
-        '''
-
-        print('[Info] Downloading NCBI assembly summary of reference sequence')
-
-        self.local_path = download_path
-
-        U.download_file_ftp_v2(
-            server      = self.ftp_server,
-            remote_path = self.remote_path,
-            local_path  = self.local_path, 
-            target_file = self.target_file, 
-            user_name   = self.ftp_user
-            )
-        
-        # File will be converted to parquet format automatically
-        if convert==True: self._convert_to_parquet()
-        
-        print(f'[Info] Complete')
-
-    # End: download
-    
+    # def End: download
+            
     def _convert_to_parquet(self):
         '''txt 파일은 너무 무겁고 data loading이 느린 것 같아서, 
         pandas에서 빠르게 읽고 용량도 가벼운 parquet (파케이) 형식으로 변환.
@@ -92,7 +66,7 @@ class NCBI(db.config.NCBIconfig):
         print(f'[Info] Removed summary text file: {original_file}')
         print(f'[Info] Converted metadata file: {converted_file}')
 
-    # End: _convert_to_parquet
+    # def End: _convert_to_parquet
 
     def update(self):
         '''Update files from FTP server to local path.
@@ -100,12 +74,11 @@ class NCBI(db.config.NCBIconfig):
 
         print('[Info] Updating NCBI assembly summary of reference sequence')
 
-        U.download_file_ftp(
+        U.request_file(
             server      = self.ftp_server,
             remote_path = self.remote_path,
             local_path  = self.local_path, 
             target_file = self.target_file, 
-            user_name   = self.ftp_user
             )
         
         # File will be converted to parquet format automatically
@@ -113,9 +86,7 @@ class NCBI(db.config.NCBIconfig):
         
         print(f'[Info] Complete')
 
-    # End: download
-
-
+    # def End: download
 # class End: NCBI
 
 
@@ -183,28 +154,47 @@ class GetGenome(NCBI):
     
     def __call__(self,):
         return self.info
+    
+    def contents(self) -> list:
+        
+        ftp_path = self.info.ftp_path
+        paths = ftp_path.split('//')[1]
+        
+        server, remote_path = paths.split('/', 1)
+        
+        # FTP Connect
+        with FTP(self.ftp_server) as ftp:
+            ftp.login()
+            
+            ftp.cwd(remote_path)
+            list_files = ftp.nlst()
+            
+        return list_files
+    
+    # def End: contents
 
 
 
-
-
-
-    def download(self, path='./'):
+    def download(self, target_file:str, path:str='./'):
         """_summary_
 
         Args:
-            path (str, optional): _description_. Defaults to './'.
-        """
+            target_file (str): File name for download from NCBI server.
+            path (str, optional): Local path for save downloaded file. Defaults to './' (current working directory).
+        """                
+        ftp_path = self.info.ftp_path
+        paths = ftp_path.split('//')[1]
         
-        U.download_file_ftp(
-            server      = self.ftp_server,
-            remote_path = self.remote_path,
-            local_path  = self.local_path, 
-            target_file = self.target_file, 
-            user_name   = self.ftp_user
+        server, remote_path = paths.split('/', 1)
+
+        U.request_file(
+            server      = server,
+            remote_path = remote_path,
+            local_path  = path, 
+            target_file = target_file, 
         )
         
-        pass
+    # def End: download
 
 
 

@@ -1,4 +1,4 @@
-import os
+import os, requests
 from ftplib import FTP
 from tqdm import tqdm
 
@@ -61,10 +61,40 @@ class SplitFastq:
 
 # class END: SplitFastq
 
+def request_file(server:str, remote_path:str, local_path:str, target_file:str):
+    
+    url  = f"https://{server}/{remote_path}/{target_file}"
+    save = f"{local_path}/{target_file}"
+    
+    os.makedirs(local_path, exist_ok=True)
+    
+    # FTP Connect
+    with FTP(server) as ftp:
+        ftp.login()
 
+        # Get file size
+        file_size = ftp.size(f'{remote_path}/{target_file}')
+
+    with requests.get(url, stream=True) as response, open(save, "wb") as file, tqdm(
+        total=file_size,
+        desc=f"[Info] Downloading {target_file}",
+        unit="B",
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as pbar:
+        
+        for data in response.iter_content(chunk_size=4096):
+            file.write(data)
+            pbar.update(len(data))
+
+    print(f"[Info] File downloaded successfully: {save}")
+    
+# def End: request_file
 
 def download_file_ftp(server:str, remote_path:str, local_path:str, target_file:str, user_name:str=None, user_pwd:str=None):
     '''Download specific file from FTP server.
+    하지만 https를 통해서 다운로드 받는 것이 속도나 안정성에서 더 나은듯...
+    request로 전부 대체될 예정.
     
     ### Example
     ```python
@@ -87,8 +117,6 @@ def download_file_ftp(server:str, remote_path:str, local_path:str, target_file:s
     os.makedirs(local_path, exist_ok=True)
 
     try:
-        
-            
         # FTP Connect
         with FTP(server) as ftp:
             ftp.login()
@@ -111,8 +139,6 @@ def download_file_ftp(server:str, remote_path:str, local_path:str, target_file:s
 
                 ftp.retrbinary(f"RETR {remote_filepath}", callback)
             
-            print('FTP download Done!')
-
     except Exception as e:
         print(f"Error: {e}")
 
