@@ -67,17 +67,14 @@ theme:
 
 # Plugins
 plugins:
-  - blog
   - search:
       separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+#   - blog
 
 # Hooks
 # hooks:
 #   - material/overrides/hooks/shortcodes.py
 #   - material/overrides/hooks/translations.py
-
-
-
 
 
 
@@ -87,6 +84,12 @@ extra:
       link: https://github.com/Goosang-Yu
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/Goosang_Yu
+
+  # Site language selector
+  # alternate:
+  #   - name: Korean
+  #     link: ../ko/
+  #     lang: ko
 
 markdown_extensions: 
   - pymdownx.highlight:
@@ -102,11 +105,14 @@ markdown_extensions:
   - pymdownx.mark
   - attr_list
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      # emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      # emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 
-  
+docs_dir: docs/en
+
 # Page tree
 nav:
   - Home: index.md
