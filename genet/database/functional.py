@@ -187,13 +187,16 @@ class GetGenome(NCBI):
         
         server, remote_path = paths.split('/', 1)
 
-        U.request_file(
-            server      = server,
-            remote_path = remote_path,
-            local_path  = path, 
-            target_file = target_file, 
-        )
+        try:
+            U.request_file(
+                server      = server,
+                remote_path = remote_path,
+                local_path  = path, 
+                target_file = target_file, 
+            )
         
+        except:
+            print(f'[Error] Fail to download file. Available file: {self.contents}')
     # def End: download
 
 

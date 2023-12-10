@@ -24,3 +24,4 @@ genet.egg-info
 *.parquet
 *.csv
 *.txt
+*.gz
