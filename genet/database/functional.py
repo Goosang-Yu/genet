@@ -117,7 +117,6 @@ class GetGenome(NCBI):
     
     # def End: __init__
 
-
     def _search_refseq(self, ) -> pd.Series():
         """만약 category가 organism_name이라면, 여러개의 GCF들이 나올 수 있으니,
         그 중에서 어떤 것이 ref_seq인지 선정하기 위한 method.
@@ -156,6 +155,12 @@ class GetGenome(NCBI):
         return self.info
     
     def contents(self) -> list:
+        """NCBI FTP 서버에 특정 spacies 폴더 안에 들어있는 파일들의 list를 전부 뽑아주는 함수. 
+        list 형태의 결과로 return 한다.
+
+        Returns:
+            list: List of files and directories in NCBI FTP server at pointed path.
+        """        
         
         ftp_path = self.info.ftp_path
         paths = ftp_path.split('//')[1]
@@ -173,9 +178,8 @@ class GetGenome(NCBI):
     
     # def End: contents
 
-
-
-    def download(self, target_file:str, path:str='./'):
+    def download(self, target_file:str, path:str='./', silence=False):
+                
         """_summary_
 
         Args:
@@ -193,14 +197,30 @@ class GetGenome(NCBI):
                 remote_path = remote_path,
                 local_path  = path, 
                 target_file = target_file, 
+                silence     = silence,
             )
         
         except:
             print(f'[Error] Fail to download file. Available file: {self.contents}')
+
     # def End: download
 
 
 
+
+class GenBankParser:
+    def __init__(self, gb_file:str, feature_file:str):
+        '''GenBank file과 feature file을 같이 넣어줘서 feature 파일 내에 있는 정보를 기반으로 parsing 하는 함수.
+        특히 transcript는 "tag=MANE Select" 가 들어있는 경우가 representative mRNA라는 정보를 가져오는 것이 중요하다.
+        이에 대해서는 좀 더 고민해보고 class 만들어보자.
+        '''
+
+        print('[Info] Parsing GenBank file.')
+
+    # def End: __init__
+
+
+    
 
 
 
