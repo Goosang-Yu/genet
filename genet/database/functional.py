@@ -29,6 +29,10 @@ class NCBI(db.config.NCBIconfig):
     def download(self, download_path:str, convert=True):
         '''Download files from FTP server to local path.
         If download_path pointed, metadata file will be downloaded at pointed path.
+        
+        ToDo
+        GetGenome이 이 NCBI를 상속 받는데, 똑같은 이름의 method (download)가 있음.
+        헷갈릴 수 있으니, 이름을 서로 다르게 하거나 NCBI의 download method를 좀 바꿔야 할 것 같음.
         '''
 
         print('[Info] Downloading NCBI assembly summary of reference sequence')
@@ -106,7 +110,7 @@ class GetGenome(NCBI):
         self.meta = self.meta.set_index(category)
 
         try   : self.data = self.meta.loc[[id]].reset_index()[_columns]
-        except: raise ValueError('''[Error] Not valid ID, Please check your id input.''')
+        except: raise ValueError('''[Error] Not valid ID, Please check your id or category ("organism_name" or "#assembly_accession") input.''')
 
         if category == 'organism_name':
             self.info = self._search_refseq()
@@ -201,12 +205,24 @@ class GetGenome(NCBI):
             )
         
         except:
-            print(f'[Error] Fail to download file. Available file: {self.contents}')
+            print(f'[Error] Fail to download file. Available file: {self.contents()}')
 
     # def End: download
 
+def gff2df(f_name:str) -> pd.DataFrame:
+    """GFF3 파일을 pd.DataFrame에 담아주는 함수.
 
+    Args:
+        f_name (str): gff 파일의 경로. 또는 gzipped file도 가능하다 (.gff.gz)
 
+    Returns:
+        pd.DataFrame: gff (or gtf) 파일의 정보가 담긴 dataframe
+    """        
+    
+    col_names = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
+    df_gff = pd.read_csv(f_name, sep='\t', names=col_names, comment='#')
+    
+    return df_gff
 
 class GenBankParser:
     def __init__(self, gb_file:str, feature_file:str):
