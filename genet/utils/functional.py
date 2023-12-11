@@ -61,7 +61,7 @@ class SplitFastq:
 
 # class END: SplitFastq
 
-def request_file(server:str, remote_path:str, local_path:str, target_file:str):
+def request_file(server:str, remote_path:str, local_path:str, target_file:str, silence:bool=False):
     
     url  = f"https://{server}/{remote_path}/{target_file}"
     save = f"{local_path}/{target_file}"
@@ -87,7 +87,7 @@ def request_file(server:str, remote_path:str, local_path:str, target_file:str):
             file.write(data)
             pbar.update(len(data))
 
-    print(f"[Info] File downloaded successfully: {save}")
+    if silence==False: print(f"[Info] File downloaded successfully: {save}")
     
 # def End: request_file
 

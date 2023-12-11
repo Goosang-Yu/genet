@@ -25,3 +25,4 @@ genet.egg-info
 *.csv
 *.txt
 *.gz
+*.gbff
