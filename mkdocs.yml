@@ -130,7 +130,9 @@ nav:
   
   - Database:
     - Introduction: 3_Database/3_1_database_intro.md
-    - Metadata    : 3_Database/3_2_Metadata from databases.md
+    - Background  : 3_Database/3_2_Genome_resource_background.md
+    - Metadata    : 3_Database/3_3_Metadata from databases.md
+    - Download    : 3_Database/3_4_Download_files.md
 
   - Analysis:
     - Introduction: 4_Analysis/analysis_intro.md
