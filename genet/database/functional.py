@@ -19,10 +19,6 @@ class NCBI(db.config.NCBIconfig):
             self.download(download_path=self.local_path)
             self.meta = pd.read_parquet(f'{self.local_path}/{self.local_file}')
 
-        self.category_available = [
-            '#assembly_accession',
-            'organism_name',
-        ]
     
     # def End: __init__
         
@@ -95,22 +91,27 @@ class NCBI(db.config.NCBIconfig):
 
 
 class GetGenome(NCBI):
-    def __init__(self, id:str, category:str='organism_name'):
+    def __init__(self, id:str, category:str='organism'):
         '''Metadata의 category에 속하는 것들 중 선택된 것에 맞는 id를 찾아서
         정보를 불러오고, 다운로드 해주는 함수.
         '''
         super().__init__()
+        
+        self.category_available = ['accession', 'organism']
 
         if category not in self.category_available: 
             raise ValueError('''[Error] Not valid category. Please check your category input.
-                    Available categories: "#assembly_accession" or "organism_name"''')
+                    Available categories: "accession" or "organism"''')
+        
+        if   category == 'organism' : category = 'organism_name'
+        elif category == 'accession': category = '#assembly_accession'
         
         # 카테고리로 지정된 column을 index로 지정한 dataframe
         _columns  = self.meta.columns
         self.meta = self.meta.set_index(category)
 
         try   : self.data = self.meta.loc[[id]].reset_index()[_columns]
-        except: raise ValueError('''[Error] Not valid ID, Please check your id or category ("organism_name" or "#assembly_accession") input.''')
+        except: raise ValueError('''[Error] Not valid ID, Please check your id or category ("organism" or "accession") input.''')
 
         if category == 'organism_name':
             self.info = self._search_refseq()
@@ -209,37 +210,86 @@ class GetGenome(NCBI):
 
     # def End: download
 
-def gff2df(f_name:str) -> pd.DataFrame:
-    """GFF3 파일을 pd.DataFrame에 담아주는 함수.
-
-    Args:
-        f_name (str): gff 파일의 경로. 또는 gzipped file도 가능하다 (.gff.gz)
-
-    Returns:
-        pd.DataFrame: gff (or gtf) 파일의 정보가 담긴 dataframe
-    """        
-    
-    col_names = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
-    df_gff = pd.read_csv(f_name, sep='\t', names=col_names, comment='#')
-    
-    return df_gff
 
 class GenBankParser:
     def __init__(self, gb_file:str, feature_file:str):
-        '''GenBank file과 feature file을 같이 넣어줘서 feature 파일 내에 있는 정보를 기반으로 parsing 하는 함수.
+        """GenBank file과 feature file을 같이 넣어줘서 feature 파일 내에 있는 정보를 기반으로 parsing 하는 함수.
         특히 transcript는 "tag=MANE Select" 가 들어있는 경우가 representative mRNA라는 정보를 가져오는 것이 중요하다.
         이에 대해서는 좀 더 고민해보고 class 만들어보자.
-        '''
+
+        Args:
+            gb_file (str): .gbff 파일
+            feature_file (str): .gff 파일
+        """        
 
         print('[Info] Parsing GenBank file.')
 
     # def End: __init__
 
 
+
+
+
+
     
 
 
+class FrameConverter:
+    def __init__(self):
+        
+        self.available_format = [
+            '.gff', 'gff.gz',
+            '.gtf', 'gtf.gz',
+        ]
 
+    # def End: __init__
+
+
+    def convert(self, file_path) -> pd.DataFrame:
+        """Database에서 받은 각종 파일들을 dataframe으로 바꿔주는 method.
+
+        Args:
+            file_path (_type_): 변환하고 싶은 파일의 경로.
+
+        Raises:
+            ValueError: Format을 지원하지 않는 파일이 들어왔을 때 Error.
+
+        Returns:
+            pd.DataFrame: Data file을 DataFrame으로 변환한 것. 
+        """        
+
+        for fmt in self.available_format:
+            if file_path.endswith(fmt): break
+
+            raise ValueError(f'Not available format. Available: {self.available_format}')
+        
+        if fmt in ['.gff', 'gff.gz', '.gtf', 'gtf.gz']:
+            df = self._gff2df(file_path)
+
+        
+        return df
+        
+    # def End: convert
+        
+
+
+
+    def _gff2df(self, file_path:str) -> pd.DataFrame:
+        """GFF3 파일을 pd.DataFrame에 담아주는 함수.
+
+        Args:
+            file_path (str): gff 파일의 경로. 또는 gzipped file도 가능하다 (.gff.gz)
+
+        Returns:
+            pd.DataFrame: gff (or gtf) 파일의 정보가 담긴 dataframe
+        """        
+        
+        col_names = ['seqid', 'source', 'type', 'start', 'end', 'score', 'strand', 'phase', 'attributes']
+        df_gff = pd.read_csv(file_path, sep='\t', names=col_names, comment='#')
+        
+        return df_gff
+    
+    # def End: _gff2df
 
 
 
