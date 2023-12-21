@@ -1,6 +1,6 @@
 <div align="center">
   
-  <img src="https://github.com/Goosang-Yu/genet/blob/main/docs/images/logo.png?raw=true" width="300"/>
+  <img src="https://github.com/Goosang-Yu/genet/blob/main/docs/en/images/logo.png?raw=true" width="300"/>
 
 **Genome Editing Toolkit** </br>
 **Since 2022. 08. 19.** </br>
@@ -60,7 +60,7 @@ GenET was developed for anyone interested in the field of genome editing. Especi
 
 
 ## Example: Prediction of prime editing efficiency by DeepPrime
-![](docs/images/Fig3_DeepPrime_architecture.svg)
+![](docs/en/images/Fig3_DeepPrime_architecture.svg)
 DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs) that target specific target sites for prime editing ([Yu et al. Cell 2023](https://doi.org/10.1016/j.cell.2023.03.034)). DeepSpCas9 prediction score is calculated simultaneously and requires tensorflow (version >=2.6). DeepPrime was developed on pytorch.
 
 ```python 
