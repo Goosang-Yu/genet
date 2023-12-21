@@ -214,7 +214,8 @@ def check_PAM_window(dict_sWinSize, sStrand, nIndexStart, nIndexEnd, sAltType, n
         nPAMCheck_min = nAltIndex - nUp + 1
         nPAMCheck_max = nAltIndex + nDown + 1
     else:
-        nPAMCheck_min = nAltIndex - nDown + 1
+        # nPAMCheck_min = nAltIndex - nDown + 1
+        nPAMCheck_min = nAltIndex - nDown
         nPAMCheck_max = nAltIndex + nUp + 1
     # if END:
 
