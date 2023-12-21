@@ -1,4 +1,6 @@
-import os
+import os, requests
+from ftplib import FTP
+from tqdm import tqdm
 
 def lower_list(input: list): return [v.lower() for v in input]
 
@@ -57,5 +59,89 @@ class SplitFastq:
                 }
                 cnt += 1
 
-
 # class END: SplitFastq
+
+def request_file(server:str, remote_path:str, local_path:str, target_file:str, silence:bool=False):
+    
+    url  = f"https://{server}/{remote_path}/{target_file}"
+    save = f"{local_path}/{target_file}"
+    
+    os.makedirs(local_path, exist_ok=True)
+    
+    # FTP Connect
+    with FTP(server) as ftp:
+        ftp.login()
+
+        # Get file size
+        file_size = ftp.size(f'{remote_path}/{target_file}')
+
+    with requests.get(url, stream=True) as response, open(save, "wb") as file, tqdm(
+        total=file_size,
+        desc=f"[Info] Downloading {target_file}",
+        unit="B",
+        unit_scale=True,
+        unit_divisor=1024,
+    ) as pbar:
+        
+        for data in response.iter_content(chunk_size=4096):
+            file.write(data)
+            pbar.update(len(data))
+
+    if silence==False: print(f"[Info] File downloaded successfully: {save}")
+    
+# def End: request_file
+
+def download_file_ftp(server:str, remote_path:str, local_path:str, target_file:str, user_name:str=None, user_pwd:str=None):
+    '''Download specific file from FTP server.
+    하지만 https를 통해서 다운로드 받는 것이 속도나 안정성에서 더 나은듯...
+    request로 전부 대체될 예정.
+    
+    ### Example
+    ```python
+    import os
+    from genet.utils import download_file_ftp
+
+    ftp_server  = "ftp.ncbi.nlm.nih.gov"
+    ftp_user    = "your_username"
+    remote_path = "/genomes/ASSEMBLY_REPORTS/"
+    local_path  = "genet/database/metadata/NCBI/"
+    target_file = 'assembly_summary_refseq.txt'
+
+    download_file_ftp(ftp_server, remote_path, local_path, target_file, ftp_user)
+    ```
+    '''
+        
+    remote_filepath = f'{remote_path}/{target_file}'
+    local_filepath  = f'{local_path}/{target_file}'
+    
+    os.makedirs(local_path, exist_ok=True)
+
+    try:
+        # FTP Connect
+        with FTP(server) as ftp:
+            ftp.login()
+
+            # Get file size
+            file_size = ftp.size(remote_filepath)
+
+            # Progress bar 
+            with open(local_filepath, "wb") as local_file, tqdm(
+                    desc=f"[Info] Downloading {target_file}",
+                    total=file_size,
+                    unit="B",
+                    unit_scale=True,
+                    unit_divisor=1024,
+            ) as pbar:
+                
+                def callback(data):
+                    local_file.write(data)
+                    pbar.update(len(data))
+
+                ftp.retrbinary(f"RETR {remote_filepath}", callback)
+            
+    except Exception as e:
+        print(f"Error: {e}")
+
+
+
+

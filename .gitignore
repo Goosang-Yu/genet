@@ -12,6 +12,8 @@ __pycache__/
 
 ## about package
 /genet/models/*/
+/genet/database/metadata/
+/test_datasets/
 
 ## about build
 /build
@@ -21,3 +23,7 @@ genet.egg-info
 
 ## About test datasets
 *.parquet
+*.csv
+*.txt
+*.gz
+*.gbff

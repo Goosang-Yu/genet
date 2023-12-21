@@ -61,7 +61,8 @@ def check_PAM_window(dict_sWinSize, sStrand, nIndexStart, nIndexEnd, sAltType, n
         nPAMCheck_min = nAltIndex - nUp + 1
         nPAMCheck_max = nAltIndex + nDown + 1
     else:
-        nPAMCheck_min = nAltIndex - nDown + 1
+        # nPAMCheck_min = nAltIndex - nDown + 1
+        nPAMCheck_min = nAltIndex - nDown
         nPAMCheck_max = nAltIndex + nUp + 1
     # if END:
 
@@ -775,7 +776,7 @@ def pe_score(Ref_seq: str,
             df = pd.DataFrame()
             df['ID']     = df_all['ID']
             df['Target'] = df_all['WT74_On']
-            df['Spacer'] = list_Guide30
+            df['Spacer'] = [wt74[4:24] for wt74 in df_all['WT74_On']]
             df['RT-PBS'] = df_all['Edited74_On'].apply(get_extension)
             df = pd.concat([df,df_all.iloc[:, 3:9]],axis=1)
             df['%s_score' % pe_system] = df_all['%s_score' % pe_system]

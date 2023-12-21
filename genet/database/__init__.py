@@ -1,10 +1,5 @@
-from genet.database.functional import(
-    GetGene, GetClinVar,
-)
+from genet.database.config import *
+from genet.database.functional import *
+from genet.database.entrez import *
+# from genet.database.download import *
 
-from Bio import Entrez
-
-print('Please enter your email')
-
-email = input('Please enter your email address to access NCBI database: ')
-Entrez.email = email

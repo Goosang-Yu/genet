@@ -67,17 +67,14 @@ theme:
 
 # Plugins
 plugins:
-  - blog
   - search:
       separator: '[\s\u200b\-_,:!=\[\]()"`/]+|\.(?!\d)|&[lg]t;|(?!\b)(?=[A-Z][a-z])'
+#   - blog
 
 # Hooks
 # hooks:
 #   - material/overrides/hooks/shortcodes.py
 #   - material/overrides/hooks/translations.py
-
-
-
 
 
 
@@ -87,6 +84,12 @@ extra:
       link: https://github.com/Goosang-Yu
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/Goosang_Yu
+
+  # Site language selector
+  # alternate:
+  #   - name: Korean
+  #     link: ../ko/
+  #     lang: ko
 
 markdown_extensions: 
   - pymdownx.highlight:
@@ -102,11 +105,14 @@ markdown_extensions:
   - pymdownx.mark
   - attr_list
   - pymdownx.emoji:
-      emoji_index: !!python/name:materialx.emoji.twemoji
-      emoji_generator: !!python/name:materialx.emoji.to_svg
+      # emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      # emoji_generator: !!python/name:materialx.emoji.to_svg
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 
-  
+docs_dir: docs/en
+
 # Page tree
 nav:
   - Home: index.md
@@ -114,10 +120,26 @@ nav:
     - Getting started: getting_started.md
     - Introduction: introduction.md
     - Installation: installation.md
+
   - Predict:
-    - How it works: howworks.md
-    - Cas9 nuclease: predict_cas9.md
-    - Base editor: predict_be.md
-    - Prime editor: predict_pe.md
+    - How it works: 1_Predict/howworks.md
+    - Cas9 nuclease: 1_Predict/predict_cas9.md
+    - Base editor: 1_Predict/predict_be.md
+    - Prime editor: 1_Predict/predict_pe.md
+
+  
+  - Database:
+    - Introduction: 3_Database/3_1_database_intro.md
+    - Background  : 3_Database/3_2_Genome_resource_background.md
+    - Metadata    : 3_Database/3_3_Metadata from databases.md
+    - Download    : 3_Database/3_4_Download_files.md
+
+  - Analysis:
+    - Introduction: 4_Analysis/analysis_intro.md
+  
+  - Utils:
+    - Introduction: 5_Utils/utils_intro.md
+    - Download from server: 5_Utils/download_files.md
+
   - Application note:
-    - Genome-wide KO lIbrary: Genome-wide_KO_library.md
+    - Genome-wide KO lIbrary: 6_Application_notes/Genome-wide_KO_library.md
