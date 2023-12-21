@@ -365,8 +365,8 @@ dict_model_requests = {
         'model_2.pt',
         'model_3.pt',
         'model_4.pt',
-        'mean.csv',
-        'std.csv',
+        'mean_231124.csv',
+        'std_231124.csv',
     ],
 
     'DeepPrime-FT': [
@@ -393,8 +393,8 @@ dict_model_requests = {
         'final_model_17.pt',
         'final_model_18.pt',
         'final_model_19.pt',
-        'mean.csv',
-        'std.csv',
+        'mean_231124.csv',
+        'std_231124.csv',
     ],
 
     'DeepPrime-off': [
@@ -404,8 +404,8 @@ dict_model_requests = {
         'final_model_2.pt',
         'final_model_3.pt',
         'final_model_4.pt',
-        'mean.csv',
-        'std.csv',
+        'mean_231124.csv',
+        'std_231124.csv',
     ],
 }
 
