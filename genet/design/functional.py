@@ -1,7 +1,6 @@
 # from genet.utils import *
 import os, sys, regex
 import pandas as pd
-from Bio import Entrez, GenBank
 from Bio.Seq import reverse_complement, translate
 from Bio.SeqUtils import gc_fraction
 from genet.design.DesignUtils import dict_pam_disrup_rank, test_score_data
@@ -264,6 +263,7 @@ class SynonymousPE:
                 if mut_pos <  1 : continue
 
                 list_mut_codon = self._make_snv(codon, snv_pos)
+
                 
                 for mut_codon in list_mut_codon:
 
@@ -281,7 +281,7 @@ class SynonymousPE:
 
                     # priority 결정하는 부분 ##########################################
                     # 1/ Edit class에 따라서 분류하고, 각 class에 따라 값을 할당
-                    if   mut_pos in [4, 5]: edit_class = 'PAM_edit'; priority = 1
+                    if   mut_pos in [5, 6]: edit_class = 'PAM_edit'; priority = 1
                     elif mut_pos < ep - 1 : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
                     elif mut_pos > ep - 1 : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
 
@@ -315,7 +315,7 @@ class SynonymousPE:
                     # 전체 결과를 dict에 넣기
                     self.dict_mut['Codon_WT'].append(codon)
                     self.dict_mut['Codon_Mut'].append(mut_codon)
-                    self.dict_mut['Codon_MutPos'].append(snv_pos+1)
+                    self.dict_mut['Codon_MutPos'].append(snv_pos)
                     self.dict_mut['Codon_RefStart'].append(codon_start+1)
                     self.dict_mut['Codon_RefEnd'].append(codon_end+1)
                     self.dict_mut['RTT_DNA_frame'].append(rtt_frame)
