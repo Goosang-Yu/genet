@@ -120,13 +120,16 @@ nav:
     - Getting started: getting_started.md
     - Introduction: introduction.md
     - Installation: installation.md
-
+  
   - Predict:
     - How it works: 1_Predict/howworks.md
     - Cas9 nuclease: 1_Predict/predict_cas9.md
     - Base editor: 1_Predict/predict_be.md
     - Prime editor: 1_Predict/predict_pe.md
 
+  - Design:
+    - Introduction: 2_Design/2_1_Design_intro.md
+    - Synonymous PE: 2_Design/2_2_SynonymousPE.md
   
   - Database:
     - Introduction: 3_Database/3_1_database_intro.md
