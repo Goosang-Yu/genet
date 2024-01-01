@@ -1,4 +1,4 @@
-### Predict SpCas9 activity (by DeepSpCas9)
+### Predict SpCas9 activity
 DeepSpCas9 is a prediction model developed to evaluate to indel frequency introduced by sgRNAs at specific target sites mediated by the SpCas9 ([Kim et al. SciAdv 2019](https://www.science.org/doi/10.1126/sciadv.aax9249)). The model was developed on tensorflow (version >= 2.6). Any dependent packages will be installed along with the GenET package.
 
 
@@ -49,7 +49,7 @@ df_out = spcas.search(gene)
 | 4 | TCATCATCATTCAACGGTGGCCGACGGGCT | CATCATTCAACGGTGGCCGA | +      | 52    | 82  | 29.63767 |
 
 
-### Predict SpCas9variants activity (by DeepSpCas9variants)
+### Predict SpCas9variants activity
 DeepSpCas9 is a prediction model developed to evaluate to indel frequency introduced by sgRNAs at specific target sites mediated by the SpCas9 PAM variants ([Kim et al. Nat.Biotechnol. 2020](https://doi.org/10.1038/s41587-020-0537-9)). The model was developed on tensorflow (version >= 2.6). Any dependent packages will be installed along with the GenET package.
 
 ```python

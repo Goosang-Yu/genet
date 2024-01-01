@@ -122,27 +122,27 @@ nav:
     - Installation: installation.md
   
   - Predict:
-    - How it works: 1_Predict/howworks.md
-    - Cas9 nuclease: 1_Predict/predict_cas9.md
-    - Base editor: 1_Predict/predict_be.md
-    - Prime editor: 1_Predict/predict_pe.md
+    - How it works: 1_Predict/1_howworks.md
+    - Cas9 nuclease: 1_Predict/2_predict_cas9.md
+    - Base editor: 1_Predict/3_predict_be.md
+    - Prime editor: 1_Predict/4_predict_pe.md
 
   - Design:
-    - Introduction: 2_Design/2_1_Design_intro.md
-    - Synonymous PE: 2_Design/2_2_SynonymousPE.md
+    - Introduction: 2_Design/1_Design_intro.md
+    - Synonymous PE: 2_Design/2_SynonymousPE.md
   
   - Database:
-    - Introduction: 3_Database/3_1_database_intro.md
-    - Background  : 3_Database/3_2_Genome_resource_background.md
-    - Metadata    : 3_Database/3_3_Metadata from databases.md
-    - Download    : 3_Database/3_4_Download_files.md
+    - Introduction: 3_Database/1_database_intro.md
+    - Background  : 3_Database/2_Genome_resource_background.md
+    - Metadata    : 3_Database/3_Metadata from databases.md
+    - Download    : 3_Database/4_Download_files.md
 
   - Analysis:
-    - Introduction: 4_Analysis/analysis_intro.md
+    - Introduction: 4_Analysis/1_analysis_intro.md
   
   - Utils:
-    - Introduction: 5_Utils/utils_intro.md
-    - Download from server: 5_Utils/download_files.md
+    - Introduction: 5_Utils/1_utils_intro.md
+    - Download from server: 5_Utils/2_download_files.md
 
   - Application note:
     - Genome-wide KO lIbrary: 6_Application_notes/Genome-wide_KO_library.md
