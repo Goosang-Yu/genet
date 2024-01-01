@@ -234,7 +234,7 @@ class GenBankParser:
     
 
 
-class FrameConverter:
+class DFConverter:
     def __init__(self):
         
         self.available_format = [
