@@ -13,6 +13,7 @@ copyright: |
 
 theme:
   name: material
+  custom_dir: docs/en/overrides
 
   # 404 page
   static_templates:
@@ -41,20 +42,6 @@ theme:
     - toc.follow
     - toc.integrate
   
-  palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/toggle-switch-off-outline
-        name: Switch to dark mode
-    
-    - scheme: slate
-      primary: black
-      accent: indigo
-      toggle:
-        icon: material/toggle-switch
-        name: Switch to light mode
 
   font:
     text: Roboto
