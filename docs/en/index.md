@@ -9,3 +9,21 @@ GenET (Genome Editing Toolkit) is a library of various python functions for the 
 
 GenET is still in its early stages of development and continue to improve and expand. Currently planned functions include guideRNA design, saturation library design, deep sequenced data analysis, and guide RNA activity prediction.
 
+
+## Who should use GenET?
+GenET was developed for anyone interested in the field of genome editing. Especially, Genet can provide aid to those with the following objectives.: <br />
+
+- Develop a quick and easy to design an genome editing experiment for a specific gene.
+- Perform genome editing analysis based on sequening data
+- Predict the activtiy of specific guideRNAs or all guideRNAs designed for editing a specific product.
+
+## Get Help
+The fastest way to get help is through Slack channel. You can also see our Issue log for answers to questions asked in the past by other members or raise a new question if it's not asked before. 
+<!-- (만약 FAQ 페이지를 만들면) Check our Frequently Asked Questions (FAQs) page. -->
+
+## Support GenET
+### ⭐ Star GenET on GitHub
+Give GenET a star on our [GitHub repository](https://github.com/Goosang-Yu/genet) (click the star button on the top right corner)
+
+### 📢 Tweet about GenET
+Help GenET spread the word. We love to hear success stories and use cases.

@@ -1,6 +1,13 @@
 ### System requirement
 GenET can be run on either Mac or Linux system. GenET is currently available on Linux or Mac based systems as one of the dependent tools, ViennaRNA package, is limited to these operating systems. Windows users must establish a WSL, docker or virtual OS environment to use this tool.
 
+GenET is tested and supported on 64-bit systems with:
+- Python 3.8, 3.9 and 3.10
+- Ubuntu 20.04 or later
+- WSL (Ubuntu 20.04 or later) on Window 10
+- CentOS 7
+- OSX (MacOS)
+
 #### 1/ Create virtual environment and install genet
 ```python
 # Create virtual env for genet. (python 3.8 was tested)

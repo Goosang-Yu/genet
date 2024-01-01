@@ -51,7 +51,6 @@ dependencies = [
     'fastparquet',
     'tqdm',
     'editdistance',
-    'ncbi-datasets-pylib==13.*',
     ]
 dynamic = ["version"]
 
@@ -78,6 +77,9 @@ exclude = [
   "/dev_ing",
   "/tests",
   "/database/metadata",
+  "/genet/models/*/",
+  "/genet/database/metadata/",
+  "/test_datasets/",
 ]
 
 [tool.hatch.build.targets.wheel]
