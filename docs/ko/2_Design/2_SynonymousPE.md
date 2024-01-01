@@ -38,7 +38,7 @@ synony_pegrna = SynonymousPE(dp_record, ref_seq=seq_wt,
 print(synony_pegrna.extension)
 ```
 
-DeepPrime의 사용법에 대해서는 `genet.predict` module의 [documentation](/docs/en/1_Predict/predict_pe.md)에서 더 자세한 내용을 볼 수 있다. 위 예시에서는 디자인 된 수 많은 pegRNA 중에서 한 개의 pegRNA를 선택해서 synonymous mutation을 도입하였다. 각각의 pegRNA마다 RTT의 영역과 길이가 다르므로, 도입할 수 있는 additional mutation의 종류도 달라질 수 있다. 우선 DeepPrime score를 기준으로 적절한 pegRNA를 선정한 후, `SynonymousPE`를 추가로 활용하여 optimization을 해서 사용할 것을 권장한다. 
+DeepPrime의 사용법에 대해서는 `genet.predict` module의 [documentation](/genet/1_Predict/4_predict_pe)에서 더 자세한 내용을 볼 수 있다. 위 예시에서는 디자인 된 수 많은 pegRNA 중에서 한 개의 pegRNA를 선택해서 synonymous mutation을 도입하였다. 각각의 pegRNA마다 RTT의 영역과 길이가 다르므로, 도입할 수 있는 additional mutation의 종류도 달라질 수 있다. 우선 DeepPrime score를 기준으로 적절한 pegRNA를 선정한 후, `SynonymousPE`를 추가로 활용하여 optimization을 해서 사용할 것을 권장한다. 
 
 ### SynonymousPE의 input parameters
 ---
