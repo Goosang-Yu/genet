@@ -85,6 +85,10 @@ extra:
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/Goosang_Yu
 
+  analytics:
+    provider: google
+    property: G-NT7P9BPR1Y
+
   # Site language selector
   # alternate:
   #   - name: Korean
