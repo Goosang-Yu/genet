@@ -282,8 +282,8 @@ class SynonymousPE:
                     # priority 결정하는 부분 ##########################################
                     # 1/ Edit class에 따라서 분류하고, 각 class에 따라 값을 할당
                     if   mut_pos in [5, 6]: edit_class = 'PAM_edit'; priority = 1
-                    elif mut_pos < ep - 1 : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
-                    elif mut_pos > ep - 1 : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
+                    elif mut_pos < ep : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
+                    elif mut_pos > ep : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
 
                     # 2/ GC contents가 변화하면 값 증가
                     if gc_fraction(codon) != gc_fraction(mut_codon): priority += 1
