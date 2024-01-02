@@ -3,6 +3,7 @@
 {% extends "main.html" %}
 {% block tabs %}
 {{ super() }}
+
 <style>
 
     .md-main {
@@ -15,6 +16,7 @@
     }
 
     .tx-container {
+        height: 1200px;
         padding-top: .0rem;
         background: linear-gradient(to bottom, var(--md-primary-fg-color), hsla(160deg,47%,55%,1) 99%,#fff 99%)
     }
@@ -215,18 +217,48 @@
     .md-footer-social {
         padding-top: 20px;
     }
+
+    /* Set the initial background image and size */
+    body {
+        margin: 0;
+        background: url('images/image_test.png') center/cover no-repeat fixed;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    /* Create a gradient layer to cover the image */
+    .gradient-layer {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 1) 100%);
+        pointer-events: none; /* Allow interaction with elements behind the gradient layer */
+        transition: opacity 0.5s; /* Add a smooth transition effect */
+    }
+
+    /* Style for the content container */
+    .tx-container {
+        position: relative;
+        z-index: 1; /* Ensure the content appears above the gradient layer */
+        color: #fff; /* Set the text color to white or your preferred color */
+        text-align: center;
+        padding: 20px;
+    }
 </style>
 
+<img src="images/image_test.png" draggable="false" style="width: 100%; height: 100%;">
 <!-- Main site Entry button descriptions -->
 <section class="tx-container">
+    
     <div class="md-grid md-typeset">
       <div class="tx-hero">
         <div class="tx-hero__image">
-          <img src="assets/images/illustration.png" draggable="false">
         </div>
         <div class="tx-hero__content">
-          <h1> UP42 Python SDK </h1>
-          <p>Access UP42's geospatial collections and processing workflows via Python.</p>
+          <h1> Genome Editing Toolkit </h1>
+          <p>Python library containing various pipelines for genome editing research.</p>
           <a href="{{ page.next_page.url | url }}" title="{{ page.next_page.title | striptags }}" class="md-button md-button--primary">
             Get started
           </a>
