@@ -106,7 +106,7 @@ docs_dir: docs/en
 
 # Page tree
 nav:
-  - Home: index.md
+  - Home: README.md
   - Getting started:
     - Getting started: getting_started.md
     - Introduction: introduction.md
