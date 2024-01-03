@@ -13,6 +13,7 @@ copyright: |
 
 theme:
   name: material
+  custom_dir: docs/en/overrides
 
   # 404 page
   static_templates:
@@ -41,26 +42,12 @@ theme:
     - toc.follow
     - toc.integrate
   
-  palette:
-    - scheme: default
-      primary: indigo
-      accent: indigo
-      toggle:
-        icon: material/toggle-switch-off-outline
-        name: Switch to dark mode
-    
-    - scheme: slate
-      primary: black
-      accent: indigo
-      toggle:
-        icon: material/toggle-switch
-        name: Switch to light mode
 
   font:
     text: Roboto
     code: Roboto Mono
   
-  logo: images/logo.png
+  logo: assets/images/logo.png
 
   # icon:
     # logo: logo
@@ -84,6 +71,10 @@ extra:
       link: https://github.com/Goosang-Yu
     - icon: fontawesome/brands/twitter
       link: https://twitter.com/Goosang_Yu
+
+  analytics:
+    provider: google
+    property: G-NT7P9BPR1Y
 
   # Site language selector
   # alternate:
@@ -115,7 +106,7 @@ docs_dir: docs/en
 
 # Page tree
 nav:
-  - Home: index.md
+  - Home: README.md
   - Getting started:
     - Getting started: getting_started.md
     - Introduction: introduction.md
