@@ -1,10 +1,10 @@
----
+<!-- ---
 template: home.html
 title: Home
 social:
   cards_layout_options:
     title: Documentation that simply works
----
+--- -->
 
 # Welcome to GenET
 [![Python](https://img.shields.io/badge/Python-3.7%20%7C%203.8%20%7C%203.9%20%7C%203.10-blue)](https://badge.fury.io/py/genet) 
