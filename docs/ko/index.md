@@ -18,7 +18,7 @@ GenET was developed for anyone interested in the field of genome editing. Especi
 - Predict the activtiy of specific guideRNAs or all guideRNAs designed for editing a specific product.
 
 ## Get Help
-The fastest way to get help is through Slack channel. You can also see our Issue log for answers to questions asked in the past by other members or raise a new question if it's not asked before. 
+The fastest way to get help is through [Slack](https://genethq.slack.com/archives/C04DP727E4E) channel. You can also see our Issue log for answers to questions asked in the past by other members or raise a new question if it's not asked before. Please send comments and questions to gsyu93@gmail.com if you need.
 <!-- (만약 FAQ 페이지를 만들면) Check our Frequently Asked Questions (FAQs) page. -->
 
 ## Support GenET
