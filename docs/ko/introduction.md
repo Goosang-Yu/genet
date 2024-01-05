@@ -12,11 +12,11 @@ Genome editing을 국내 학계에서 지칭하는 '유전자 교정'은 사실 
 
 
 ## CRISPR의 작동 원리
-![CRISPR_history](images/ko_0_1_1_CRISPR_history.svg)
+![CRISPR_history](assets/contents/ko_0_1_1_CRISPR_history.svg)
 
 CRISPR는 bacteria의 유전자를 전문적으로 연구하던 과학자들이 발견한 아주 특이한 구조의 서열이다. 특정 서열이 반복 (repeat) 되고, 사이사이마다 특정 간격의 서열 (spacer)이 반복되는 구조이다. 지금까지 기능을 알 수 없던 유전자들은 많았으나, 이렇게 규칙적으로 반복되는 서열이 명확하게 존재하는 경우는 흔치 않았다. 심지어 특정 박테리아 종에서만 발견되는 것이 아니라, 수 많은 종에서 유사한 구조들이 발견된다는 보고들이 발표되었다. 훗날 이는 Cas9이라는 유전자 가위 단백질이 작동할 위치를 지정해주는 guide RNA (gRNA)의 형태라는 것이 밝혀졌다.
 
-![CRISPR_machanism](images/ko_0_1_2_CRISPR_machanism.svg)
+![CRISPR_machanism](assets/contents/ko_0_1_2_CRISPR_machanism.svg)
 
 
 ## 다양한 종류의 CRISPR system
@@ -26,38 +26,3 @@ CRISPR는 bacteria의 유전자를 전문적으로 연구하던 과학자들이 
 
 최근에는 DSB를 일으키지 않고도 모든 형태의 유전자 교정 (치환, 삽입, 삭제)을 할 수 있는 기술은 프라임 에디팅 (prime editing; PE)가 개발되면서, 유전자 교정의 범위를 훨씬 확장할 수 있게 되었다. 
 
-## Genome editing 연구를 위한 GenET 활용
-GenET을 통해, 유전 정보 및 CRISPR를 이용한 연구를 하기 위해 필요한 다양한 기능들을 사용할 수 있다 (또는 추가 예정). GenET에서 제공 (예정 포함)하는 기능들을 아래와 같다. 
-
-| Module   | Functions      | Descriptions                                                          | Status |
-| -------- | -------------- | --------------------------------------------------------------------- | ------ |
-| Predict  | SpCas9         | DeepSpCas9 모델 사용                                                   | 사용가능   |
-| Predict  | SpCas9variants | DeepSpCas9variants 모델 사용                                           | 사용가능   |
-| Predict  | Base editor    | DeepBE 모델 사용                                                       | 개발예정   |
-| Predict  | Prime editor   | DeepPrime 모델 사용                                                    | 사용가능   |
-| Design   | KOLiD          | Genome-wide KO library design                                         | 개발예정   |
-| Design   | ReLiD          | Gene regulation library design                                        | 개발예정   |
-| Design   | CRISPRStop     | Design gRNA for inducing premature stop codon using CBE               | 개발예정   |
-| Design   | SynonymousPE   | Design pegRNA containing additional synonymousmutation in RT template | 사용가능   |
-| Database | GetGenome      | NCBI database에서 genome data를 가져오는 기능                           | 사용가능   |
-| Database | GetGene        | NCBI database에서 특정 gene의 정보를 가져오는 기능                       | 개발예정   |
-| Database | GenBankParser  | GenBank file에서 원하는 정보들을 찾아내는 기능                           | 개발예정   |
-| Database | DFConverter    | NCBI genbank file의 형태를 DataFrame으로 변환하는 기능                  | 사용가능   |
-| Analysis | SGE            | Saturation genome editing 데이터를 분석하기 위한 기능                   | 개발예정   |
-| Analysis | UMItools       | UMI 분석을 위한 함수 (from UMI-tools)                                  | 사용가능   |
-| Utils    | request_file   | HTTP protocol을 이용해 서버에서 원하는 파일을 다운로드 하는              | 사용가능   |
-| Utils    | SplitFastq     | FASTQ 파일을 작은 크기들로 나눠주는 기능                                | 사용가능   |
-
-
-## GenET 인용하기
-
-```
-@Manual {GenET, 
-    title = {GenET: Python package for genome editing research}, 
-    author = {Goosang Yu}, 
-    year = {2024}, 
-    month = {January}, 
-    note = {GenET version 0.13.1}, 
-    url = {https://github.com/Goosang-Yu/genet}
-    }
-```

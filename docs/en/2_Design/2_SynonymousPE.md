@@ -51,7 +51,7 @@ pegRNA의 표적이 되는 DNA 서열 정보. `SynonymousPE`는 이 서열 내�
 `frame`: int  
 Reference sequence (ref_seq) 서열의 frame을 나타내는 값이다. CDS의 codon frame에 의해 결정되며, 0, 1, 2 중에 하나로 표현된다. 예를 들어, CDS 서열이 codon (3bp)의 맨 앞부터 시작한다면, `frame`은 0으로 입력하면 된다. Frame이 정확하지 않으면 전혀 다른 amino acid 서열에 의한 synonymou mutation이 생성되므로, 꼼꼼하게 확인하고 입력해야 한다. 
 
-![codon_frame](../images/en_2_2_1_codon_frame.svg)
+![codon_frame](../assets/contents/en_2_2_1_codon_frame.svg)
 
 `cds_start`: int  
 `ref_seq`에서 CDS가 시작하는 위치를 의미한다.
@@ -68,7 +68,7 @@ SynonymousPE의 frame과 CDS 위치 지정에 대한 내용은 처음 사용할 
 
 #### Example 1:
 ---
-![Example_1](../images/ko_2_2_2_Synony_example_1.svg)
+![Example_1](../assets/contents/ko_2_2_2_Synony_example_1.svg)
 
 ```python
 from genet.design import SynonymousPE
@@ -83,7 +83,7 @@ synony_pegrna = SynonymousPE(dp_record, ref_seq=ref_seq, frame=0, cds_start=0, c
 
 #### Example 2:
 ---
-![Example_2](../images/ko_2_2_3_Synony_example_2.svg)
+![Example_2](../assets/contents/ko_2_2_3_Synony_example_2.svg)
 
 ```python
 from genet.design import SynonymousPE
@@ -98,7 +98,7 @@ synony_pegrna = SynonymousPE(dp_record, ref_seq=ref_seq, frame=2, cds_start=0, c
 
 #### Example 3:
 ---
-![Example_3](../images/ko_2_2_4_Synony_example_3.svg)
+![Example_3](../assets/contents/ko_2_2_4_Synony_example_3.svg)
 
 ```python
 from genet.design import SynonymousPE
