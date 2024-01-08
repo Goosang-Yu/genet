@@ -144,11 +144,13 @@ class SynonymousPE:
         # step 2: pegRNA의 strand 방향에 따라 synonymous Mut 생성 함수 결정
         if self.wt_seq in self.ref_seq:
             self.strand = '+'
-            self.rtt_frame = (frame - self.edit_pos + 1) % 3 # rtt 시작점의 frame, LHA 길이를 이용한 계산
+            #self.rtt_frame = (frame - self.edit_pos + 1) % 3 # rtt 시작점의 frame, LHA 길이를 이용한 계산
+            self.rtt_frame = (frame - (self.edit_pos - 1) % 3) % 3 #frame - (self.edit_pos - 1)가 음수가 되었을 때 결과 값이 다름.
 
         elif reverse_complement(self.wt_seq) in self.ref_seq:
             self.strand = '-'
-            self.rtt_frame = (self.edit_pos + frame) % 3  # revcom_rtt_dna의 3' end가 위치하는 지점의 frame. 시작점이 거기이기 때문.
+            #self.rtt_frame = (self.edit_pos + frame) % 3  # revcom_rtt_dna의 3' end가 위치하는 지점의 frame. 시작점이 거기이기 때문.
+            self.rtt_frame = (self.edit_pos + frame - 1) % 3
             
         else: raise ValueError('Reference sequence is not matched with pegRNA information!\nPlease chech your ref_seq')
     
@@ -228,14 +230,16 @@ class SynonymousPE:
 
         if strand == '+':
             codon_le  = rtt_frame
-            codon_re  = (3 - (rtt_frame + self.rtt_len)) % 3
+            #codon_re  = (3 - (rtt_frame + self.rtt_len)) % 3
+            codon_re  = -(rtt_frame + self.rtt_len) % 3
 
             codon_RTT = self.ed_seq[21-codon_le:21+self.rtt_len+codon_re]
 
             dict_codon_Pos = {codon_RTT: [i for i in range(codon_le, len(codon_RTT)-codon_re)]}
 
         else:
-            codon_re  = (self.frame - ep) % 3
+            #codon_re  = (self.frame - ep) % 3
+            codon_re  = 2 - rtt_frame     
             codon_le  = -(codon_re + self.rtt_len) % 3
 
             codon_RTT = self.ed_seq[21-codon_re:21+self.rtt_len+codon_le]
@@ -257,7 +261,8 @@ class SynonymousPE:
                 if strand == '+': 
                     mut_pos = snv_pos + 1 - codon_le
                 else: 
-                    mut_pos = self.rtt_len - (snv_pos + 1 - codon_re)
+                    #mut_pos = self.rtt_len - (snv_pos + 1 - codon_re)
+                    mut_pos = self.rtt_len + 1 - (snv_pos + 1 - codon_re)
 
                 if mut_pos == ep: continue
                 if mut_pos <  1 : continue
@@ -281,56 +286,22 @@ class SynonymousPE:
 
                     # priority 결정하는 부분 ##########################################
                     # 1/ Edit class에 따라서 분류하고, 각 class에 따라 값을 할당
-                    if   mut_pos in [5, 6]: edit_class = 'PAM_edit'; priority = 1
-                    elif mut_pos < ep : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
-                    elif mut_pos > ep : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
-
+                    #if   mut_pos in [5, 6]: edit_class = 'PAM_edit'; priority = 1
+                    #elif mut_pos < ep : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
+                    #elif mut_pos > ep : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
+                    
+                    #for TP53
+                    if   mut_pos in [5, 6] and rtt_dna_mut[4:6] not in ['GG', 'GA', 'AG']: 
+                        if mut_pos < ep : edit_class = 'PAM_edit_LHA'; priority = 1
+                        else : edit_class = 'PAM_edit_RHA'; priority = 1
+                        
+                    elif mut_pos < ep : edit_class = 'LHA_edit'; priority = 3 + ep - mut_pos
+                    elif mut_pos > ep : edit_class = 'RHA_edit'; priority = 4 + ep + mut_pos
                     # 2/ GC contents가 변화하면 값 증가
                     if gc_fraction(codon) != gc_fraction(mut_codon): priority += 1
 
                     # 3/ 또 추가할 것이 있나?
-                    # New priority rules for TP53
-                    '''
-                    수정된 Priority rule:
-                    - 전제조건: intended edit 과 synonymous mutation이 같은 위치에 오면 안됨. ep != mut_pos 
-                    - 아래 3개의 rule을 순차적으로 적용할 것. Priority를 [A, B, C]의 형태로 만들어 A -> B -> C의 순서로 적용
-                    A. PAM disruption (neither NGG, NAG, NGA) 여부 / LHA 와 RHA 중 어느 부분에 속하는지에 따라 우선순위 부여 (1순위 고려 대상)
-                        1 : PAM disruption & LHA에 synonymous mutation
-                        #2 : PAM disruption & RHA에 synonymous mutation
-                        3 : X PAM disruption & LHA에 synonymous mutation
-                        4 : X PAM disruption & RHA에 synonymous mutation
-                    B. Intended edit과 synonymous mutation 사이의 거리를 고려하여 우선순위 부여 (2순위 고려 대상)
-                        priority = abs(ep-mut_pos)
-                    C. Synonymous mutation을 도입하였을 때 GC 비율 변화에 따른 우선순위 부여 (3순위 고려 대상)
-                        0 : GC 비율 변화없음
-                        1 : GC 비율 변화함.
-                    '''
-                    priority_base = [0, 0, 0]
-                    
-                    #1 PAM disruption (neither NGG, NAG, NGA) 여부 / LHA 와 RHA 중 어느 부분에 속하는지에 따라 우선순위 부여 (1순위 고려 대상)
-                    PAM_start_loc = self.wt_seq.find(self.pbs_dna) + len(self.pbs_dna) + 3
-                    PAM_end_2bp = self.wt_seq[PAM_start_loc+1:PAM_start_loc+3]
 
-                    if (self.wt_seq[PAM_start_loc+1:PAM_start_loc+3] in ['GG', 'GA', 'AG']):
-                        if (self.wt_seq[PAM_start_loc+1:PAM_start_loc+3] == 'GG') and (mut_pos in [5,6]) and ('G>A가 아님'):  # 원래 PAM이 NGG인 경우 G>A이면 PAM disruption이 안됨.
-                            PAM_disruption = True
-                        elif (self.wt_seq[PAM_start_loc+1:PAM_start_loc+3] == 'GA') and (mut_pos in [5,6]) and ('A>G가 아님'):  # 원래 PAM이 NGA인 경우 A>G이면 PAM disruption이 안됨.
-                            PAM_disruption = True
-                        elif (self.wt_seq[PAM_start_loc+1:PAM_start_loc+3] == 'AG') and (mut_pos in [5,6]) and ('A>G가 아님'):  # 원래 PAM이 NAG인 경우 A>G이면 PAM disruption이 안됨.
-                            PAM_disruption = True
-                        else:
-                            PAM_disruption = False
-                    else:
-                        print('ERROR : Check PAM location! %s instead of PAM' %(wt_seq[PAM_start_loc:PAM_start_loc+3]))
-                        sys.exit()
-                    
-                    
-                    if mut_pos < ep : edit_class = 'LHA_edit'
-                    elif mut_pos > ep : edit_class = 'RHA_edit'
-                    else : print('ERROR : synonymous mutation on intended edit')
-                    
-                    if (edit_class == 'LHA_edit') and (edit_class == 'LHA_edit')
-                    
                     ###################################################################
 
                     # Codon 중 intron에 속하는 것은 AA sequence translation에서 제외
@@ -379,13 +350,14 @@ class SynonymousPE:
     # def End: generate
 
     
-    def stack(self, num:int):
+    def stack(self, num:int, max_rha_edit:int = float('inf')):
         """만들 수 있는 Synonymous Mut 들의 조합을 추가로 만들어서, 
         그 중에서도 synonymous mut이 존재하는지 확인하고,
         가능한 조합을 return 하는 method.
 
         Args:
             num (int): Synonymous Mutation을 쌓을 최대 제한 수
+            max_rha_edit (int) : 허용할 RHA edit의 최대 제한 수. (지정 안하면 제한 안둠.)
 
         Returns:
             _type_: str, list
@@ -410,43 +382,84 @@ class SynonymousPE:
         selected_mut_codon = best_syn.Codon_Mut
 
         synMut_cnt = 1
-        stacked_pos = []
+        synMut_RHA_cnt = 1 if best_syn.Edit_class == 'RHA_edit' else 0
+        stacked_pos = [best_syn.Mut_pos]
 
         for i in range(1, len(syn_dedup)):
             
             temp_syn = syn_dedup.iloc[i]
+            
+            if best_syn.Edit_class != 'PAM_edit_RHA':
+                mut_pos = temp_syn.Codon_MutPos - 1
+                mut_nt  = temp_syn.Codon_Mut[mut_pos]
 
-            mut_pos = temp_syn.Codon_MutPos
-            mut_nt  = temp_syn.Codon_Mut[mut_pos]
+                stacked_mut_codon = list(selected_mut_codon)
+                stacked_mut_codon[mut_pos] = mut_nt
+                stacked_mut_codon = ''.join(stacked_mut_codon)
 
-            stacked_mut_codon = list(selected_mut_codon)
-            stacked_mut_codon[mut_pos] = mut_nt
-            stacked_mut_codon = ''.join(stacked_mut_codon)
+                # Silent Mut check
+                aa_mut_codon = temp_syn.Codon_Mut
 
-            # Silent Mut check
-            aa_mut_codon = temp_syn.Codon_Mut
+                if codon_intron_5 > 0: 
+                    aa_mut_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
+                if codon_intron_3 > 0:
+                    aa_mut_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
 
-            if codon_intron_5 > 0: 
-                aa_mut_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
-            if codon_intron_3 > 0:
-                aa_mut_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+                aa_origin = translate(aa_origin_codon)
+                aa_mut    = translate(aa_mut_codon)
 
-            aa_origin = translate(aa_origin_codon)
-            aa_mut    = translate(aa_mut_codon)
+                if aa_origin == aa_mut:
+                    
+                    # 만약 조건에 맞는 mutation을 찾으면, origin_codon을 업데이트
+                    selected_mut_codon =  stacked_mut_codon
+                    aa_origin_codon =  stacked_mut_codon
 
-            if aa_origin == aa_mut:
-                
-                # 만약 조건에 맞는 mutation을 찾으면, origin_codon을 업데이트
-                selected_mut_codon =  stacked_mut_codon
-                aa_origin_codon =  stacked_mut_codon
+                    if codon_intron_5 > 0: aa_origin_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
+                    if codon_intron_3 > 0: aa_origin_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
 
-                if codon_intron_5 > 0: aa_origin_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
-                if codon_intron_3 > 0: aa_origin_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+                    synMut_cnt += 1
+                    synMut_RHA_cnt += 1 if temp_syn.Edit_class == 'RHA_edit' else 0
+                    stacked_pos.append(temp_syn.Mut_pos)
 
-                synMut_cnt += 1
-                stacked_pos.append(temp_syn.Mut_pos)
+                    if (synMut_cnt == num) or (synMut_RHA_cnt == max_rha_edit): break
 
-                if synMut_cnt == num: break
+            elif best_syn.Edit_class == 'PAM_edit_RHA':
+                if temp_syn.Edit_class in 'PAM_edit_RHA': continue
+                elif temp_syn.Edit_class not in ['PAM_edit_RHA', 'RHA_edit']:
+                    
+                    mut_pos = temp_syn.Codon_MutPos - 1
+                    mut_nt  = temp_syn.Codon_Mut[mut_pos]
+
+                    stacked_mut_codon = list(selected_mut_codon)
+                    stacked_mut_codon[mut_pos] = mut_nt
+                    stacked_mut_codon = ''.join(stacked_mut_codon)
+
+                    # Silent Mut check
+                    aa_mut_codon = temp_syn.Codon_Mut
+
+                    if codon_intron_5 > 0: 
+                        aa_mut_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
+                    if codon_intron_3 > 0:
+                        aa_mut_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+
+                    aa_origin = translate(aa_origin_codon)
+                    aa_mut    = translate(aa_mut_codon)
+
+                    if aa_origin == aa_mut:
+                        
+                        # 만약 조건에 맞는 mutation을 찾으면, origin_codon을 업데이트
+                        selected_mut_codon =  stacked_mut_codon
+                        aa_origin_codon =  stacked_mut_codon
+
+                        if codon_intron_5 > 0: aa_origin_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
+                        if codon_intron_3 > 0: aa_origin_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+
+                        synMut_cnt += 1
+                        synMut_RHA_cnt += 1 if temp_syn.Edit_class == 'RHA_edit' else 0
+                        stacked_pos.append(temp_syn.Mut_pos)
+
+                        if (synMut_cnt == num) or (synMut_RHA_cnt == max_rha_edit): break
+                else : break
 
         if strand == '+':
             rtt_dna_mut = selected_mut_codon[self.codon_le:len(selected_mut_codon)-self.codon_re]
