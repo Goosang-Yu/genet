@@ -356,15 +356,15 @@ class SynonymousPE:
                     # 전체 결과를 dict에 넣기
                     self.dict_mut['Codon_WT'].append(codon)
                     self.dict_mut['Codon_Mut'].append(mut_codon)
-                    self.dict_mut['Codon_MutPos'].append(snv_pos)
-                    self.dict_mut['Codon_RefStart'].append(codon_start+1)
-                    self.dict_mut['Codon_RefEnd'].append(codon_end+1)
+                    self.dict_mut['Codon_MutPos'].append(snv_pos+1)       # First position = 1
+                    self.dict_mut['Codon_RefStart'].append(codon_start+1) # First position = 1
+                    self.dict_mut['Codon_RefEnd'].append(codon_end+1)     # First position = 1
                     self.dict_mut['RTT_DNA_frame'].append(rtt_frame)
                     self.dict_mut['RTT_DNA_Strand'].append(strand)
                     self.dict_mut['AminoAcid_WT'].append(aa_wt)
                     self.dict_mut['AminoAcid_Mut'].append(aa_mut)
                     self.dict_mut['Silent_check'].append(silent_check)
-                    self.dict_mut['Mut_pos'].append(mut_pos)
+                    self.dict_mut['Mut_pos'].append(mut_pos)              # First position = 1
                     self.dict_mut['Mut_refpos'].append(mut_refpos)
                     self.dict_mut['Priority'].append(priority) # intended edit (PAM) 위치에 가까울수록 우선
                     self.dict_mut['PAM_Mut'].append(rtt_dna_mut[4:6])
