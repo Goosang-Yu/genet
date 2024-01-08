@@ -289,7 +289,48 @@ class SynonymousPE:
                     if gc_fraction(codon) != gc_fraction(mut_codon): priority += 1
 
                     # 3/ 또 추가할 것이 있나?
+                    # New priority rules for TP53
+                    '''
+                    수정된 Priority rule:
+                    - 전제조건: intended edit 과 synonymous mutation이 같은 위치에 오면 안됨. ep != mut_pos 
+                    - 아래 3개의 rule을 순차적으로 적용할 것. Priority를 [A, B, C]의 형태로 만들어 A -> B -> C의 순서로 적용
+                    A. PAM disruption (neither NGG, NAG, NGA) 여부 / LHA 와 RHA 중 어느 부분에 속하는지에 따라 우선순위 부여 (1순위 고려 대상)
+                        1 : PAM disruption & LHA에 synonymous mutation
+                        #2 : PAM disruption & RHA에 synonymous mutation
+                        3 : X PAM disruption & LHA에 synonymous mutation
+                        4 : X PAM disruption & RHA에 synonymous mutation
+                    B. Intended edit과 synonymous mutation 사이의 거리를 고려하여 우선순위 부여 (2순위 고려 대상)
+                        priority = abs(ep-mut_pos)
+                    C. Synonymous mutation을 도입하였을 때 GC 비율 변화에 따른 우선순위 부여 (3순위 고려 대상)
+                        0 : GC 비율 변화없음
+                        1 : GC 비율 변화함.
+                    '''
+                    priority_base = [0, 0, 0]
+                    
+                    #1 PAM disruption (neither NGG, NAG, NGA) 여부 / LHA 와 RHA 중 어느 부분에 속하는지에 따라 우선순위 부여 (1순위 고려 대상)
+                    PAM_start_loc = self.wt_seq.find(self.pbs_dna) + len(self.pbs_dna) + 3
+                    PAM_end_2bp = self.wt_seq[PAM_start_loc+1:PAM_start_loc+3]
 
+                    if (self.wt_seq[PAM_start_loc+1:PAM_start_loc+3] in ['GG', 'GA', 'AG']):
+                        if (self.wt_seq[PAM_start_loc+1:PAM_start_loc+3] == 'GG') and (mut_pos in [5,6]) and ('G>A가 아님'):  # 원래 PAM이 NGG인 경우 G>A이면 PAM disruption이 안됨.
+                            PAM_disruption = True
+                        elif (self.wt_seq[PAM_start_loc+1:PAM_start_loc+3] == 'GA') and (mut_pos in [5,6]) and ('A>G가 아님'):  # 원래 PAM이 NGA인 경우 A>G이면 PAM disruption이 안됨.
+                            PAM_disruption = True
+                        elif (self.wt_seq[PAM_start_loc+1:PAM_start_loc+3] == 'AG') and (mut_pos in [5,6]) and ('A>G가 아님'):  # 원래 PAM이 NAG인 경우 A>G이면 PAM disruption이 안됨.
+                            PAM_disruption = True
+                        else:
+                            PAM_disruption = False
+                    else:
+                        print('ERROR : Check PAM location! %s instead of PAM' %(wt_seq[PAM_start_loc:PAM_start_loc+3]))
+                        sys.exit()
+                    
+                    
+                    if mut_pos < ep : edit_class = 'LHA_edit'
+                    elif mut_pos > ep : edit_class = 'RHA_edit'
+                    else : print('ERROR : synonymous mutation on intended edit')
+                    
+                    if (edit_class == 'LHA_edit') and (edit_class == 'LHA_edit')
+                    
                     ###################################################################
 
                     # Codon 중 intron에 속하는 것은 AA sequence translation에서 제외
@@ -375,7 +416,7 @@ class SynonymousPE:
             
             temp_syn = syn_dedup.iloc[i]
 
-            mut_pos = temp_syn.Codon_MutPos - 1
+            mut_pos = temp_syn.Codon_MutPos
             mut_nt  = temp_syn.Codon_Mut[mut_pos]
 
             stacked_mut_codon = list(selected_mut_codon)
