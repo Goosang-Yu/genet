@@ -295,8 +295,9 @@ class SynonymousPE:
                         if mut_pos < ep : edit_class = 'PAM_edit_LHA'; priority = 1
                         else : edit_class = 'PAM_edit_RHA'; priority = 1
                         
-                    elif mut_pos < ep : edit_class = 'LHA_edit'; priority = 3 + ep - mut_pos
-                    elif mut_pos > ep : edit_class = 'RHA_edit'; priority = 4 + ep + mut_pos
+                    elif mut_pos < ep : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
+                    elif mut_pos > ep : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
+                    
                     # 2/ GC contents가 변화하면 값 증가
                     if gc_fraction(codon) != gc_fraction(mut_codon): priority += 1
 
@@ -350,7 +351,7 @@ class SynonymousPE:
     # def End: generate
 
     
-    def stack(self, num:int, max_rha_edit:int = float('inf')):
+    def stack(self, num:int, max_rha_edit:int = 2):
         """만들 수 있는 Synonymous Mut 들의 조합을 추가로 만들어서, 
         그 중에서도 synonymous mut이 존재하는지 확인하고,
         가능한 조합을 return 하는 method.
