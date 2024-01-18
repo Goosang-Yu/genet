@@ -282,8 +282,8 @@ class SynonymousPE:
                     # priority 결정하는 부분 ##########################################
                     # 1/ Edit class에 따라서 분류하고, 각 class에 따라 값을 할당
                     if   mut_pos in [5, 6]: edit_class = 'PAM_edit'; priority = 1
-                    elif mut_pos < ep - 1 : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
-                    elif mut_pos > ep - 1 : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
+                    elif mut_pos < ep : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
+                    elif mut_pos > ep : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
 
                     # 2/ GC contents가 변화하면 값 증가
                     if gc_fraction(codon) != gc_fraction(mut_codon): priority += 1
@@ -315,15 +315,15 @@ class SynonymousPE:
                     # 전체 결과를 dict에 넣기
                     self.dict_mut['Codon_WT'].append(codon)
                     self.dict_mut['Codon_Mut'].append(mut_codon)
-                    self.dict_mut['Codon_MutPos'].append(snv_pos)
-                    self.dict_mut['Codon_RefStart'].append(codon_start+1)
-                    self.dict_mut['Codon_RefEnd'].append(codon_end+1)
+                    self.dict_mut['Codon_MutPos'].append(snv_pos+1)       # First position = 1
+                    self.dict_mut['Codon_RefStart'].append(codon_start+1) # First position = 1
+                    self.dict_mut['Codon_RefEnd'].append(codon_end+1)     # First position = 1
                     self.dict_mut['RTT_DNA_frame'].append(rtt_frame)
                     self.dict_mut['RTT_DNA_Strand'].append(strand)
                     self.dict_mut['AminoAcid_WT'].append(aa_wt)
                     self.dict_mut['AminoAcid_Mut'].append(aa_mut)
                     self.dict_mut['Silent_check'].append(silent_check)
-                    self.dict_mut['Mut_pos'].append(mut_pos)
+                    self.dict_mut['Mut_pos'].append(mut_pos)              # First position = 1
                     self.dict_mut['Mut_refpos'].append(mut_refpos)
                     self.dict_mut['Priority'].append(priority) # intended edit (PAM) 위치에 가까울수록 우선
                     self.dict_mut['PAM_Mut'].append(rtt_dna_mut[4:6])
