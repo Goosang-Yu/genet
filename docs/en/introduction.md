@@ -12,11 +12,11 @@ Genome editing을 국내 학계에서 지칭하는 '유전자 교정'은 사실 
 
 
 ## CRISPR의 작동 원리
-![CRISPR_history](images/en_0_1_1_CRISPR_history.svg)
+![CRISPR_history](assets/contents/en_0_1_1_CRISPR_history.svg)
 
 CRISPR는 bacteria의 유전자를 전문적으로 연구하던 과학자들이 발견한 아주 특이한 구조의 서열이다. 특정 서열이 반복 (repeat) 되고, 사이사이마다 특정 간격의 서열 (spacer)이 반복되는 구조이다. 지금까지 기능을 알 수 없던 유전자들은 많았으나, 이렇게 규칙적으로 반복되는 서열이 명확하게 존재하는 경우는 흔치 않았다. 심지어 특정 박테리아 종에서만 발견되는 것이 아니라, 수 많은 종에서 유사한 구조들이 발견된다는 보고들이 발표되었다. 훗날 이는 Cas9이라는 유전자 가위 단백질이 작동할 위치를 지정해주는 guide RNA (gRNA)의 형태라는 것이 밝혀졌다.
 
-![CRISPR_machanism](images/ko_0_1_2_CRISPR_machanism.svg)
+![CRISPR_machanism](assets/contents/ko_0_1_2_CRISPR_machanism.svg)
 
 
 ## 다양한 종류의 CRISPR system
