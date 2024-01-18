@@ -826,4 +826,22 @@ def select_cols(data):
 
     return features
 
-#pecv_score
+def pecv_score(data, model, device, batch_size=128):
+    model.eval()
+    data = data.reset_index(drop=True)
+    g = seq_concat(data)
+    x = select_cols(data)
+    g = torch.tensor(g, dtype=torch.float32, device=device)
+    x = torch.tensor(x.values, dtype=torch.float32, device=device)
+    y = torch.zeros(len(data), dtype=torch.float32, device=device)
+
+    test = TensorDataset(g, x, y)
+    test_loader = DataLoader(test, batch_size=batch_size, shuffle=False)
+
+    with torch.no_grad():
+        for g, x, y in test_loader:
+            y_pred = model(g, x)
+            y_pred = y_pred.cpu().numpy().flatten()
+            data.loc[y_pred > 0.5, 'DeepSpCas9_score'] = y_pred[y_pred > 0.5]
+
+    return data 
