@@ -1,21 +1,27 @@
-GenET은 python을 기반으로 다양한 genome editing 관련된 연구 설계와 분석을 할 수 있는 library이다. 특히 CRISPR systme (Cas9, base editing, prime editing)을 손쉽게 활용할 수 있는 기능들을 제공하고 있다. 
-
+GenET is a Python-based library that allows for the design and analysis of various genome editing-related research. It provides convenient features for utilizing CRISPR systems (Cas9, base editing, prime editing) with ease.
 
 ## Installation
-GenET은 PyPI를 이용해서 손쉽게 설치할 수 있다. [설치방법 페이지](/genet/installation)를 확인하길 바란다.
+GenET can be easily installed using PyPI. Please check the [installation guide](/genet/installation) for the installation instructions.
 ```bash
 pip install genet
 ```
 
 
 
-## Genome editing 연구를 위한 GenET 활용 예시
-GenET을 통해, 유전 정보 및 CRISPR를 이용한 연구를 하기 위해 필요한 다양한 기능들을 사용할 수 있다 (또는 추가 예정).
+## Example Usage of GenET for Genome Editing Research
+Through GenET, various features are available (or planned to be added) to facilitate research on genetic information and studies using CRISPR.
 
 > Case1: 
 
 ```python
+# Testing import genet modules
 
+import genet.database
+import genet.analysis
+import genet.design
+import genet.models
+import genet.predict
+import genet.utils
 ```
 
 
