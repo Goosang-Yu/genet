@@ -235,13 +235,13 @@ class SynonymousPE:
             dict_codon_Pos = {codon_RTT: [i for i in range(codon_le, len(codon_RTT)-codon_re)]}
 
         else:
-            codon_re  = (self.frame - ep) % 3
+            codon_re = abs(self.frame - ep) % 3  # added abs()
             codon_le  = -(codon_re + self.rtt_len) % 3
 
             codon_RTT = self.ed_seq[21-codon_re:21+self.rtt_len+codon_le]
             codon_RTT = reverse_complement(codon_RTT)
 
-            dict_codon_Pos = {codon_RTT: [i for i in range(codon_re, len(codon_RTT)-codon_le)]}
+            dict_codon_Pos = {codon_RTT: [i for i in range(codon_le, len(codon_RTT) - codon_re)]} #due to revcom sequence
 
         ### 결과가 안 맞으면, 여기까지 (codon_RTT)를 다시 한번 살펴보기, 특히 (-) strand! #######
         
@@ -257,7 +257,7 @@ class SynonymousPE:
                 if strand == '+': 
                     mut_pos = snv_pos + 1 - codon_le
                 else: 
-                    mut_pos = self.rtt_len - (snv_pos + 1 - codon_re)
+                    mut_pos = len(codon_RTT) - codon_re - snv_pos
 
                 if mut_pos == ep: continue
                 if mut_pos <  1 : continue

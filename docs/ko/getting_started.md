@@ -59,7 +59,7 @@ Please send all comments and questions to gsyu93@gmail.com
     author = {Goosang Yu}, 
     year = {2024}, 
     month = {January}, 
-    note = {GenET version 0.13.1}, 
+    note = {GenET version 0.13.3}, 
     url = {https://github.com/Goosang-Yu/genet}
     }
 ```

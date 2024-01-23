@@ -56,7 +56,7 @@ GenET was developed for anyone interested in the field of genome editing. Especi
 - Develop a quick and easy to design an genome editing experiment for a specific gene.
 - Perform genome editing analysis based on sequening data
 - Predict the activtiy of specific guideRNAs or all guideRNAs designed for editing a specific product.
-
+- Design a saturation library for a specific gene.
 
 
 ## Example: Prediction of prime editing efficiency by DeepPrime
