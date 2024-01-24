@@ -144,13 +144,11 @@ class SynonymousPE:
         # step 2: pegRNA의 strand 방향에 따라 synonymous Mut 생성 함수 결정
         if self.wt_seq in self.ref_seq:
             self.strand = '+'
-            #self.rtt_frame = (frame - self.edit_pos + 1) % 3 # rtt 시작점의 frame, LHA 길이를 이용한 계산
-            self.rtt_frame = (frame - (self.edit_pos - 1) % 3) % 3 #frame - (self.edit_pos - 1)가 음수가 되었을 때 결과 값이 다름.
+            self.rtt_frame = (frame - self.edit_pos + 1) % 3 # rtt 시작점의 frame, LHA 길이를 이용한 계산
 
         elif reverse_complement(self.wt_seq) in self.ref_seq:
             self.strand = '-'
-            #self.rtt_frame = (self.edit_pos + frame) % 3  # revcom_rtt_dna의 3' end가 위치하는 지점의 frame. 시작점이 거기이기 때문.
-            self.rtt_frame = (self.edit_pos + frame - 1) % 3
+            self.rtt_frame = (self.edit_pos + frame) % 3  # revcom_rtt_dna의 3' end가 위치하는 지점의 frame. 시작점이 거기이기 때문.
             
         else: raise ValueError('Reference sequence is not matched with pegRNA information!\nPlease chech your ref_seq')
     
@@ -230,22 +228,20 @@ class SynonymousPE:
 
         if strand == '+':
             codon_le  = rtt_frame
-            #codon_re  = (3 - (rtt_frame + self.rtt_len)) % 3
-            codon_re  = -(rtt_frame + self.rtt_len) % 3
+            codon_re  = (3 - (rtt_frame + self.rtt_len)) % 3
 
             codon_RTT = self.ed_seq[21-codon_le:21+self.rtt_len+codon_re]
 
             dict_codon_Pos = {codon_RTT: [i for i in range(codon_le, len(codon_RTT)-codon_re)]}
 
         else:
-            #codon_re  = (self.frame - ep) % 3
-            codon_re  = 2 - rtt_frame     
+            codon_re = abs(self.frame - ep) % 3  # added abs()
             codon_le  = -(codon_re + self.rtt_len) % 3
 
             codon_RTT = self.ed_seq[21-codon_re:21+self.rtt_len+codon_le]
             codon_RTT = reverse_complement(codon_RTT)
 
-            dict_codon_Pos = {codon_RTT: [i for i in range(codon_re, len(codon_RTT)-codon_le)]}
+            dict_codon_Pos = {codon_RTT: [i for i in range(codon_le, len(codon_RTT) - codon_re)]} #due to revcom sequence
 
         ### 결과가 안 맞으면, 여기까지 (codon_RTT)를 다시 한번 살펴보기, 특히 (-) strand! #######
         
@@ -261,8 +257,7 @@ class SynonymousPE:
                 if strand == '+': 
                     mut_pos = snv_pos + 1 - codon_le
                 else: 
-                    #mut_pos = self.rtt_len - (snv_pos + 1 - codon_re)
-                    mut_pos = self.rtt_len + 1 - (snv_pos + 1 - codon_re)
+                    mut_pos = len(codon_RTT) - codon_re - snv_pos
 
                 if mut_pos == ep: continue
                 if mut_pos <  1 : continue
@@ -289,9 +284,8 @@ class SynonymousPE:
                     #if   mut_pos in [5, 6]: edit_class = 'PAM_edit'; priority = 1
                     #elif mut_pos < ep : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
                     #elif mut_pos > ep : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
-                    
                     #for TP53
-                    if   mut_pos in [5, 6] and rtt_dna_mut[4:6] not in ['GG', 'GA', 'AG']: 
+                    if (mut_pos in [5, 6]) and (rtt_dna_mut[4:6] not in ['GG', 'GA', 'AG']): 
                         if mut_pos < ep : edit_class = 'PAM_edit_LHA'; priority = 1
                         else : edit_class = 'PAM_edit_RHA'; priority = 1
                         
