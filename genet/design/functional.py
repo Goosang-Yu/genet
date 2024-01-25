@@ -285,13 +285,9 @@ class SynonymousPE:
 
                     # priority 결정하는 부분 ##########################################
                     # 1/ Edit class에 따라서 분류하고, 각 class에 따라 값을 할당
-                    #if   mut_pos in [5, 6]: edit_class = 'PAM_edit'; priority = 1
-                    #elif mut_pos < ep : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
-                    #elif mut_pos > ep : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
-                    #for TP53
                     if (mut_pos in [5, 6]) and (rtt_dna_mut[4:6] not in ['GG', 'GA', 'AG']): 
                         if mut_pos < ep : edit_class = 'PAM_edit_LHA'; priority = 1
-                        else : edit_class = 'PAM_edit_RHA'; priority = 1
+                        else            : edit_class = 'PAM_edit_RHA'; priority = 1
                         
                     elif mut_pos < ep : edit_class = 'LHA_edit'; priority = 2 + ep - mut_pos
                     elif mut_pos > ep : edit_class = 'RHA_edit'; priority = 3 + ep + mut_pos
@@ -311,11 +307,20 @@ class SynonymousPE:
                     aa_mut_codon = mut_codon
                     
                     if codon_intron_5 > 0: 
-                        aa_wt_codon = codon[(codon_intron_5 // 3) * 3:]
+                        aa_wt_codon = codon[((codon_intron_5 // 3) - 1) * 3:]
                         aa_mut_codon = mut_codon[(codon_intron_5 // 3) * 3:]
+
+                        # partial codon 부분의 mutation filtering (+ strand)
+                        partial_len = len(codon) - len(aa_wt_codon)
+                        if snv_pos in [partial_len, partial_len-1]: continue 
+
                     if codon_intron_3 > 0: 
-                        aa_wt_codon = codon[:-(codon_intron_3 // 3) * 3]
-                        aa_mut_codon = mut_codon[:-(codon_intron_3 // 3) * 3]
+                        aa_wt_codon = codon[:-((codon_intron_3 // 3) + 1) * 3]
+                        aa_mut_codon = mut_codon[:-((codon_intron_3 // 3) + 1) * 3]
+                        
+                        # partial codon 부분의 mutation filtering (- strand)
+                        partial_len = len(aa_wt_codon)
+                        if snv_pos in [partial_len, partial_len+1]: continue 
                     
                     aa_wt  = translate(aa_wt_codon)
                     aa_mut = translate(aa_mut_codon)
