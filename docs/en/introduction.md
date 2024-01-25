@@ -15,7 +15,7 @@ Gene editing involves the technology to modify specific genetic information at d
 
 CRISPR is a unique sequence structure discovered by scientists specializing in the study of bacterial genes. It consists of repeated sequences with specific intervals of spacer sequences. While many gene sequences were previously unknown, the regular repetition of sequences was uncommon. This structure, found not only in specific bacterial strains but also in numerous species, was later identified as the guide RNA (gRNA) that specifies the location for the action of a gene-editing protein called Cas9.
 
-![CRISPR_machanism](assets/contents/ko_0_1_2_CRISPR_machanism.svg)
+![CRISPR_machanism](assets/contents/en_0_1_2_CRISPR_machanism.svg)
 
 
 ## Various Types of CRISPR Systems
@@ -44,15 +44,4 @@ Through GenET, various functionalities are available (or planned) for research o
 | Utils    | SplitFastq     | Function to split FASTQ files into smaller sizes                      | Available   |
 
 
-## GenET 인용하기
-
-```
-@Manual {GenET, 
-    title = {GenET: Python package for genome editing research}, 
-    author = {Goosang Yu}, 
-    year = {2024}, 
-    month = {January}, 
-    note = {GenET version 0.13.1}, 
-    url = {https://github.com/Goosang-Yu/genet}
-    }
 ```
