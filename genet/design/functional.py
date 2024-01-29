@@ -317,16 +317,16 @@ class SynonymousPE:
                     
                     if self.codon_intron_5 > 0: 
                         
-                        aa_wt_codon = codon[((self.codon_intron_5 // 3) + 1) * 3:]
-                        aa_mut_codon = mut_codon[((self.codon_intron_5 // 3) + 1) * 3:]
+                        aa_wt_codon = codon[(self.codon_intron_5 // 3) * 3:]
+                        aa_mut_codon = mut_codon[(self.codon_intron_5 // 3) * 3:]
                         
                         # partial codon 부분의 mutation filtering (+ strand)
                         partial_len = len(codon) - len(aa_wt_codon)
                         if snv_pos in [partial_len, partial_len-1]: continue 
 
                     if codon_intron_3 > 0: 
-                        aa_wt_codon = codon[:-((codon_intron_3 // 3) + 1) * 3]
-                        aa_mut_codon = mut_codon[:-((codon_intron_3 // 3) + 1) * 3]
+                        aa_wt_codon = codon[:-(codon_intron_3 // 3) * 3]
+                        aa_mut_codon = mut_codon[:-(codon_intron_3 // 3) * 3]
                         
                         # partial codon 부분의 mutation filtering (- strand)
                         partial_len = len(aa_wt_codon)
@@ -417,10 +417,8 @@ class SynonymousPE:
                 # Silent Mut check
                 aa_mut_codon = temp_syn.Codon_Mut
 
-                if codon_intron_5 > 0: 
-                    aa_mut_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
-                if codon_intron_3 > 0:
-                    aa_mut_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+                if codon_intron_5 > 0: aa_mut_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
+                if codon_intron_3 > 0: aa_mut_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
 
                 aa_origin = translate(aa_origin_codon)
                 aa_mut    = translate(aa_mut_codon)
@@ -454,10 +452,8 @@ class SynonymousPE:
                     # Silent Mut check
                     aa_mut_codon = temp_syn.Codon_Mut
 
-                    if codon_intron_5 > 0: 
-                        aa_mut_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
-                    if codon_intron_3 > 0:
-                        aa_mut_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+                    if codon_intron_5 > 0: aa_mut_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
+                    if codon_intron_3 > 0: aa_mut_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
 
                     aa_origin = translate(aa_origin_codon)
                     aa_mut    = translate(aa_mut_codon)
