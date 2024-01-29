@@ -175,15 +175,24 @@ class SynonymousPE:
         
         self.output = self.generate(self.rtt_frame, self.strand)
         
-        # step 3: 만약 RHA 길이 조정 옵션이 True로 되어있으면, 조정해주기. (defualt)
-        if adj_rha == True:
-            adj_len = self.output['Mut_pos'] - self.edit_pos
-            
-            if adj_len > 0: 
-                rtt_end = 21 + self.rtt_len
-                self.output['RTT_DNA_Mut'] = self.output['RTT_DNA_Mut'] + self.wt_seq[rtt_end:rtt_end+adj_len]
+        if type(self.output) == pd.core.series.Series:
+            # SynonyPE가 만들어진 경우
 
-        self.extension = self.pbs_dna + self.output['RTT_DNA_Mut']
+            # step 3: 만약 RHA 길이 조정 옵션이 True로 되어있으면, 조정해주기. (defualt)
+            if adj_rha == True:
+                adj_len = self.output['Mut_pos'] - self.edit_pos
+                
+                if adj_len > 0: 
+                    rtt_end = 21 + self.rtt_len
+                    self.output['RTT_DNA_Mut'] = self.output['RTT_DNA_Mut'] + self.wt_seq[rtt_end:rtt_end+adj_len]
+
+            self.extension = self.pbs_dna + self.output['RTT_DNA_Mut']
+            
+        elif type(self.output) == pd.core.frame.DataFrame:
+            # SynonyPE가 안 만들어져서
+            # output이 self.mutations로 나온 경우
+            
+            self.extension = 'Not available SynonyPE'
         
     # End def __init__:
 
@@ -281,7 +290,7 @@ class SynonymousPE:
                         rtt_dna_mut = reverse_complement(mut_codon[codon_le:len(mut_codon)-codon_re])
                         mut_refpos  = 60 - (mut_pos - ep)
                         codon_end   = 60 + (codon_re + ep - 1)
-                        codon_start = codon_end - len(codon_RTT) - 1
+                        codon_start = codon_end - len(codon_RTT) + 1
 
                     # priority 결정하는 부분 ##########################################
                     # 1/ Edit class에 따라서 분류하고, 각 class에 따라 값을 할당
@@ -300,28 +309,38 @@ class SynonymousPE:
                     ###################################################################
 
                     # Codon 중 intron에 속하는 것은 AA sequence translation에서 제외
-                    codon_intron_5 = self.cds_start - codon_start
+                    self.codon_intron_5 = self.cds_start - codon_start
                     codon_intron_3 = codon_end - self.cds_end
 
                     aa_wt_codon = codon
                     aa_mut_codon = mut_codon
                     
-                    if codon_intron_5 > 0: 
-                        aa_wt_codon = codon[((codon_intron_5 // 3) - 1) * 3:]
-                        aa_mut_codon = mut_codon[(codon_intron_5 // 3) * 3:]
-
-                        # partial codon 부분의 mutation filtering (+ strand)
-                        partial_len = len(codon) - len(aa_wt_codon)
-                        if snv_pos in [partial_len, partial_len-1]: continue 
+                    if self.codon_intron_5 > 0: 
+                        if self.codon_intron_5 % 3 == 0:
+                            aa_wt_codon = codon[(self.codon_intron_5 // 3) * 3:]
+                            aa_mut_codon = mut_codon[(self.codon_intron_5 // 3) * 3:]
+                        
+                        else :
+                            aa_wt_codon = codon[((self.codon_intron_5 // 3) + 1) * 3:]
+                            aa_mut_codon = mut_codon[((self.codon_intron_5 // 3) + 1) * 3:]
+                            
+                            # partial codon 부분의 mutation filtering
+                            partial_len = len(codon) - len(aa_wt_codon)
+                            if snv_pos in [partial_len, partial_len-1]: continue 
 
                     if codon_intron_3 > 0: 
-                        aa_wt_codon = codon[:-((codon_intron_3 // 3) + 1) * 3]
-                        aa_mut_codon = mut_codon[:-((codon_intron_3 // 3) + 1) * 3]
+                        if codon_intron_3 % 3 == 0:
+                            aa_wt_codon = codon[:-(codon_intron_3 // 3) * 3]
+                            aa_mut_codon = mut_codon[:-(codon_intron_3 // 3) * 3]                    
+                                                   
+                        else:
+                            aa_wt_codon = codon[:-((codon_intron_3 // 3) + 1) * 3]
+                            aa_mut_codon = mut_codon[:-((codon_intron_3 // 3) + 1) * 3]                                
                         
-                        # partial codon 부분의 mutation filtering (- strand)
-                        partial_len = len(aa_wt_codon)
-                        if snv_pos in [partial_len, partial_len+1]: continue 
-                    
+                            # partial codon 부분의 mutation filtering
+                            partial_len = len(aa_wt_codon)
+                            if snv_pos in [partial_len, partial_len+1]: continue 
+                        
                     aa_wt  = translate(aa_wt_codon)
                     aa_mut = translate(aa_mut_codon)
 
@@ -347,10 +366,13 @@ class SynonymousPE:
                     self.dict_mut['Edit_class'].append(edit_class)
 
         self.mutations  = pd.DataFrame(self.dict_mut) 
-
-        self.synonymous = self.mutations.groupby(by='Silent_check').get_group(True).sort_values(by='Priority').reset_index(drop=True)
+        try: 
+            self.synonymous = self.mutations.groupby(by='Silent_check').get_group(True).sort_values(by='Priority').reset_index(drop=True)
         
-        return self.synonymous.iloc[0]
+            return self.synonymous.iloc[0] # Series 형태
+        
+        except:
+            return self.mutations # DataFrame 형태
     # def End: generate
 
     
@@ -376,10 +398,21 @@ class SynonymousPE:
         codon_intron_5 = self.cds_start - best_syn.Codon_RefStart
         codon_intron_3 = best_syn.Codon_RefEnd - self.cds_end
 
+        aa_origin_codon_wt = best_syn.Codon_WT
         aa_origin_codon = best_syn.Codon_Mut
 
-        if codon_intron_5 > 0: aa_origin_codon = best_syn.Codon_Mut[(codon_intron_5 // 3) * 3:]
-        if codon_intron_3 > 0: aa_origin_codon = best_syn.Codon_Mut[:-(codon_intron_3 // 3) * 3]
+        if codon_intron_5 > 0:
+            if len(aa_origin_codon_wt) % 3 == 0:
+                aa_origin_codon = best_syn.Codon_Mut[(codon_intron_5 // 3) * 3:]
+            else :
+                aa_origin_codon = best_syn.Codon_Mut[((codon_intron_5 // 3) + 1) * 3:]
+            
+            
+        if codon_intron_3 > 0: 
+            if len(aa_origin_codon_wt) % 3 == 0:
+                aa_origin_codon = best_syn.Codon_Mut[:-(codon_intron_3 // 3) * 3]
+            else : 
+                aa_origin_codon = best_syn.Codon_Mut[:-((codon_intron_3 // 3) + 1) * 3]
 
         aa_origin = translate(aa_origin_codon)
 
@@ -404,10 +437,19 @@ class SynonymousPE:
                 # Silent Mut check
                 aa_mut_codon = temp_syn.Codon_Mut
 
-                if codon_intron_5 > 0: 
-                    aa_mut_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
-                if codon_intron_3 > 0:
-                    aa_mut_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+                if codon_intron_5 > 0:
+                    if codon_intron_5 % 3 == 0:
+                        aa_mut_codon = temp_syn.Codon_Mut[(codon_intron_5 // 3) * 3:]
+                    else :
+                        aa_mut_codon = temp_syn.Codon_Mut[((codon_intron_5 // 3) + 1) * 3:]
+                    
+                    
+                if codon_intron_3 > 0: 
+                    if codon_intron_3 % 3 == 0:
+                        aa_mut_codon = temp_syn.Codon_Mut[:-(codon_intron_3 // 3) * 3]
+                    else : 
+                        aa_mut_codon = temp_syn.Codon_Mut[:-((codon_intron_3 // 3) + 1) * 3]
+
 
                 aa_origin = translate(aa_origin_codon)
                 aa_mut    = translate(aa_mut_codon)
@@ -418,9 +460,18 @@ class SynonymousPE:
                     selected_mut_codon =  stacked_mut_codon
                     aa_origin_codon =  stacked_mut_codon
 
-                    if codon_intron_5 > 0: aa_origin_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
-                    if codon_intron_3 > 0: aa_origin_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
-
+                    if codon_intron_5 > 0:
+                        if codon_intron_5 % 3 == 0:
+                            aa_origin_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
+                        else :
+                            aa_origin_codon = stacked_mut_codon[((codon_intron_5 // 3) + 1) * 3:]
+                        
+                    if codon_intron_3 > 0: 
+                        if codon_intron_3 % 3 == 0:
+                            aa_origin_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+                        else : 
+                            aa_origin_codon = stacked_mut_codon[:-((codon_intron_3 // 3) + 1) * 3]
+                            
                     synMut_cnt += 1
                     synMut_RHA_cnt += 1 if temp_syn.Edit_class == 'RHA_edit' else 0
                     stacked_pos.append(temp_syn.Mut_pos)
@@ -430,7 +481,6 @@ class SynonymousPE:
             elif best_syn.Edit_class == 'PAM_edit_RHA':
                 if temp_syn.Edit_class in 'PAM_edit_RHA': continue
                 elif temp_syn.Edit_class not in ['PAM_edit_RHA', 'RHA_edit']:
-                    
                     mut_pos = temp_syn.Codon_MutPos - 1
                     mut_nt  = temp_syn.Codon_Mut[mut_pos]
 
@@ -441,10 +491,19 @@ class SynonymousPE:
                     # Silent Mut check
                     aa_mut_codon = temp_syn.Codon_Mut
 
-                    if codon_intron_5 > 0: 
-                        aa_mut_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
-                    if codon_intron_3 > 0:
-                        aa_mut_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+                    if codon_intron_5 > 0:
+                        if codon_intron_5 % 3 == 0:
+                            aa_mut_codon = temp_syn.Codon_Mut[(codon_intron_5 // 3) * 3:]
+                        else :
+                            aa_mut_codon = temp_syn.Codon_Mut[((codon_intron_5 // 3) + 1) * 3:]
+                        
+                        
+                    if codon_intron_3 > 0: 
+                        if codon_intron_3 % 3 == 0:
+                            aa_mut_codon = temp_syn.Codon_Mut[:-(codon_intron_3 // 3) * 3]
+                        else : 
+                            aa_mut_codon = temp_syn.Codon_Mut[:-((codon_intron_3 // 3) + 1) * 3]
+
 
                     aa_origin = translate(aa_origin_codon)
                     aa_mut    = translate(aa_mut_codon)
@@ -455,8 +514,17 @@ class SynonymousPE:
                         selected_mut_codon =  stacked_mut_codon
                         aa_origin_codon =  stacked_mut_codon
 
-                        if codon_intron_5 > 0: aa_origin_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
-                        if codon_intron_3 > 0: aa_origin_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+                        if codon_intron_5 > 0:
+                            if codon_intron_5 % 3 == 0:
+                                aa_origin_codon = stacked_mut_codon[(codon_intron_5 // 3) * 3:]
+                            else :
+                                aa_origin_codon = stacked_mut_codon[((codon_intron_5 // 3) + 1) * 3:]
+                            
+                        if codon_intron_3 > 0: 
+                            if codon_intron_3 % 3 == 0:
+                                aa_origin_codon = stacked_mut_codon[:-(codon_intron_3 // 3) * 3]
+                            else : 
+                                aa_origin_codon = stacked_mut_codon[:-((codon_intron_3 // 3) + 1) * 3]
 
                         synMut_cnt += 1
                         synMut_RHA_cnt += 1 if temp_syn.Edit_class == 'RHA_edit' else 0
