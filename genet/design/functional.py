@@ -402,14 +402,14 @@ class SynonymousPE:
         aa_origin_codon = best_syn.Codon_Mut
 
         if codon_intron_5 > 0:
-            if len(aa_origin_codon_wt) % 3 == 0:
+            if codon_intron_5 % 3 == 0:
                 aa_origin_codon = best_syn.Codon_Mut[(codon_intron_5 // 3) * 3:]
             else :
                 aa_origin_codon = best_syn.Codon_Mut[((codon_intron_5 // 3) + 1) * 3:]
             
             
         if codon_intron_3 > 0: 
-            if len(aa_origin_codon_wt) % 3 == 0:
+            if codon_intron_3 % 3 == 0:
                 aa_origin_codon = best_syn.Codon_Mut[:-(codon_intron_3 // 3) * 3]
             else : 
                 aa_origin_codon = best_syn.Codon_Mut[:-((codon_intron_3 // 3) + 1) * 3]
