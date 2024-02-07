@@ -431,7 +431,7 @@ class SynonymousPE:
                 print('best_syn is RHA_edit' %self.sID)
                 break
             elif best_syn.Edit_class in ['PAM_edit_LHA', 'LHA_edit']:
-                if temp_syn.Edit_class in 'PAM_edit_RHA': pass
+                if temp_syn.Edit_class in 'PAM_edit_RHA': break
                 elif temp_syn.Edit_class not in ['PAM_edit_RHA', 'RHA_edit']:
                     mut_pos = temp_syn.Codon_MutPos - 1
                     mut_nt  = temp_syn.Codon_Mut[mut_pos]
@@ -482,11 +482,11 @@ class SynonymousPE:
                         synMut_RHA_cnt += 1 if temp_syn.Edit_class == 'RHA_edit' else 0
                         stacked_pos.append(temp_syn.Mut_pos)
 
-                        if (synMut_cnt >= num) or (synMut_RHA_cnt >= max_rha_edit): pass
-                else : pass
+                        if (synMut_cnt >= num) or (synMut_RHA_cnt >= max_rha_edit): break
+                else : break
                 
             elif best_syn.Edit_class == 'PAM_edit_RHA':
-                if temp_syn.Edit_class in 'PAM_edit_RHA': pass
+                if temp_syn.Edit_class in 'PAM_edit_RHA': break
                 elif temp_syn.Edit_class not in ['PAM_edit_RHA', 'RHA_edit']:
                     mut_pos = temp_syn.Codon_MutPos - 1
                     mut_nt  = temp_syn.Codon_Mut[mut_pos]
@@ -537,8 +537,8 @@ class SynonymousPE:
                         synMut_RHA_cnt += 1 if temp_syn.Edit_class == 'RHA_edit' else 0
                         stacked_pos.append(temp_syn.Mut_pos)
 
-                        if (synMut_cnt >= num) or (synMut_RHA_cnt >= max_rha_edit): pass
-                else : pass
+                        if (synMut_cnt >= num) or (synMut_RHA_cnt >= max_rha_edit): break
+                else : break
 
         if strand == '+':
             rtt_dna_mut = selected_mut_codon[self.codon_le:len(selected_mut_codon)-self.codon_re]
