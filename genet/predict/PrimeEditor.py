@@ -14,7 +14,7 @@ from glob import glob
 
 from Bio.SeqUtils import MeltingTemp as mt
 from Bio.SeqUtils import gc_fraction as gc
-from Bio.Seq import Seq
+from Bio.Seq import Seq, transcribe, back_transcribe
 
 from RNA import fold_compound
 
@@ -61,8 +61,8 @@ class DeepPrime:
         if silence != True:
             self.check_input()
 
-        ## FeatureExtraction Class
-        cFeat = FeatureExtraction()
+        ## PEFeatureExtraction Class
+        cFeat = PEFeatureExtraction()
 
         cFeat.input_id = sID
         cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
@@ -172,6 +172,191 @@ class DeepPrime:
     # def check_input: END
 
 
+class DeepPrimeGuideRNA:
+    '''
+    이미 디자인 된 pegRNA에서 DeepPrime을 돌리고 싶을 때 사용하는 pipeline.
+    DeepPrime: pegRNA activity prediction models\n
+    Input  = 121 nt DNA sequence without edit\n
+    Output = 121 nt DNA sequence with edit\n
+    
+    ### Available Edit types\n
+    sub, ins, del\n
+    
+    ### Available Edit length\n
+    1, 2, 3\n
+    
+    ### Available PE systems\n
+    PE2, PE2max, PE4max, NRCH_PE2, NRCH_PE2max, NRCH_PE4max\n
+    
+    ### Available Cell types\n
+    HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3
+    
+    '''
+    def __init__(self, sID:str, target:str, pbs:str, rtt:str, 
+                 edit_len:int, edit_pos:int, edit_type:str, 
+                 out_dir:str=os.getcwd()):
+        
+
+        # PBS와 RTT는 target 기준으로 reverse complementary 방향으로 있어야 함.
+        # PBS와 RTT를 DNA/RNA 중 어떤 것으로 input을 받아도, 전부 DNA로 변환해주기.
+
+        if len(target) != 74: raise ValueError('Please check your input: target. The length of target should be 74nt')
+
+        self.spacer = target[4:24]
+        self.rtpbs  = back_transcribe(rtt+pbs)
+
+        # Check edit_type input and determine type dependent features
+        if   edit_type == 'sub': type_sub=1; type_ins=0; type_del=0; rha_len=len(rtt)-edit_pos-edit_len+1
+        elif edit_type == 'ins': type_sub=0; type_ins=1; type_del=0; rha_len=len(rtt)-edit_pos-edit_len+1
+        elif edit_type == 'del': type_sub=0; type_ins=0; type_del=1; rha_len=len(rtt)-edit_pos+1
+        else: raise ValueError('Please check your input: edit_type. Available edit style: sub, ins, del')
+
+
+        # pegRNA Tm feature
+        seq_Tm1    = transcribe(pbs)
+        seq_Tm2    = target[21:21+len(rtt)]
+
+        if edit_type == 'sub':
+            seq_Tm3 = target[21:21 + len(rtt)]
+            sTm4antiSeq = reverse_complement(target[21:21 + len(rtt)])
+        elif edit_type == 'ins':
+            seq_Tm3 = target[21:21 + len(rtt) - edit_len]
+            sTm4antiSeq = reverse_complement(target[21:21 + len(rtt) - edit_len])
+        elif edit_type == 'del':
+            seq_Tm3 = target[21:21 + len(rtt) + edit_len]
+            sTm4antiSeq = reverse_complement(target[21:21 + len(rtt) + edit_len])                    
+        
+        seq_Tm4 = [back_transcribe(reverse_complement(rtt)), sTm4antiSeq] # 원래 코드에는 [sRTSeq, sTm3antiSeq]
+
+        seq_Tm5 = transcribe(rtt) # 원래 코드: reverse_complement(sRTSeq.replace('A', 'U'))
+
+        fTm1 = mt.Tm_NN(seq=Seq(seq_Tm1), nn_table=mt.R_DNA_NN1)
+        fTm2 = mt.Tm_NN(seq=Seq(seq_Tm2), nn_table=mt.DNA_NN3)
+        fTm3 = mt.Tm_NN(seq=Seq(seq_Tm3), nn_table=mt.DNA_NN3)
+        
+
+        # 이 부분이 사실 의도된 feature는 아니긴 한데... 이미 이렇게 모델이 만들어졌음...
+        for sSeq1, sSeq2 in zip(seq_Tm4[0], seq_Tm4[1]):
+            try:
+                fTm4 = mt.Tm_NN(seq=sSeq1, c_seq=sSeq2, nn_table=mt.DNA_NN3)
+            except ValueError:
+                fTm4 = 0
+
+        ######### 이 부분이 문제 ###################################################
+
+        fTm5 = mt.Tm_NN(seq=Seq(seq_Tm5), nn_table=mt.R_DNA_NN1)
+
+        ############################################################################
+
+        # MFE_3 - RT + PBS + PolyT
+        seq_MFE3 = back_transcribe(rtt) + back_transcribe(pbs) + 'TTTTTT'
+        sDBSeq, fMFE3 = fold_compound(seq_MFE3).mfe()
+
+        # MFE_4 - spacer only
+        seq_MFE4 = 'G' + self.spacer[1:]
+        sDBSeq, fMFE4 = fold_compound(seq_MFE4).mfe()
+
+
+        self.dict_feat = {
+            # Enter your sample's ID
+            'ID'                         : [sID],
+
+            # pegRNA sequence information
+            'Spacer'                     : [self.spacer],
+            'RT-PBS'                     : [self.rtpbs],
+            
+            # pegRNA length feature
+            'PBS_len'                    : [len(pbs)],
+            'RTT_len'                    : [len(rtt)],
+            'RT-PBS_len'                 : [len(self.rtpbs)],
+            'Edit_pos'                   : [edit_pos],
+            'Edit_len'                   : [edit_len],
+            'RHA_len'                    : [rha_len],
+
+            # Target sequence information
+            'Target'                     : [target],
+            'Masked_EditSeq'             : ['x'*(21-len(pbs)) + reverse_complement(self.rtpbs) + 'x'*(74-21-len(rtt))],
+
+            # Edit type information
+            'type_sub'                   : [type_sub],
+            'type_ins'                   : [type_ins],
+            'type_del'                   : [type_del],
+
+            # pegRNA Tm feature
+            'Tm1_PBS'                    : [fTm1],
+            'Tm2_RTT_cTarget_sameLength' : [fTm2],
+            'Tm3_RTT_cTarget_replaced'   : [fTm3], 
+            'Tm4_cDNA_PAM-oppositeTarget': [fTm4],
+            'Tm5_RTT_cDNA'               : [fTm5],
+            'deltaTm_Tm4-Tm2'            : [fTm4 - fTm2],
+
+            # pegRNA GC feature
+            'GC_count_PBS'               : [pbs.count('G') + pbs.count('C')],
+            'GC_count_RTT'               : [rtt.count('G') + rtt.count('C')],
+            'GC_count_RT-PBS'            : [self.rtpbs.count('G') + self.rtpbs.count('C')],
+            'GC_contents_PBS'            : [100 * gc(pbs)],
+            'GC_contents_RTT'            : [100 * gc(rtt)],
+            'GC_contents_RT-PBS'         : [100 * gc(self.rtpbs)],
+
+            # pegRNA MFE feature
+            'MFE_RT-PBS-polyT'           : [fMFE3],
+            'MFE_Spacer'                 : [fMFE4],
+
+            # DeepSpCas9 score
+            'DeepSpCas9_score'           : [SpCas9().predict([target[:30]]).SpCas9.loc[0]],
+        }
+
+        self.features = pd.DataFrame.from_dict(data=self.dict_feat, orient='columns')
+
+
+    def predict(self, pe_system:str, cell_type:str = 'HEK293T', show_features:bool = False, report=False):
+
+        df_all = self.features.copy()
+
+        os.environ['CUDA_VISIBLE_DEVICES']='0'
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        
+        model_info = LoadModel('DeepPrime', pe_system, cell_type)
+        model_dir  = model_info.model_dir
+
+        mean = pd.read_csv(f'{model_dir}/mean_231124.csv', header=None, index_col=0).squeeze()
+        std  = pd.read_csv(f'{model_dir}/std_231124.csv',  header=None, index_col=0).squeeze()
+
+        test_features = select_cols(df_all)
+
+        g_test = seq_concat(df_all)
+        x_test = (test_features - mean) / std
+
+        g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
+        x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
+
+        models = [m_files for m_files in glob(f'{model_dir}/*.pt')]
+        preds  = []
+
+        for m in models:
+            model = GeneInteractionModel(hidden_size=128, num_layers=1).to(device)
+            model.load_state_dict(torch.load(m, map_location=device))
+            model.eval()
+            with torch.no_grad():
+                g, x = g_test, x_test
+                g = g.permute((0, 3, 1, 2))
+                pred = model(g, x).detach().cpu().numpy()
+            preds.append(pred)
+        
+        # AVERAGE PREDICTIONS
+        preds = np.squeeze(np.array(preds))
+        preds = np.mean(preds, axis=0)
+        preds = np.exp(preds) - 1
+
+        df_all.insert(1, f'{pe_system}_score', preds)
+
+        self.data = df_all
+
+        return preds
+    
+    # def predict: END
+
+
 
 def set_alt_position_window(sStrand, sAltKey, nAltIndex, nIndexStart, nIndexEnd, nAltLen):
     if sStrand == '+':
@@ -226,7 +411,7 @@ def check_PAM_window(dict_sWinSize, sStrand, nIndexStart, nIndexEnd, sAltType, n
 
 # def END: check_PAM_window
 
-class FeatureExtraction:
+class PEFeatureExtraction:
     def __init__(self):
         self.sGuideKey = ''
         self.sChrID = ''

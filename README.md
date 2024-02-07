@@ -27,7 +27,7 @@ Please see the [documentation](https://goosang-yu.github.io/genet/).
 conda create -n genet python=3.8
 conda activate genet
 
-# Install genet ( >= ver. 0.7.0)
+# Install genet
 pip install genet
 ```
 
