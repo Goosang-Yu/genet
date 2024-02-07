@@ -431,8 +431,8 @@ class SynonymousPE:
                 print('best_syn is RHA_edit' %self.sID)
                 break
             elif best_syn.Edit_class in ['PAM_edit_LHA', 'LHA_edit']:
-                if temp_syn.Edit_class in 'PAM_edit_RHA': break
-                elif temp_syn.Edit_class not in ['PAM_edit_RHA', 'RHA_edit']:
+                if temp_syn.Edit_class == 'PAM_edit_RHA': continue
+                elif temp_syn.Edit_class in ['PAM_edit_LHA', 'LHA_edit']:
                     mut_pos = temp_syn.Codon_MutPos - 1
                     mut_nt  = temp_syn.Codon_Mut[mut_pos]
 
@@ -486,8 +486,8 @@ class SynonymousPE:
                 else : break
                 
             elif best_syn.Edit_class == 'PAM_edit_RHA':
-                if temp_syn.Edit_class in 'PAM_edit_RHA': break
-                elif temp_syn.Edit_class not in ['PAM_edit_RHA', 'RHA_edit']:
+                if temp_syn.Edit_class == 'PAM_edit_RHA': continue
+                elif temp_syn.Edit_class in ['PAM_edit_LHA', 'LHA_edit']:
                     mut_pos = temp_syn.Codon_MutPos - 1
                     mut_nt  = temp_syn.Codon_Mut[mut_pos]
 
