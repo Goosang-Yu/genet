@@ -2,17 +2,16 @@
 
 ### Additioal edit for efficient prime editing
 ---
-Prime editing은 RT-PBS 외에도 다양한 요인들에 의해 효율이 결정된다. 대표적으로 잘 알려져있는 것은 mismatch repair (MMR) system에 의한 저해효과이다. MMR에 의한 prime editing efficiency 저해를 방지하기 위해, pegRNA에 추가적인 mutation을 도입하는 전략을 사용할 수 있다 ([Chen et al., 2021, Cell](https://doi.org/10.1016/j.cell.2021.09.018)). 
+Prime editing efficiency is determined by various factors beyond RT-PBS. One well-known factor is the inhibitory effect by the mismatch repair (MMR) system. To prevent prime editing efficiency inhibition by MMR, a strategy of introducing additional mutations into pegRNA can be used ([Chen et al., 2021, Cell](https://doi.org/10.1016/j.cell.2021.09.018)). 
 
-하지만, 추가적인 mutation을 도입하는 것은 MMR의 영향을 줄이는 효과와 함께 pegRNA의 activity를 떨어뜨리는 효과도 있을 수 있다. 또한, 만약 genome editing을 하려는 위치가 protein coding sequence (CDS) 영역이라면 단백질의 기능에 영향을 주지 않는 synonymous (silent) mutation을 도입할 필요가 있다. 위와 같은 내용들을 고려했을 때, 어떤 mutation을 추가로 도입하는 pegRNA를 선택할지 디자인하고 선택하는 것은 꽤나 번거로운 작업이다.
+However, introducing additional mutations may not only reduce the impact of MMR but also decrease the activity of pegRNA. Moreover, if the target site for genome editing lies within the protein coding sequence (CDS) region, it is necessary to introduce synonymous (silent) mutations that do not affect protein function. Considering these factors, designing and selecting which mutations to introduce additionally into pegRNA can be a rather cumbersome task.
 
 
 ### `SynonymousPE` module in GenET
 ---
-GenET의 `SynonymousPE`는 추가 mutation이 도입된 pegRNA를 손쉽게 디자인 할 수 있는 기능을 제공한다. 특히, CDS에 맞춰서 가능한 synonymous mutation을 찾아주므로, 생물학적 연구에 활용할 때 유용하게 사용될 수 있다. 
+GenET's SynonymousPE provides the functionality to easily design pegRNAs with additional mutations introduced. Specifically, it identifies possible synonymous mutations that align with the CDS, making it useful for biological research applications.
 
-또한 `SynonymousPE`는 `DeepPrime`과 직접적으로 호환되기 때문에, `DeepPrime`에서 디자인한 pegRNA에 바로 synonymous mutation을 도입한 pegRNA를 만들 수 있다. 
-
+Furthermore, SynonymousPE is directly compatible with DeepPrime, allowing for the creation of pegRNAs with synonymous mutations directly from pegRNAs designed in DeepPrime. 
 
 ```python
 from genet.predict import DeepPrime
@@ -38,33 +37,36 @@ synony_pegrna = SynonymousPE(dp_record, ref_seq=seq_wt,
 print(synony_pegrna.extension)
 ```
 
-DeepPrime의 사용법에 대해서는 `genet.predict` module의 [documentation](/docs/en/1_Predict/predict_pe.md)에서 더 자세한 내용을 볼 수 있다. 위 예시에서는 디자인 된 수 많은 pegRNA 중에서 한 개의 pegRNA를 선택해서 synonymous mutation을 도입하였다. 각각의 pegRNA마다 RTT의 영역과 길이가 다르므로, 도입할 수 있는 additional mutation의 종류도 달라질 수 있다. 우선 DeepPrime score를 기준으로 적절한 pegRNA를 선정한 후, `SynonymousPE`를 추가로 활용하여 optimization을 해서 사용할 것을 권장한다. 
 
-### SynonymousPE의 input parameters
+You can find more detailed information about the usage of DeepPrime in the documentation of the genet.predict module [documentation](/docs/en/1_Predict/predict_pe.md). In the provided example, a synonymous mutation was introduced into one of the many designed pegRNAs. Since each pegRNA may have different regions and lengths for RTT, the types of additional mutations that can be introduced may also vary.
+
+It is recommended to first select appropriate pegRNAs based on DeepPrime scores and then further optimize them using SynonymousPE.
+
+### SynonymousPE's input parameters
 ---
 `de_record`: pd.Series  
-pegRNA의 정보를 담은 객체. DeepPrime을 이용해 디자인한 경우, 결과로 나온 `DataFrame`에서 특정 index를 불러오면 그대로 사용할 수 있다. 
+An object containing information about the pegRNA. When designed using DeepPrime, if you retrieve a specific index from the resulting DataFrame, you can use it directly.
 
 `ref_seq`: str  
-pegRNA의 표적이 되는 DNA 서열 정보. `SynonymousPE`는 이 서열 내에 CDS가 존재한다고 가정하고 정해진 규칙에 따라 synonymous mutation을 도입한다. 아래의 `frame`, `cds_start`, `cds_end`의 기준이 되는 유전 서열이다. 
+The DNA sequence information that serves as the target for the pegRNA. SynonymousPE assumes the presence of a CDS within this sequence and introduces synonymous mutations according to predefined rules. The genetic sequence used as the reference for frame, cds_start, and cds_end is defined below.  
 
 `frame`: int  
-Reference sequence (ref_seq) 서열의 frame을 나타내는 값이다. CDS의 codon frame에 의해 결정되며, 0, 1, 2 중에 하나로 표현된다. 예를 들어, CDS 서열이 codon (3bp)의 맨 앞부터 시작한다면, `frame`은 0으로 입력하면 된다. Frame이 정확하지 않으면 전혀 다른 amino acid 서열에 의한 synonymou mutation이 생성되므로, 꼼꼼하게 확인하고 입력해야 한다. 
+This value represents the frame of the reference sequence (ref_seq). It is determined by the codon frame of the CDS and is expressed as 0, 1, or 2. For example, if the CDS sequence starts from the beginning of a codon (3bp), you would input frame as 0. It's crucial to input the correct frame, as an inaccurate frame could lead to synonymous mutations resulting in a completely different amino acid sequence.
 
 ![codon_frame](../assets/contents/en_2_2_1_codon_frame.svg)
 
 `cds_start`: int  
-`ref_seq`에서 CDS가 시작하는 위치를 의미한다.
+`ref_seq` Indicates the position where the CDS starts in the ref_seq.
 
 `cds_end`: int  
-`ref_seq`에서 CDS가 끝나는 위치를 의미한다.
+`ref_seq` Indicates the position where the CDS ends in the ref_seq.
 
 `adj_rha`: bool  
-Synonymous mutation이 RT template의 RHA에 생겼을 경우, RHA 길이가 너무 짧아지면 prime editing 효율이 급감할 수도 있다. 대안책으로, RT template의 길이를 인위적으로 늘려줄 수 있다. `adj_rha`는 RT template의 RHA가 짧아졌을 때, 그 길이만큼 RT template 길이를 늘려줄 것인지에 대한 옵션이다 (기본값: True). 만약 `adj_rha`=False인 경우, synonymous mutation이 생긴 위치에 관계없이, RT template의 길이는 원래 pegRNA의 그것과 동일하게 유지된다. 
+When a synonymous mutation occurs in the RHA of the RT template, the efficiency of prime editing may significantly decrease if the RHA becomes too short. As an alternative, you can artificially extend the length of the RT template. adj_rha is an option to specify whether to extend the length of the RT template by the same amount as the shortening of the RHA when it becomes too short (default: True). If adj_rha is set to False, regardless of where the synonymous mutation occurs, the length of the RT template remains the same as that of the original pegRNA.
 
-### `SynonymousPE` input 예시
+### `SynonymousPE` input examples
 ---
-SynonymousPE의 frame과 CDS 위치 지정에 대한 내용은 처음 사용할 때 약간 복잡할 수 있다. 아래의 예시들을 참고해서 자신이 사용할 서열에 대해 정확히 지정해 사용하길 바란다. 
+The information regarding the frame and CDS positioning in SynonymousPE can be somewhat complex to grasp at first use. 
 
 #### Example 1:
 ---
@@ -112,36 +114,34 @@ synony_pegrna = SynonymousPE(dp_record, ref_seq=ref_seq, frame=1, cds_start=44, 
 ```
 
 
-### `SynonymousPE`의 mutation 우선순위
+### `SynonymousPE`s mutation Priority
 ---
-pegRNA RT template에 1bp 돌연변이를 추가로 도입했을 때, synonymous mutation에 해당하는 것이 여러개가 존재할 수 있다. `SynonymousPE`는 이렇게 만들어질 수 있는 mutation들 각각에 우선순위 점수를 배정하고, 그 중 가장 우선순위가 높은 mutation을 추가로 도입한 RT template을 선정해서 `.extension`으로 제공한다. `SynonymousPE`의 우선순위를 산정하는 기준은 아래와 같다. 
+When introducing a 1bp point mutation into the pegRNA RT template, there may be multiple synonymous mutations. <code>SynonymousPE</code> assigns priority scores to each possible mutation and selects the RT template with the highest priority mutation for additional incorporation, providing it as <code>.extension</code>. The criteria for determining the priority of <code>SynonymousPE</code> are as follows.
 
-- 1순위: PAM (GG)을 없애주는 synonymous mutation이 존재할 경우, 가장 우선순위를 높게 배정한다.
-- 2순위: Left homology arm (LHA)에 도입할 경우, intended prime-edit position에 가까울 수록 우선순위를 높게 배정한다.
-- 3순위: Right homology arm (RHA)에 도입할 경우, intended prime-edit position에 가까울 수록 우선순위를 높게 배정한다.
+- Priority 1: If there is a synonymous mutation that eliminates the PAM (GG), it is assigned the highest priority.
+- Priority 2: When introduced into the Left Homology Arm (LHA), mutations closer to the intended prime-edit position are assigned higher priority.
+- Priority 3: When introduced into the Right Homology Arm (RHA), mutations closer to the intended prime-edit position are assigned higher priority.
 
-
-### `stack`: Synonymous mutation의 연속 도입
+### `stack`: Introduction of synonymous mutations
 ---
-하나의 RT template에 여러개의 synonymous mutation들을 넣어주는 기능이다. 기본적으로 `SynonymousPE`는 RT template에 1개의 synonymous mutation만 도입한 것 중에서 가장 우선 순위가 높은 것을 선정해서 `.extension`으로 제공한다. 하지만 만약 2개 이상의 synonymous mutation을 한번에 도입하고 싶다면, `.stack` method를 사용할 수 있다. 
+This functionality allows for the insertion of multiple synonymous mutations into a single RT template. By default, <code>SynonymousPE</code> selects the highest priority mutation among those introducing only one synonymous mutation into the RT template and provides it as <code>.extension</code>. However, if you wish to introduce two or more synonymous mutations simultaneously, you can use the <code>.stack</code> method.
 
 ```python 
 from genet.design import SynonymousPE
 
-# SynonymousPE 객체를 생성
+# Create a SynonymousPE object
 synony_pegrna = design.SynonymousPE(dp_record, ref_seq=seq_wt, frame=0)
 
-# 최대 3개의 synonymous mutation이 도입된 RT template을 생성
+# Generate an RT template with up to three synonymous mutations introduced
 three_syn = synony_pegrna.stack(num=3)
 ```
 
-`.stack`은 가능한 synonymous mutation들을 배정된 우선순위 순으로 추가로 도입해준다. 각각의 synonymous mutation이 1개씩만 도입되었을 때는 amino acid 서열 변화가 없지만, 2개가 동시에 도입될 때에는 amino acid 서열 변화가 생기는 경우도 있다. 이러한 경우에는 다음 우선순위의 mutation으로 넘어간다.
+`.stack`
+It incorporates possible synonymous mutations in order of assigned priority. When each synonymous mutation is introduced individually, there is no change in the amino acid sequence. However, when two mutations are introduced simultaneously, there may be a change in the amino acid sequence. In such cases, the process moves on to the next priority mutation.
 
-
-### SynonymousPE에서 불러올 수 있는 객체들
+### Objects Available for Retrieval in SynonymousPE
 ---
-아래는 주요 결과들을 확인할 수 있는 객체들이다. 
-
+Below are the objects available for accessing key results.
 | Name          | Type         | Description                                                                                  |
 | ------------- | ------------ | -------------------------------------------------------------------------------------------- |
 | `.extension`  | str          | Selected RT-PBS sequence containing recommanded synonymous mutation.                         |
@@ -154,10 +154,10 @@ three_syn = synony_pegrna.stack(num=3)
 ```python 
 from genet.design import SynonymousPE
 
-# SynonymousPE 객체를 생성
+# Create a SynonymousPE object
 synony_pegrna = design.SynonymousPE(dp_record, ref_seq=seq_wt, frame=0)
 
-# 도입 가능한 synonymous mutations 확인
+# Check for available synonymous mutations for introduction
 synony_pegrna.synonymous
 ```
 
@@ -191,7 +191,7 @@ Results:
 | GCCGTGGAGGAGCCGCAGTCAGATCCTAGCGTCGAGCCC | GCCGTGGAGGAGCCGCAGTCAGATCCTAGCGTCGAGCCT | 38           | 58             | 97           | 1             | +              | VEEPQSDPSVEP | VEEPQSDPSVEP  | TRUE         | 38      | 95         | GG      | 45       | RHA_edit   | CCGTGGAGGAGCCGCAGTCAGATCCTAGCGTCGAGCCT |
 
 
-아래는 코드 내에서 디자인을 위해 사용된 parameter들과 기타 세부 정보들을 담은 객체들이다.
+Below are the objects containing parameters and other detailed information used for design within the code. 
 
 | Name         | Type | Description                                               |
 | ------------ | ---- | --------------------------------------------------------- |
@@ -213,14 +213,11 @@ Results:
 | `.codon_re`  | int  | Length of right end (RE) of codon sequence.               |
 | `.codon_RTT` | str  | Codon sequence with RT template.                          |
 
-다음과 같이 값을 확인할 수 있다. 
+You can check the values as follows. 
 
 ```python 
 from genet.design import SynonymousPE
-
-# SynonymousPE 객체를 생성
+ 
 synony_pegrna = design.SynonymousPE(dp_record, ref_seq=seq_wt, frame=0)
-
-# 도입 가능한 synonymous mutations 확인
 synony_pegrna.ref_seq
 ```
