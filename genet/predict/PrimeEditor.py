@@ -1030,3 +1030,43 @@ def pecv_score(data, model, device, batch_size=128):
             data.loc[y_pred > 0.5, 'DeepSpCas9_score'] = y_pred[y_pred > 0.5]
 
     return data 
+
+
+
+class DeepPrimeOff:
+    def __init__(self):
+        '''DeepPrime-Off model을 사용하기 위한 input을 만들고, 모델 결과값을 내주는 pipeline'''
+
+
+        pass
+
+    def make_input_from_fasta(self, cas_offinder_result:str, fasta_path, seq_length=74):
+        '''From cas_offinder_results, get on_target_scaper, Location, Position, Off-target sequence, Strand, and number of mismatch (MM) information.
+        Then, find and open the fasta file which matches the chromosome number of each sequence in cas_offinder_result.
+        After then, find the sequence context starting from 'Position' to seq_length (74nt by default).
+        This sequence contexts are returned as a DataFrame.
+
+        cas_offinder_result: Path of text file with cas_offinder results.
+        fasta_path: Path of directory containing fasta files.
+        seq_length: Length of sequence context.
+        '''
+
+        # cas_offinder_result, transform tsv to DataFrame format
+        cas_offinder_result = pd.read_csv(cas_offinder_result, seq='\t', names=['On_target_scaper', 'Location', 'Position', 'Off_target_sequence', 'Strand', 'MM_count'])
+
+        # example value of 'Location': '22 dna:chromosome chromosome:GRCh38:22:1:50818468:1 REF'
+        # Meaning of values of 'Location': chromosome name, chromosome number and position of the sequence and Reference genomic sequence.
+        
+        # extract chromosome name from 'Location' and make new column 'Chromosome'
+        cas_offinder_result['Chromosome'] = cas_offinder_result['Location'].apply(lambda x: x.split(' ')[0])
+        
+
+
+        
+        # sort_values of cas_offinder_results depending on 'Location' especially for chromosome number
+        cas_offinder_result = cas_offinder_result.sort_values(by='Location')
+
+        
+
+
+
