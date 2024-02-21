@@ -1,20 +1,26 @@
+# genet package and modules 
 import genet.utils
 from genet.predict.PredUtils import *
 from genet.predict.Nuclease import SpCas9
 from genet.models import LoadModel
 
-import torch
-import torch.nn.functional as F
-import torch.nn as nn
-
+# python standard packages
 import os, sys, regex
 import numpy as np
 import pandas as pd
 from glob import glob
+from tqdm import tqdm
 
+# pytorch package and modules 
+import torch
+import torch.nn.functional as F
+import torch.nn as nn
+
+# biopython package and modules 
 from Bio.SeqUtils import MeltingTemp as mt
 from Bio.SeqUtils import gc_fraction as gc
-from Bio.Seq import Seq, transcribe, back_transcribe
+from Bio.Seq import Seq, transcribe, back_transcribe, reverse_complement
+from Bio import SeqIO
 
 from RNA import fold_compound
 
@@ -1011,36 +1017,51 @@ def select_cols(data):
 
     return features
 
-def pecv_score(data, model, device, batch_size=128):
-    model.eval()
-    data = data.reset_index(drop=True)
-    g = seq_concat(data)
-    x = select_cols(data)
-    g = torch.tensor(g, dtype=torch.float32, device=device)
-    x = torch.tensor(x.values, dtype=torch.float32, device=device)
-    y = torch.zeros(len(data), dtype=torch.float32, device=device)
-
-    test = TensorDataset(g, x, y)
-    test_loader = DataLoader(test, batch_size=batch_size, shuffle=False)
-
-    with torch.no_grad():
-        for g, x, y in test_loader:
-            y_pred = model(g, x)
-            y_pred = y_pred.cpu().numpy().flatten()
-            data.loc[y_pred > 0.5, 'DeepSpCas9_score'] = y_pred[y_pred > 0.5]
-
-    return data 
-
 
 
 class DeepPrimeOff:
     def __init__(self):
-        '''DeepPrime-Off model을 사용하기 위한 input을 만들고, 모델 결과값을 내주는 pipeline'''
+        '''DeepPrime-Off model을 사용하기 위한 input을 만들고, 모델 결과값을 내주는 pipeline
+        
+        ## How to use
+        #### Step 1. Run Cas-OFFinder with the spacer sequence of pegRNAs
+
+
+        #### Step 2. Setup the model
+        ```python
+        from genet.predict import DeepPrimeOff
+
+        deep_off = DeepPrimeOff()
+        deep_off.setup('./cas_offinder_results/cas')
+
+
+        ```
+        - cas_offinder_results: Path of text file with cas_offinder results.
+        - fasta_path: Path of directory containing fasta files.
+        - seq_length: Length of sequence context.
+
+
+        #### Step 3. Predict the score
+
+        ```python
+        
+        df_PE_off = deep_off.predict() # type: pd.DataFrame
+
+        ```
+
+        
+        '''
+
+
+        
+
+
 
 
         pass
 
-    def make_input_from_fasta(self, cas_offinder_result:str, fasta_path, seq_length=74):
+    
+    def setup(self, cas_offinder_result:str, fasta_path:str, assemble_name:str='Homo_sapiens.GRCh38', seq_length:int=74):
         '''From cas_offinder_results, get on_target_scaper, Location, Position, Off-target sequence, Strand, and number of mismatch (MM) information.
         Then, find and open the fasta file which matches the chromosome number of each sequence in cas_offinder_result.
         After then, find the sequence context starting from 'Position' to seq_length (74nt by default).
@@ -1051,22 +1072,79 @@ class DeepPrimeOff:
         seq_length: Length of sequence context.
         '''
 
-        # cas_offinder_result, transform tsv to DataFrame format
-        cas_offinder_result = pd.read_csv(cas_offinder_result, seq='\t', names=['On_target_scaper', 'Location', 'Position', 'Off_target_sequence', 'Strand', 'MM_count'])
 
-        # example value of 'Location': '22 dna:chromosome chromosome:GRCh38:22:1:50818468:1 REF'
-        # Meaning of values of 'Location': chromosome name, chromosome number and position of the sequence and Reference genomic sequence.
-        
+        self.df_offinder = self.casoffinder_tsv2df(cas_offinder_result)
+        self.df_offinder = self._get_sequence_from_fasta(df_offinder=self.df_offinder,
+                                                         fasta_path=fasta_path,
+                                                         seq_length=seq_length,
+                                                         assemble_name=assemble_name)
+
+
+        pass 
+
+
+    def casoffinder_tsv2df(self, cas_offinder_result_path:str):
+        '''cas_offinder_result, transform tsv to DataFrame format
+        Also, add "Chromosome" column.'''
+
+        df_offinder = pd.read_csv(cas_offinder_result_path, sep='\t', names=['On_target_scaper', 'Location', 'Position', 'Off_target_sequence', 'Strand', 'MM_count'])
+
         # extract chromosome name from 'Location' and make new column 'Chromosome'
-        cas_offinder_result['Chromosome'] = cas_offinder_result['Location'].apply(lambda x: x.split(' ')[0])
-        
+        df_offinder['Chromosome'] = df_offinder['Location'].apply(lambda x: x.split(' ')[0])
+
+        return df_offinder
 
 
-        
-        # sort_values of cas_offinder_results depending on 'Location' especially for chromosome number
-        cas_offinder_result = cas_offinder_result.sort_values(by='Location')
+    def _get_sequence_from_fasta(self, df_offinder:pd.DataFrame, fasta_path:str, seq_length:int=74, assemble_name:str='Homo_sapiens.GRCh38'):
+        '''From FASTA file, get sequence context starting from 'Position' to seq_length (default 74nt).'''
 
-        
+        list_df_out = []
+        df_offinder_grouped = df_offinder.groupby('Chromosome')
+
+        # make progress bar
+        pbar = tqdm(df_offinder_grouped.groups.keys(),
+                    desc='Finding sequence context for each chromosome',
+                    total=len(df_offinder_grouped.groups.keys()), 
+                    unit='chromosomes', unit_scale=True, leave=False)
+
+        # iterate through each chromosome
+        for chromosome in pbar:
+            
+            # 이 부분은 FASTA 파일의 이름이 hard coding 되어 있음. 나중에 general하게 바꿔줘야 함. 
+            fasta  = str(SeqIO.read(f'{fasta_path}/{assemble_name}.dna.chromosome.{chromosome}.fa', 'fasta').seq)
+            df_chr = df_offinder_grouped.get_group(chromosome)
+
+            chr_strand_grouped = df_chr.groupby('Strand')
+
+            # for strand == '+'
+            df_strand_fwd = chr_strand_grouped.get_group('+').copy()
+            df_strand_fwd['Off74_context'] = df_strand_fwd['Position'].apply(lambda pos: fasta[pos-4:pos-4+seq_length])
+
+            # for strand == '-'
+            df_strand_rev = chr_strand_grouped.get_group('-').copy()
+            df_strand_rev['Off74_context'] = df_strand_rev['Position'].apply(lambda pos: reverse_complement(fasta[pos+28-seq_length:pos+28]))
+
+            list_df_out.append(df_strand_fwd, df_strand_rev)
+
+        return pd.concat(list_df_out, axis=0)
+    
+
+
+    def predict():
+        '''Get DeepPrime-Off prediction score. '''
+
+        pass
+
+
+
+
+
+
+
+
+
+
+
 
 
 
