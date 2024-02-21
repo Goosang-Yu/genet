@@ -16,13 +16,13 @@ class NCBI(db.config.NCBIconfig):
             self.meta = pd.read_parquet(f'{self.local_path}/{self.local_file}')
         else:
             print('[Info] NCBI reference genome assembly metadata is not found. This message appears only once when starting the NCBI database for the first time.')
-            self.download(download_path=self.local_path)
+            self.download_meta(download_path=self.local_path)
             self.meta = pd.read_parquet(f'{self.local_path}/{self.local_file}')
 
     
     # def End: __init__
         
-    def download(self, download_path:str, convert=True):
+    def download_meta(self, download_path:str, convert=True):
         '''Download files from FTP server to local path.
         If download_path pointed, metadata file will be downloaded at pointed path.
         
@@ -183,7 +183,7 @@ class GetGenome(NCBI):
     
     # def End: contents
 
-    def download(self, target_file:str, path:str='./', silence=False):
+    def download(self, target_file:str, download_path:str='./', silence=False):
                 
         """_summary_
 
@@ -200,7 +200,7 @@ class GetGenome(NCBI):
             U.request_file(
                 server      = server,
                 remote_path = remote_path,
-                local_path  = path, 
+                local_path  = download_path, 
                 target_file = target_file, 
                 silence     = silence,
             )
