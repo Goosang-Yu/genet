@@ -1,7 +1,8 @@
-import os, requests
+import os, gzip, requests
 import pandas as pd
 import genet.database as db
 import genet.utils as U
+from Bio import SeqIO
 from ftplib import FTP
 
 class NCBI(db.config.NCBIconfig):
@@ -111,7 +112,7 @@ class GetGenome(NCBI):
         self.meta = self.meta.set_index(category)
 
         try   : self.data = self.meta.loc[[id]].reset_index()[_columns]
-        except: raise ValueError('''[Error] Not valid ID, Please check your id or category ("organism" or "accession") input.''')
+        except: raise ValueError('''[Error] Not valid ID, Please check your id or category ("organism" or "accession") input.\nYou can check available IDs and accession numbers from NCBI().meta.''')
 
         if category == 'organism_name':
             self.info = self._search_refseq()
@@ -228,6 +229,42 @@ class GenBankParser:
 
 
 
+
+class GenomeParser:
+    def __init__(self, fasta_file:str):
+        """FASTA / GenBank file 등을 읽어서, 자주 사용하는 기능을 간단한 method로 구현할 수 있게 만든 것.
+        꼭 FASTA 파일로 한정해서 만들어야 하나? 나중에는 file format에 상관없이 인식 가능한 일반적인 함수로 만들기.
+
+        Args:
+            fasta_file (str): .fa, fna, 또는 이들의 압축 파일
+            
+        """        
+
+        print('[Info] Parsing GenBank file.')
+
+
+
+    def _load_file(self, file_path:str) -> SeqIO.SeqRecord:
+        '''Read the file and parse it.
+        If the file is gzipped, it will be decompressed.
+        This function will return SeqRecord object.'''
+
+        if file_path.endswith('.gz'):
+            with gzip.open(file_path, 'rb') as handle:
+
+                if file_path.endswith( '.fa.gz' or '.fna.gz' or '.fasta.gz'):
+                    records = SeqIO.parse(handle, 'fasta')
+                elif file_path.endswith( '.fq.gz' or '.fastq.gz'):
+                    records = SeqIO.parse(handle, 'fastq')
+                elif file_path.endswith( '.gb.gz' or '.gbk.gz' or '.gbff.gz' or ):
+                    records = SeqIO.parse(handle, 'genbank')
+
+
+                records = SeqIO.parse(handle, 'genbank')
+
+        else: records = SeqIO.parse(file_path, 'genbank')
+
+    # def End: __init__
 
 
 
