@@ -244,31 +244,32 @@ class GenomeParser:
 
 
 
-    def _load_file(self, file_path:str) -> SeqIO.SeqRecord:
+    def _get_file_format(self, file_path:str) -> str:
         '''Read the file and parse it.
         If the file is gzipped, it will be decompressed.
         This function will return SeqRecord object.'''
 
-        if file_path.endswith('.gz'):
-            with gzip.open(file_path, 'rb') as handle:
+        # delete .gz extension
+        if file_path.endswith('.gz'): file_path = file_path[:-3]
+        
+        # find the file extension
+        if file_path.endswith( '.fa' or '.fna' or '.fasta'):
+            file_format = 'fasta'
+        elif file_path.endswith( '.fq' or '.fastq'):
+            file_format = 'fastq'
+        elif file_path.endswith( '.gb' or '.gbk' or '.gbff'):
+            file_format = 'genbank'
 
-                if file_path.endswith( '.fa.gz' or '.fna.gz' or '.fasta.gz'):
-                    records = SeqIO.parse(handle, 'fasta')
-                elif file_path.endswith( '.fq.gz' or '.fastq.gz'):
-                    records = SeqIO.parse(handle, 'fastq')
-                elif file_path.endswith( '.gb.gz' or '.gbk.gz' or '.gbff.gz' or ):
-                    records = SeqIO.parse(handle, 'genbank')
+        return file_format
 
-
-                records = SeqIO.parse(handle, 'genbank')
-
-        else: records = SeqIO.parse(file_path, 'genbank')
-
-    # def End: __init__
+    # def End: _get_file_format
 
 
 
-    
+    def _file_parsing(self, file_path:str) -> str:
+        '''Read the file and parse it.
+        If the file is gzipped, it will be decompressed.
+        This function will return SeqRecord object.'''
 
 
 class DFConverter:
