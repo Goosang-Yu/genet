@@ -123,7 +123,7 @@ class GetGenome(NCBI):
     
     # def End: __init__
 
-    def _search_refseq(self, ) -> pd.Series():
+    def _search_refseq(self, ) -> pd.Series:
         """만약 category가 organism_name이라면, 여러개의 GCF들이 나올 수 있으니,
         그 중에서 어떤 것이 ref_seq인지 선정하기 위한 method.
         만약 적절한 ref_seq이 없다면, 다른 category를 이용하는 것을 권장하는 error 발생.
@@ -212,18 +212,46 @@ class GetGenome(NCBI):
     # def End: download
 
 
-class GenBankParser:
-    def __init__(self, gb_file:str, feature_file:str):
-        """GenBank file과 feature file을 같이 넣어줘서 feature 파일 내에 있는 정보를 기반으로 parsing 하는 함수.
-        특히 transcript는 "tag=MANE Select" 가 들어있는 경우가 representative mRNA라는 정보를 가져오는 것이 중요하다.
-        이에 대해서는 좀 더 고민해보고 class 만들어보자.
+class GetChromosome(GetGenome):
+    def __init__(self, id:str, category:str='organism'):
+        """Mammalian cell의 경우에는 chromosome 단위로 file이 정리된 것을 사용해야 할 경우가 있다.
+        대표적으로 Cas-OFFinder는 chromosome이 각각 분리된 파일을 기준으로 작동한다. 
+        따라서 본 함수는 database에서 chromosome이 따로 정리된 파일을 찾아서 다운로드 한다.
+
+        `GetChromosome`은 `GetGenome`을 상속받아서 작동한다. 
+        따라서 `GetGenome`의 __init__() input을 동일하게 넣어줘야 하며, 
+        `GetGenome`의 contents(), download()를 사용할 수 있다. 
+
+        NCBI database에는 각 assembly마다 하위 경로에 chromosome이 나누어진 파일들이 별도로 존재한다.
+        예를 들어, 인간 (Homo sapiens)의 경우, 아래의 경로에 존재한다. 
+        https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/reference/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_assembly_structure/Primary_Assembly/assembled_chromosomes/FASTA/
+        
+        만약 chromosome으로 assembly가 만들어지는 구조라면, assembly_level == 'Chromosome'으로 되어있다.
+        Mammalian cell이 아니라서 chromosome과 같은 하위 assembly structure가 없는 경우에는 작동하지 않는다.
 
         Args:
             gb_file (str): .gbff 파일
             feature_file (str): .gff 파일
         """        
 
-        print('[Info] Parsing GenBank file.')
+        super().__init__(id, category)
+
+        info = self.info.copy()
+
+        
+        if info.assembly_level != 'Chromosome':
+            raise ValueError('''[Error] Not valid assembly level. Please check your assembly level input.
+                    Available assembly levels: "Chromosome"''')
+
+        accession    = info['#assembly_accession']
+        asm_name     = info['asm_name']
+        asm_ftp_path = info.ftp_path
+        
+        # Renew the ftp path to directory containing chromosome FASTA files
+        info.ftp_path = f'{asm_ftp_path}/{accession}_{asm_name}_assembly_structure/Primary_Assembly/assembled_chromosomes/FASTA/'
+        
+        self.info = info
+
 
     # def End: __init__
 
