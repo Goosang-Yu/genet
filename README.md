@@ -59,7 +59,70 @@ GenET was developed for anyone interested in the field of genome editing. Especi
 - Design a saturation library for a specific gene.
 
 
-## Example: Prediction of prime editing efficiency by DeepPrime
+
+## Example 1: Download genomic data from NCBI database
+
+연구에 필요한 유전체 정보는 NCBI와 같은 public database에서 다운로드 받아서 사용하는 경우가 많다. 간단한 정보만 확인할 경우에는 NCBI 홈페이지에서 검색 결과를 찾아보는 것으로 충분하다. 하지만 많은 양의 데이터가 필요하거나, 특정 분석 pipeline에 필요한 reference sequence 파일이 필요한 경우에는 특정 정보를 담고 있는 파일을 찾아서 다운로드 해야 할 경우가 있다. 
+
+GenET database module은 자주 사용하는 NCBI의 데이터 파일들을 손쉽게 다운로드 할 수 있는 함수들을 제공한다. 예를 들어, `Homo sapiens`의 genomic assembly를 다운로드 하고 싶다면, `GetGenome`을 아래와 같이 사용할 수 있다.
+
+먼저, `GenGenome`을 import 한다. 
+```python 
+from genet.database import GetGenome
+```
+
+원하는 spacies를 넣고 GetGenome instance를 만든다.
+```python
+genome = GetGenome('Homo sapiens')
+```
+
+해당 species의 assembly에 관련된 파일 중 다운로드 받을 수 있는 것들을 확인한다.
+```python
+list_contents = genome.contents()
+list_contents
+```
+
+> output:    
+  ['README.txt',
+ 'Annotation_comparison',
+ 'GCF_000001405.40_GRCh38.p14_assembly_structure',
+ 'GCF_000001405.40-RS_2023_10_annotation_report.xml',
+ 'annotation_hashes.txt',
+ 'RefSeq_transcripts_alignments',
+ 'GCF_000001405.40_GRCh38.p14_assembly_regions.txt',
+ 'GCF_000001405.40_GRCh38.p14_assembly_report.txt',
+ 'GCF_000001405.40_GRCh38.p14_assembly_stats.txt',
+ 'GCF_000001405.40_GRCh38.p14_cds_from_genomic.fna.gz',
+ 'GCF_000001405.40_GRCh38.p14_feature_count.txt.gz',
+ 'GCF_000001405.40_GRCh38.p14_feature_table.txt.gz',
+ 'GCF_000001405.40_GRCh38.p14_genomic.fna.gz',
+ 'GCF_000001405.40_GRCh38.p14_genomic.gbff.gz',
+ 'GCF_000001405.40_GRCh38.p14_genomic.gff.gz',
+ 'GCF_000001405.40_GRCh38.p14_genomic.gtf.gz',
+ 'GCF_000001405.40_GRCh38.p14_genomic_gaps.txt.gz',
+ 'GCF_000001405.40_GRCh38.p14_protein.faa.gz',
+ 'GCF_000001405.40_GRCh38.p14_protein.gpff.gz',
+ 'GCF_000001405.40_GRCh38.p14_pseudo_without_product.fna.gz',
+ 'GCF_000001405.40_GRCh38.p14_rm.out.gz',
+ 'GCF_000001405.40_GRCh38.p14_rm.run',
+ 'GCF_000001405.40_GRCh38.p14_rna.fna.gz',
+ 'GCF_000001405.40_GRCh38.p14_rna.gbff.gz',
+ 'GCF_000001405.40_GRCh38.p14_rna_from_genomic.fna.gz',
+ 'GCF_000001405.40_GRCh38.p14_translated_cds.faa.gz',
+ 'README_GCF_000001405.40-RS_2023_10',
+ 'assembly_status.txt',
+ 'md5checksums.txt',
+ 'GRCh38_major_release_seqs_for_alignment_pipelines']
+
+
+
+원하는 파일 이름을 지정해서 원하는 경로에 다운로드 한다. 
+```python
+genome.download('GCF_000001405.40_GRCh38.p14_genomic.gbff.gz')
+```
+
+
+## Example 2: Prediction of prime editing efficiency by DeepPrime
 ![](docs/en/assets/contents/en_1_4_1_DeepPrime_architecture.svg)
 DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs) that target specific target sites for prime editing ([Yu et al. Cell 2023](https://doi.org/10.1016/j.cell.2023.03.034)). DeepSpCas9 prediction score is calculated simultaneously and requires tensorflow (version >=2.6). DeepPrime was developed on pytorch. For more details, please see the [documentation](https://goosang-yu.github.io/genet/).
 
