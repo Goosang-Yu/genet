@@ -186,7 +186,9 @@ class GetGenome(NCBI):
 
     def download(self, target_file:str, download_path:str='./', silence=False):
                 
-        """_summary_
+        """target_file과 같은 이름의 파일을 원하는 경로에 FTP 서버로부터 다운로드 해주는 함수.
+        ToDo: target_file='all'이라고 적으면 self.contents()로 불러온 모든 파일을 다운로드 해준다.
+        단, directory는 무시한다. 
 
         Args:
             target_file (str): File name for download from NCBI server.
@@ -254,8 +256,74 @@ class GetChromosome(GetGenome):
 
 
     # def End: __init__
+        
+    def download(self, target_file:str, download_path:str='./', silence:bool=False, decompress:bool=False):
+                
+        """target_file과 같은 이름의 파일을 원하는 경로에 FTP 서버로부터 다운로드 해주는 함수.
+        ToDo: target_file='all'이라고 적으면 self.contents()로 불러온 모든 파일을 다운로드 해준다.
+        단, directory는 무시한다. 
+
+        Args:
+            target_file (str): File name for download from NCBI server.
+            path (str, optional): Local path for save downloaded file. Defaults to './' (current working directory).
+        """                
+        ftp_path = self.info.ftp_path
+        paths = ftp_path.split('//')[1]
+        
+        server, remote_path = paths.split('/', 1)
+
+        try:
+            U.request_file(
+                server      = server,
+                remote_path = remote_path,
+                local_path  = download_path, 
+                target_file = target_file, 
+                silence     = silence,
+            )
+        
+            if decompress == True:
+                if silence == False:
+                    print(f"[Info] Decompressing gzipped file: {target_file}")
+                gzipped_file_path = f'{download_path}/{target_file}'
+                output_file_path  = gzipped_file_path.replace('.gz', '')
+
+                with gzip.open(gzipped_file_path, 'rb') as f_in:
+                    with open(output_file_path, 'wb') as f_out:
+                        # .gz 파일을 읽어서 압축 해제하고, 압축 해제된 내용을 새 파일에 쓴다
+                        f_out.write(f_in.read())
+
+                os.unlink(gzipped_file_path)
 
 
+        except:
+            print(f'[Error] Fail to download file. Available file: {self.contents()}')
+
+        
+
+
+    # def End: download
+
+
+class GetGeneFTP:
+    def __init__(self):
+        """NCBI FTP server에서 gene directory에 있는 데이터를 기반으로 다운로드하고 불러오는 함수.
+
+        아직 개발중
+        - NCBI config meta data를 기반으로 정보를 찾아낼 수 있나?
+        이건 genome assembly를 기반으로 정리된 파일인 것 같긴 한데.... 다른 config를 기준으로 해야하는지 알아보기
+
+
+        Args:
+            gb_file (str): .gbff 파일
+            feature_file (str): .gff 파일
+        """        
+
+
+        # ToDo: ftp서버/gene/ ~~~ 에서 원하는 tax, gene name 등에서 파일을 찾아내는 script 짜기.
+        pass
+
+
+    # def End: __init__
 
 
 class GenomeParser:
