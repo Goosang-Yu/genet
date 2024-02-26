@@ -919,14 +919,36 @@ class PEFeatureExtraction:
                 list_output.append(list_sOut)
             
             # loop END: sSeqKey
+        
+        hder_features = [
+            # Sample ID
+            'ID', 
 
-        hder_essen = ['ID', 'RT-PBS', 'PBS_len', 'RTT_len', 'RT-PBS_len', 'Edit_pos', 'Edit_len', 'RHA_len', 'Target', 'Masked_EditSeq', 
-                    'type_sub', 'type_ins', 'type_del','Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 
-                    'Tm4_cDNA_PAM-oppositeTarget', 'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2',
-                    'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS', 
-                    'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 'MFE_RT-PBS-polyT', 'MFE_Spacer']
+            # pegRNA sequence features
+            'RT-PBS', 
 
-        df_out = pd.DataFrame(list_output, columns=hder_essen)
+            # pegRNA edit and length features
+            'PBS_len', 'RTT_len', 'RT-PBS_len', 'Edit_pos', 'Edit_len', 'RHA_len', 
+            
+            # Target sequences
+            'Target', 'Masked_EditSeq', 
+
+            # Edit types
+            'type_sub', 'type_ins', 'type_del',
+
+            # Tm features
+            'Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 
+            'Tm4_cDNA_PAM-oppositeTarget', 'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2',
+
+            # GC counts and contents
+            'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS', 
+            'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 
+            
+            # RNA 2ndary structure features
+            'MFE_RT-PBS-polyT', 'MFE_Spacer'
+            ]
+
+        df_out = pd.DataFrame(list_output, columns=hder_features)
 
         list_spacer = [wt74[4:24] for wt74 in df_out.Target]
         df_out.insert(1, 'Spacer', list_spacer)
@@ -1061,29 +1083,101 @@ class DeepPrimeOff:
         pass
 
     
-    def setup(self, cas_offinder_result:str, fasta_path:str, assemble_name:str='Homo_sapiens.GRCh38', seq_length:int=74):
-        '''From cas_offinder_results, get on_target_scaper, Location, Position, Off-target sequence, Strand, and number of mismatch (MM) information.
+    def setup(self,
+              features:pd.DataFrame,
+              cas_offinder_result:str,
+              assemble_name:str='Homo_sapiens.GRCh38', 
+              ):
+        
+        """일단 지금은 Cas-OFFinder output을 넣어주는 형태이지만, 
+        나중에는 DeepPrime_record를 인식해서 spacer sequence를 뽑아내고, 자동으로 Cas-OFFinder가 돌아가게 만들기
+
+        From cas_offinder_results, get on_target_scaper, Location, 
+        Position, Off-target sequence, Strand, and number of mismatch (MM) information.
+
         Then, find and open the fasta file which matches the chromosome number of each sequence in cas_offinder_result.
         After then, find the sequence context starting from 'Position' to seq_length (74nt by default).
         This sequence contexts are returned as a DataFrame.
 
-        cas_offinder_result: Path of text file with cas_offinder results.
-        fasta_path: Path of directory containing fasta files.
-        seq_length: Length of sequence context.
-        '''
+        Args:
+            features (pd.DataFrame): _description_
+            cas_offinder_result (str): Path of text file with cas_offinder results.
+            assemble_name (str, optional): _description_. Defaults to 'Homo_sapiens.GRCh38'.
+        """
+
+        # DeepPrime features DataFrame에 필요한 column들이 전부 잘 들어있는지 확인하는 함수
+        # 만약 문제가 없다면, self.features에 해당 DataFrame을 넣는다.
+        self.features = self._check_record(features=features)
+
+        # Convert Cas-OFFinder result file to DataFrame format
+        self.df_offinder = self._offinder_to_df(cas_offinder_result)
+
+        # 74nt Target context를 FASTA 파일에서 가져오기
+        self.df_offinder = self._get_target_seq(df_offinder=self.df_offinder,
+                                                assemble_name=assemble_name,
+                                                )
+
+        # DeepPrime features DataFrame에 각 pegRNA마다 off-target candidates들을 조합해서 넣어주기
 
 
-        self.df_offinder = self.casoffinder_tsv2df(cas_offinder_result)
-        self.df_offinder = self._get_sequence_from_fasta(df_offinder=self.df_offinder,
-                                                         fasta_path=fasta_path,
-                                                         seq_length=seq_length,
-                                                         assemble_name=assemble_name)
 
 
         pass 
+    
+    # def END: setup
 
 
-    def casoffinder_tsv2df(self, cas_offinder_result_path:str):
+    def _check_record(self, features:pd.DataFrame) -> pd.DataFrame:
+        """Input으로 들어온 features가 DeepPrime pipeline으로 만들어진 DataFrame 형태가 맞는지 점검하는 함수.
+
+        Args:
+            features (pd.DataFrame): DeepPrime에서 feature들의 정보가 들어있는 DataFrame.
+        """        
+
+        # Check if the input dataframe is in the correct format
+
+        list_features = [
+            'ID', 
+
+            # pegRNA sequence features
+            'Spacer', 'RT-PBS', 
+
+            # pegRNA edit and length features
+            'PBS_len', 'RTT_len', 'RT-PBS_len', 'Edit_pos', 'Edit_len', 'RHA_len', 
+            
+            # Target sequences
+            'Target', 'Masked_EditSeq', 
+
+            # Edit types
+            'type_sub', 'type_ins', 'type_del',
+
+            # Tm features
+            'Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 
+            'Tm4_cDNA_PAM-oppositeTarget', 'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2',
+
+            # GC counts and contents
+            'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS', 
+            'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 
+            
+            # RNA 2ndary structure features
+            'MFE_RT-PBS-polyT', 'MFE_Spacer',
+
+            # DeepSpCas9 score
+            'DeepSpCas9_score',
+            ]
+        
+        for feat_name in list_features:
+            if feat_name not in features.columns:
+                raise ValueError(f'The input dataframe does not have the column {feat_name}')
+            
+        return features
+    
+    # def END: _check_record
+            
+
+        
+
+    def _offinder_to_df(self, cas_offinder_result_path:str):
         '''cas_offinder_result, transform tsv to DataFrame format
         Also, add "Chromosome" column.'''
 
@@ -1095,9 +1189,11 @@ class DeepPrimeOff:
         return df_offinder
 
 
-    def _get_sequence_from_fasta(self, df_offinder:pd.DataFrame, fasta_path:str, seq_length:int=74, assemble_name:str='Homo_sapiens.GRCh38'):
+    def _get_target_seq(self, df_offinder:pd.DataFrame, assemble_name:str='Homo_sapiens.GRCh38'):
         '''From FASTA file, get sequence context starting from 'Position' to seq_length (default 74nt).'''
-
+        
+        seq_length = 74, 
+        
         list_df_out = []
         df_offinder_grouped = df_offinder.groupby('Chromosome')
 
@@ -1111,7 +1207,7 @@ class DeepPrimeOff:
         for chromosome in pbar:
             
             # 이 부분은 FASTA 파일의 이름이 hard coding 되어 있음. 나중에 general하게 바꿔줘야 함. 
-            fasta  = str(SeqIO.read(f'{fasta_path}/{assemble_name}.dna.chromosome.{chromosome}.fa', 'fasta').seq)
+            fasta  = str(SeqIO.read(f'{assemble_name}/{assemble_name}.dna.chromosome.{chromosome}.fa', 'fasta').seq)
             df_chr = df_offinder_grouped.get_group(chromosome)
 
             chr_strand_grouped = df_chr.groupby('Strand')
