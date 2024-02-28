@@ -1081,6 +1081,8 @@ class DeepPrimeOff:
 
 
         pass
+    
+    # def END: __init__
 
     
     def setup(self,
@@ -1105,25 +1107,20 @@ class DeepPrimeOff:
             assemble_name (str, optional): _description_. Defaults to 'Homo_sapiens.GRCh38'.
         """
 
-        # DeepPrime features DataFrame에 필요한 column들이 전부 잘 들어있는지 확인하는 함수
-        # 만약 문제가 없다면, self.features에 해당 DataFrame을 넣는다.
+        # Step1: DeepPrime features DataFrame에 필요한 column들이 전부 잘 들어있는지 확인하는 함수
         self.features = self._check_record(features=features)
 
-        # Convert Cas-OFFinder result file to DataFrame format
+        # Step2: Convert Cas-OFFinder result file to DataFrame format
         self.df_offinder = self._offinder_to_df(cas_offinder_result)
 
-        # 74nt Target context를 FASTA 파일에서 가져오기
-        self.df_offinder = self._get_target_seq(df_offinder=self.df_offinder,
-                                                assemble_name=assemble_name,
-                                                )
+        # Step3: 74nt Target context를 FASTA 파일에서 가져오기
+        self.df_offinder = self._get_target_seq(df_offinder=self.df_offinder,assemble_name=assemble_name)
 
-        # DeepPrime features DataFrame에 각 pegRNA마다 off-target candidates들을 조합해서 넣어주기
+        # Step4: DeepPrime features DataFrame에 각 pegRNA마다 off-target candidates들을 조합해서 넣어주기
+        self.features = self._match_target_seq(features=self.features, df_offinder=self.df_offinder)
 
+        return self.features
 
-
-
-        pass 
-    
     # def END: setup
 
 
@@ -1132,6 +1129,12 @@ class DeepPrimeOff:
 
         Args:
             features (pd.DataFrame): DeepPrime에서 feature들의 정보가 들어있는 DataFrame.
+
+        Raises:
+            ValueError: 만약 features에 들어있어야 할 column 이름이 없다면 error 발생.
+
+        Returns:
+            pd.DataFrame: Input으로 받은 features를 그대로 return
         """        
 
         # Check if the input dataframe is in the correct format
@@ -1177,9 +1180,16 @@ class DeepPrimeOff:
 
         
 
-    def _offinder_to_df(self, cas_offinder_result_path:str):
-        '''cas_offinder_result, transform tsv to DataFrame format
-        Also, add "Chromosome" column.'''
+    def _offinder_to_df(self, cas_offinder_result_path:str) -> pd.DataFrame:
+        """cas_offinder_result, transform tsv to DataFrame format
+        Also, add "Chromosome" column.
+
+        Args:
+            cas_offinder_result_path (str): _description_
+
+        Returns:
+            pd.DataFrame: _description_
+        """
 
         df_offinder = pd.read_csv(cas_offinder_result_path, sep='\t', names=['On_target_scaper', 'Location', 'Position', 'Off_target_sequence', 'Strand', 'MM_count'])
 
@@ -1189,8 +1199,17 @@ class DeepPrimeOff:
         return df_offinder
 
 
-    def _get_target_seq(self, df_offinder:pd.DataFrame, assemble_name:str='Homo_sapiens.GRCh38'):
-        '''From FASTA file, get sequence context starting from 'Position' to seq_length (default 74nt).'''
+    def _get_target_seq(self, df_offinder:pd.DataFrame, assemble_name:str='Homo_sapiens.GRCh38') -> pd.DataFrame:
+        
+        """From FASTA file, get sequence context starting from 'Position' to seq_length (default 74nt).
+
+        Args:
+            df_offinder (pd.DataFrame): _description_
+            assemble_name (str, optional): _description_. Defaults to 'Homo_sapiens.GRCh38'.
+
+        Returns:
+            pd.DataFrame: _description_
+        """        
         
         seq_length = 74, 
         
@@ -1225,9 +1244,66 @@ class DeepPrimeOff:
         return pd.concat(list_df_out, axis=0)
     
 
+    def _match_target_seq(self, features:pd.DataFrame, df_offinder:pd.DataFrame) -> pd.DataFrame:
+        """DeepPrime pipeline에서 만들어진 features record에 off-target candidates로 찾아진 74nt sequence를 연결해주는 함수.
+        이때, 
 
-    def predict():
-        '''Get DeepPrime-Off prediction score. '''
+        Args:
+            features (pd.DataFrame): DeepPrime pipeline으로부터 만들어진 pegRNA / target sequence와 biofeatures가 있는 DataFrame.
+            df_offinder (pd.DataFrame): Cas-OFFinder result DataFrame.
+
+        Returns:
+            pd.DataFrame: Features record에 off-target candidates 74nt sequence를 매칭시킨 DataFrame.
+        """
+
+        # ToDo?: 먼저 index가 중복되지 않은 것이 들어있는지 확인한다. 만약 중복 index가 있으면, 새 index를 배정한다. 
+        # 하지만 DeepPrime pipeline에서 있던 dataframe을 그대로 가져왔다면, 중복 index는 없을 것... 
+
+        list_df    = []
+        feat_group = features.groupby('Spacer')
+
+        for idx_off in tqdm(df_offinder.index):
+            df_off_row = df_offinder.loc[idx_off]
+
+            spacer_on  = df_off_row['On_target_scaper'][:-3]
+            location   = df_off_row['Location']
+            position   = df_off_row['Position']
+            off_target = df_off_row['Off_target_sequence']
+            strand     = df_off_row['Strand']
+            n_mismatch = df_off_row['MM_count']
+            off74seq   = df_off_row['Off74_context']
+            
+            try:
+                df_feat_temp = feat_group.get_group(spacer_on).copy()
+                len_feat = len(df_feat_temp)
+
+                df_feat_temp['Location']   = [location   for i in range(len_feat)]
+                df_feat_temp['Position']   = [position   for i in range(len_feat)]
+                df_feat_temp['Off-target'] = [off_target for i in range(len_feat)]
+                df_feat_temp['Strand']     = [strand     for i in range(len_feat)]
+                df_feat_temp['MM']         = [n_mismatch for i in range(len_feat)]
+                df_feat_temp['off74seq']   = [off74seq   for i in range(len_feat)]
+            
+            except: continue
+
+            list_df.append(df_feat_temp)
+            
+        df_out = pd.concat(list_df, ignore_index=True)
+
+        return df_out
+
+
+    def predict(self) -> pd.DataFrame:
+        """Get DeepPrime-Off prediction score. 
+
+        Returns:
+            pd.DataFrame: _description_
+        """        
+
+
+
+
+
 
         pass
 
