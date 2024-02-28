@@ -17,10 +17,10 @@ import torch.nn.functional as F
 import torch.nn as nn
 
 # biopython package and modules 
+from Bio import SeqIO
+from Bio.Seq import Seq, transcribe, back_transcribe, reverse_complement
 from Bio.SeqUtils import MeltingTemp as mt
 from Bio.SeqUtils import gc_fraction as gc
-from Bio.Seq import Seq, transcribe, back_transcribe, reverse_complement
-from Bio import SeqIO
 
 from RNA import fold_compound
 
@@ -29,26 +29,25 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 class DeepPrime:
-    '''
-    DeepPrime: pegRNA activity prediction models\n
-    Input  = 121 nt DNA sequence without edit\n
-    Output = 121 nt DNA sequence with edit\n
-    
-    ### Available Edit types\n
-    sub1, sub2, sub3, ins1, ins2, ins3, del1, del2, del3\n
-    
-    ### Available PE systems\n
-    PE2, PE2max, PE4max, NRCH_PE2, NRCH_PE2max, NRCH_PE4max\n
-    
-    ### Available Cell types\n
-    HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3
-    
-    '''
+
     def __init__(self, sID:str, Ref_seq: str, ED_seq: str, edit_type: str, edit_len: int,
-                pam:str = 'NGG', pbs_min:int = 7, pbs_max:int = 15,
-                rtt_min:int = 0, rtt_max:int = 40, silence:bool = False,
-                out_dir:str=os.getcwd(),
+                 pam:str = 'NGG', pbs_min:int = 7, pbs_max:int = 15,
+                 rtt_min:int = 0, rtt_max:int = 40, 
                 ):
+        """DeepPrime: pegRNA activity prediction models\n
+
+        Args:
+            sID (str): Sample ID for pegRNAs.
+            Ref_seq (str): 121 nt DNA sequence without edit.
+            ED_seq (str): 121 nt DNA sequence with edit.
+            edit_type (str): Available Edit types is sub1, sub2, sub3, ins1, ins2, ins3, del1, del2, del3.
+            edit_len (int): Length of prime editing. Available edit length range: 1-3nt.
+            pam (str, optional): PAM sequence. Available PAMs are NGG, NGA, NAG, NRCH. Defaults to 'NGG'.
+            pbs_min (int, optional): Minimum length of PBS (1-17). Defaults to 7.
+            pbs_max (int, optional): Maximum length of PBS (1-17). Defaults to 15.
+            rtt_min (int, optional): Minimum length of RTT (0-40). Defaults to 0.
+            rtt_max (int, optional): Maximum length of RTT (0-40). Defaults to 40.
+        """        
         
         # input parameters
         self.nAltIndex = 60
@@ -57,15 +56,9 @@ class DeepPrime:
         self.pbs_min, self.pbs_max = pbs_min, pbs_max
         self.pbs_range = [pbs_min, pbs_max]
         self.rtt_min, self.rtt_max   = rtt_min, rtt_max
-        self.silence = silence
-        
-        # output directory
-        self.OUT_PATH = out_dir
-        self.TEMP_DIR = '%s/temp/%s' % (self.OUT_PATH, self.sID)
         
         # initializing
-        if silence != True:
-            self.check_input()
+        self.check_input()
 
         ## PEFeatureExtraction Class
         cFeat = PEFeatureExtraction()
@@ -96,7 +89,18 @@ class DeepPrime:
     # def __init__: END
 
 
-    def predict(self, pe_system:str, cell_type:str = 'HEK293T', show_features:bool = False, report=False):
+    def predict(self, pe_system:str, cell_type:str = 'HEK293T', show_features:bool = False, report=False) -> pd.DataFrame:
+        """_summary_
+    
+        Args:
+            pe_system (str): Available PE systems are PE2, PE2max, PE4max, NRCH_PE2, NRCH_PE2max, NRCH_PE4max
+            cell_type (str, optional): Available Cell types are HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3. Defaults to 'HEK293T'.
+            show_features (bool, optional): _description_. Defaults to False.
+            report (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            pd.DataFrame: _description_
+        """        
 
         df_all = self.features.copy()
 
@@ -179,34 +183,49 @@ class DeepPrime:
 
 
 class DeepPrimeGuideRNA:
-    '''
-    이미 디자인 된 pegRNA에서 DeepPrime을 돌리고 싶을 때 사용하는 pipeline.
-    DeepPrime: pegRNA activity prediction models\n
-    Input  = 121 nt DNA sequence without edit\n
-    Output = 121 nt DNA sequence with edit\n
-    
-    ### Available Edit types\n
-    sub, ins, del\n
-    
-    ### Available Edit length\n
-    1, 2, 3\n
-    
-    ### Available PE systems\n
-    PE2, PE2max, PE4max, NRCH_PE2, NRCH_PE2max, NRCH_PE4max\n
-    
-    ### Available Cell types\n
-    HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3
-    
-    '''
+
     def __init__(self, sID:str, target:str, pbs:str, rtt:str, 
                  edit_len:int, edit_pos:int, edit_type:str, 
-                 out_dir:str=os.getcwd()):
-        
+                 ):
+        """이미 디자인 된 pegRNA에서 DeepPrime을 돌리고 싶을 때 사용하는 pipeline.
+
+        Args:
+            sID (str): 해당 pegRNA의 id.
+            target (str): Target sequence, 74nt 길이로 고정된다.
+            pbs (str): PBS sequence.
+            rtt (str): RTT sequence.
+            edit_len (int): Length of prime editing. Available edit length range: 1-3nt
+            edit_pos (int): Position of prime editing. Available edit position range: 1-40nt
+            edit_type (str): Type of prime editing. Available edit style: sub, ins, del
+
+        Raises:
+            ValueError: Target sequence length가 74nt가 아닌 경우 발생
+            ValueError: Edit length가 1, 2 또는 3이 아닌 경우 발생
+            ValueError: Edit type이 sub, ins, del 중 하나가 아닌 경우 발생
+
+        ### Examples:
+        ``` python
+        from genet.predict import DeepPrimeGuideRNA
+
+        target    = 'ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATG'
+        pbs       = 'GGCAAGGGTGT'
+        rtt       = 'CGTCTCAGTTTCTGGGAGCTTTGAAAACTCCACAA'
+        edit_len  = 1
+        edit_pos  = 34
+        edit_type = 'sub'
+
+        pegrna = DeepPrimeGuideRNA('pegRNA_test', target=target, pbs=pbs, rtt=rtt,
+                                edit_len=edit_len, edit_pos=edit_pos, edit_type=edit_type)
+
+        pe2max_score = pegrna.predict('PE2max')
+        ```
+        """        
 
         # PBS와 RTT는 target 기준으로 reverse complementary 방향으로 있어야 함.
         # PBS와 RTT를 DNA/RNA 중 어떤 것으로 input을 받아도, 전부 DNA로 변환해주기.
 
         if len(target) != 74: raise ValueError('Please check your input: target. The length of target should be 74nt')
+        if edit_len not in [1, 2, 3]: raise ValueError('Please check your input: edit_len. The length of edit should be 1, 2, or 3')
 
         self.spacer = target[4:24]
         self.rtpbs  = back_transcribe(rtt+pbs)
@@ -1181,7 +1200,7 @@ class DeepPrimeOff:
         
 
     def _offinder_to_df(self, cas_offinder_result_path:str) -> pd.DataFrame:
-        """cas_offinder_result, transform tsv to DataFrame format
+        """cas_offinder_result, transform tsv to DataFrame format.
         Also, add "Chromosome" column.
 
         Args:
