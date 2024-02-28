@@ -18,7 +18,7 @@ import torch.nn as nn
 
 # biopython package and modules 
 from Bio import SeqIO
-from Bio.Seq import Seq, transcribe, back_transcribe, reverse_complement
+from Bio.Seq import Seq, transcribe, back_transcribe, reverse_complement, reverse_complement_rna
 from Bio.SeqUtils import MeltingTemp as mt
 from Bio.SeqUtils import gc_fraction as gc
 
@@ -717,7 +717,7 @@ class PEFeatureExtraction:
                 sRTSeq, sPBSSeq = sSeqKey.split(',')
 
                 ## for Tm1
-                sForTm1 = reverse_complement(sPBSSeq.replace('A', 'U'))
+                sForTm1 = reverse_complement_rna(sPBSSeq)
 
                 if sStrand == '+':
                     ## for Tm2
@@ -764,8 +764,8 @@ class PEFeatureExtraction:
                 sForTm3 = [sRTSeq, sTm3antiSeq]
 
                 ## for Tm4
-                sForTm4 = [reverse_complement(sRTSeq.replace('A', 'U')), sRTSeq]
-
+                # sForTm4 = [reverse_complement(sRTSeq.replace('A', 'U')), sRTSeq] # original code
+                sForTm4 = reverse_complement_rna(sRTSeq)
 
                 self.dict_sCombos[sPAMKey][sSeqKey] = {'Tm1_PBS': sForTm1,
                                                         'Tm2_RTT_cTarget_sameLength': sForTm2,
@@ -836,7 +836,7 @@ class PEFeatureExtraction:
         # if END:
 
         # Tm4 - revcom(AAGTcGATCC(RNA version)) + AAGTcGATCC
-        fTm4 = mt.Tm_NN(seq=Seq(sForTm4[0]), nn_table=mt.R_DNA_NN1)
+        fTm4 = mt.Tm_NN(seq=Seq(sForTm4), nn_table=mt.R_DNA_NN1)
 
         # Tm5 - Tm3 - Tm2
         fTm5 = fTm3 - fTm2
@@ -1296,12 +1296,12 @@ class DeepPrimeOff:
                 df_feat_temp = feat_group.get_group(spacer_on).copy()
                 len_feat = len(df_feat_temp)
 
-                df_feat_temp['Location']   = [location   for i in range(len_feat)]
-                df_feat_temp['Position']   = [position   for i in range(len_feat)]
-                df_feat_temp['Off-target'] = [off_target for i in range(len_feat)]
-                df_feat_temp['Strand']     = [strand     for i in range(len_feat)]
-                df_feat_temp['MM']         = [n_mismatch for i in range(len_feat)]
-                df_feat_temp['off74seq']   = [off74seq   for i in range(len_feat)]
+                df_feat_temp['Location']   = [location   for _ in range(len_feat)]
+                df_feat_temp['Position']   = [position   for _ in range(len_feat)]
+                df_feat_temp['Off-target'] = [off_target for _ in range(len_feat)]
+                df_feat_temp['Strand']     = [strand     for _ in range(len_feat)]
+                df_feat_temp['MM']         = [n_mismatch for _ in range(len_feat)]
+                df_feat_temp['off74seq']   = [off74seq   for _ in range(len_feat)]
             
             except: continue
 
