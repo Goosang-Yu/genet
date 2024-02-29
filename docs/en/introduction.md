@@ -24,24 +24,26 @@ Early gene editing technologies mostly caused double-strand breaks (DSB), posing
 ## Utilizing GenET for Genome Editing Research
 Through GenET, various functionalities are available (or planned) for research on genetic information and CRISPR. The provided (and planned) features include:
 
-| Module   | Functions      | Descriptions                                                          | Status |
-| -------- | -------------- | --------------------------------------------------------------------- | ------ |
-| Predict  | SpCas9         | Use of the DeepSpCas9 model	                                        | Available   |
-| Predict  | SpCas9variants | Use of the DeepSpCas9variants model                                   | Available   |
-| Predict  | Base editor    | Use of the DeepBE model                                               | Planned   |
-| Predict  | Prime editor   | Use of the DeepPrime model                                            | Available   |
-| Design   | KOLiD          | Genome-wide KO library design                                         | Planned   |
-| Design   | ReLiD          | Gene regulation library design                                        | Planned   |
-| Design   | CRISPRStop     | Design gRNA for inducing premature stop codon using CBE               | Planned   |
-| Design   | SynonymousPE   | Design pegRNA containing additional synonymousmutation in RT template | Available   |
-| Database | GetGenome      | Function to retrieve genome data from NCBI database                   | Available   |
-| Database | GetGene        | Function to retrieve information about a specific gene from NCBI database | Planned   |
-| Database | GenBankParser  | Function to extract desired information from GenBank files            | Planned   |
-| Database | DFConverter    | Function to convert the format of NCBI GenBank files to DataFrame     | Available   |
-| Analysis | SGE            | Function for analyzing Saturation Genome Editing data                 | Planned   |
-| Analysis | UMItools       | Functions for UMI analysis (from UMI-tools)                           | Available   |
-| Utils    | request_file   | Function to download files from the server using the HTTP protocol    | Available   |
-| Utils    | SplitFastq     | Function to split FASTQ files into smaller sizes                      | Available   |
+| Module   | Functions         | Descriptions                                                              | Status    |
+| -------- | ----------------- | ------------------------------------------------------------------------- | --------- |
+| Predict  | SpCas9            | Use of the DeepSpCas9 model	                                           | Available |
+| Predict  | SpCas9variants    | Use of the DeepSpCas9variants model                                       | Available |
+| Predict  | Base editor       | Use of the DeepBE model                                                   | Planned   |
+| Predict  | DeepPrime         | Use of the DeepPrime model for all possible pegRNAs                       | Available |
+| Predict  | DeepPrimeGuideRNA | Use of the DeepPrime model for already designed pegRNA                    | Available |
+| Predict  | DeepPrimeOff      | Use of the DeepPrime-Off model for searching and predicting off-targets   | Available |
+| Design   | KOLiD             | Genome-wide KO library design                                             | Planned   |
+| Design   | ReLiD             | Gene regulation library design                                            | Planned   |
+| Design   | CRISPRStop        | Design gRNA for inducing premature stop codon using CBE                   | Planned   |
+| Design   | SynonymousPE      | Design pegRNA containing additional synonymousmutation in RT template     | Available |
+| Database | GetGenome         | Function to retrieve genome data from NCBI database                       | Available |
+| Database | GetChromosome     | Function to retrieve chromosome data from NCBI database                   | Available |
+| Database | GetGene           | Function to retrieve information about a specific gene from NCBI database | Planned   |
+| Database | GenBankParser     | Function to extract desired information from GenBank files                | Planned   |
+| Database | DFConverter       | Function to convert the format of NCBI GenBank files to DataFrame         | Available |
+| Analysis | SGE               | Function for analyzing Saturation Genome Editing data                     | Planned   |
+| Analysis | UMItools          | Functions for UMI analysis (from UMI-tools)                               | Available |
+| Utils    | request_file      | Function to download files from the server using the HTTP protocol        | Available |
+| Utils    | SplitFastq        | Function to split FASTQ files into smaller sizes                          | Available |
 
 
-```

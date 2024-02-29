@@ -27,3 +27,6 @@ genet.egg-info
 *.txt
 *.gz
 *.gbff
+
+# About tutorials
+!tutorials/*.ipynb

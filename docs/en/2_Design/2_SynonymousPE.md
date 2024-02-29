@@ -142,6 +142,7 @@ It incorporates possible synonymous mutations in order of assigned priority. Whe
 ### Objects Available for Retrieval in SynonymousPE
 ---
 Below are the objects available for accessing key results.
+
 | Name          | Type         | Description                                                                                  |
 | ------------- | ------------ | -------------------------------------------------------------------------------------------- |
 | `.extension`  | str          | Selected RT-PBS sequence containing recommanded synonymous mutation.                         |
