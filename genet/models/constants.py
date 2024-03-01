@@ -340,6 +340,11 @@ dict_model_info = {
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
         'path': 'DeepPrime/DP_variant_NIH_NRCHPE4max_Opti_220815'
     },
+    'PE2-Off-HEK293T': {
+        'type': 'DeepPrime-Off',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepPrime/DeepPrime_off'
+    },
 }
 
 
@@ -358,8 +363,6 @@ dict_model_requests = {
 
     'DeepPrime_base': [
         '__init__.py',
-        'dp_mean.csv', 
-        'dp_std.csv',
         'model_0.pt',
         'model_1.pt',
         'model_2.pt',
@@ -373,8 +376,6 @@ dict_model_requests = {
 
     'DeepPrime-FT': [
         '__init__.py',
-        'dp_mean.csv', 
-        'dp_std.csv',
         'final_model_0.pt',
         'final_model_1.pt',
         'final_model_2.pt',
@@ -401,15 +402,13 @@ dict_model_requests = {
         'std_231124.csv',
     ],
 
-    'DeepPrime-off': [
+    'DeepPrime-Off': [
         '__init__.py',
         'final_model_0.pt',
         'final_model_1.pt',
         'final_model_2.pt',
         'final_model_3.pt',
         'final_model_4.pt',
-        'mean.csv',
-        'std.csv',
         'mean_231124.csv',
         'std_231124.csv',
     ],
