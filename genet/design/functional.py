@@ -602,3 +602,25 @@ def make_mismatch(seq:str, n_mismatch:int, save:str=None) -> pd.DataFrame:
                 print(f"사용 중인 메모리 - {cnt} combinations: {mem} GB")
 
     
+def make_bulge(seq:str, n_bulge:int, save:str=None) -> pd.DataFrame:
+    """주어진 sequence에 n_bulge 수 만큼의 insertion or deletion을 만들어주는 함수. 
+
+    Args:
+        seq (str): mismatch를 만들고자 하는 sequence 정보 (DNA 기준, 추후 RNA 추가해주면 좋을듯?)
+        n_mismatch (int): mismatch를 만드는 수
+        save (str): 결과를 저장할 파일 경로. Defaults to None.
+
+    Raises:
+        ValueError: n_mismatch가 sequence의 길이보다 값이 큰 경우 에러 발생
+
+    Returns:
+        None
+    """
+
+    if n_bulge > len(seq): raise ValueError("n_bulge should be less than or equal to the length of the given sequence")
+
+    seq = seq.upper()
+    input_len = len(seq)
+    list_seq = list(seq)
+
+    

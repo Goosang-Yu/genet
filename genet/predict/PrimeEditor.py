@@ -62,10 +62,10 @@ class DeepPrime:
         self.check_input()
 
         ## PEFeatureExtraction Class
-        cFeat = PEFeatureExtraction()
+        cFeat = PEFeatureExtraction(Ref_seq, ED_seq, edit_type, edit_len)
 
         cFeat.input_id = sID
-        cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
+        # cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
         cFeat.get_sAltNotation(self.nAltIndex)
         cFeat.get_all_RT_PBS(self.nAltIndex, nMinPBS= self.pbs_min-1, nMaxPBS=self.pbs_max, nMaxRT=rtt_max, pam=self.pam)
         cFeat.make_rt_pbs_combinations()
@@ -101,15 +101,20 @@ class DeepPrime:
 
         Returns:
             pd.DataFrame: 각 pegRNA와 target쌍 마다의 DeepPrime prediction score를 계산한 결과를 DataFrame으로 반환.
-        """        
+        """
+        
+        # Load models
+        model_info = LoadModel('DeepPrime', pe_system, cell_type)
+        model_dir  = model_info.model_dir
 
+        # Check pe_system is available for PAM
+        self.check_pe_type(pe_system)
+
+        # Data preprocessing for deep learning model
         df_all = self.features.copy()
 
         os.environ['CUDA_VISIBLE_DEVICES']='0'
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        
-        model_info = LoadModel('DeepPrime', pe_system, cell_type)
-        model_dir  = model_info.model_dir
 
         mean = pd.read_csv(f'{model_dir}/mean_231124.csv', header=None, index_col=0).squeeze()
         std  = pd.read_csv(f'{model_dir}/std_231124.csv',  header=None, index_col=0).squeeze()
@@ -169,14 +174,26 @@ class DeepPrime:
         if self.edit_type not in ['sub', 'ins', 'del']:
             raise ValueError('Please check your input: edit_type. Available edit style: sub, ins, del')
         
-        if self.pam not in ['NGG', 'NRCH', 'NAG', 'NGA']:
-            raise ValueError('Please check your input: pam. Available PAM: NGG, NGA, NAG, NRCH')
+        if self.pam not in ['NGG', 'NRCH', 'NAG', 'NGA', 'NNGG']:
+            raise ValueError('Please check your input: pam. Available PAM: NGG, NGA, NAG, NRCH, NNGG')
 
         if self.edit_len > 3:
             raise ValueError('Please check your input: edit_len. Please set edit length upto 3nt. Available edit length range: 1~3nt')
         
         if self.edit_len < 1:
             raise ValueError('Please check your input: edit_len. Please set edit length at least 1nt. Available edit length range: 1~3nt')
+
+        return None
+    
+    # def check_input: END
+
+    def check_pe_type(self, pe_system:str):
+        
+        if self.pam == 'NRCH' and pe_system not in ['NRCH_PE2', 'NRCH_PE2max', 'NRCH_PE4max']:
+            raise ValueError(f'{self.pam} PAM is not available for {pe_system}. Please check PAM or pe_system. ')
+        
+        if self.pam == 'NNGG' and pe_system not in ['sRGN-PE2max']:
+            raise ValueError(f'{self.pam} PAM is not available for {pe_system}. Please check PAM or pe_system. ')
 
         return None
     
@@ -439,23 +456,27 @@ def check_PAM_window(dict_sWinSize, sStrand, nIndexStart, nIndexEnd, sAltType, n
 # def END: check_PAM_window
 
 class PEFeatureExtraction:
-    def __init__(self):
+    def __init__(self, Ref_seq, ED_seq, edit_type, edit_len):
+        
+        # configuration parameters
+        # 이게 sRGN을 지정하는 단계까 .predict  부분이기 때문에, feature extraction 부분에서 spacer 길이를 조정할 수가 없음...!
+        # pe_system을 지정하는 단계를 바꿔줘야 할 것 같음. 
+        self.spacer_len = 20
+        
+        # Initialized
+        self.get_input(Ref_seq, ED_seq, edit_type, edit_len)
+
         self.sGuideKey = ''
-        self.sChrID = ''
         self.sStrand = ''
-        self.nGenomicPos = 0
         self.nEditIndex = 0
         self.nPBSLen = 0
         self.nRTTLen = 0
         self.sPBSSeq = ''
         self.sRTSeq = ''
         self.sPegRNASeq = ''
-        self.sWTSeq = ''
-        self.sEditedSeq = ''
+
+
         self.list_sSeqs = []
-        self.type_sub = 0
-        self.type_ins = 0
-        self.type_del = 0
         self.fTm1 = 0.0
         self.fTm2 = 0.0
         self.fTm2new = 0.0
@@ -464,12 +485,14 @@ class PEFeatureExtraction:
         self.fTmD = 0.0
         self.fMFE3 = 0.0
         self.fMFE4 = 0.0
+
         self.nGCcnt1 = 0
         self.nGCcnt2 = 0
         self.nGCcnt3 = 0
         self.fGCcont1 = 0.0
         self.fGCcont2 = 0.0
         self.fGCcont3 = 0.0
+        
         self.dict_sSeqs = {}
         self.dict_sCombos = {}
         self.dict_sOutput = {}
@@ -483,9 +506,9 @@ class PEFeatureExtraction:
         self.sAltType = edit_type
         self.nAltLen = edit_len
 
-        if   self.sAltType.startswith('sub'): self.type_sub = 1
-        elif self.sAltType.startswith('del'): self.type_del = 1
-        elif self.sAltType.startswith('ins'): self.type_ins = 1
+        if   self.sAltType.startswith('sub'): self.type_sub = 1; self.type_del = 0; self.type_ins = 0
+        elif self.sAltType.startswith('del'): self.type_del = 1; self.type_sub = 0; self.type_ins = 0
+        elif self.sAltType.startswith('ins'): self.type_ins = 1; self.type_del = 0; self.type_sub = 0
     
     # def End: get_input
 
@@ -538,6 +561,8 @@ class PEFeatureExtraction:
             dict_sRE = {'+': '[ACGT]AG[ACGT]', '-': '[ACGT]CT[ACGT]'} # for Original-PE PAM
         elif pam == 'NGA':
             dict_sRE = {'+': '[ACGT]GA[ACGT]', '-': '[ACGT]TC[ACGT]'} # for Original-PE PAM
+        elif pam == 'NNGG':
+            dict_sRE = {'+': '[ACGT][ACGT]GG', '-': 'CC[ACGT][ACGT]'} # for sRGN-PE PAM
 
         for sStrand in ['+', '-']:
 
@@ -548,7 +573,7 @@ class PEFeatureExtraction:
                     nIndexStart = sReIndex.start()
                     nIndexEnd = sReIndex.end() - 1
                     sPAMSeq = self.sWTSeq[nIndexStart:nIndexEnd]
-                    sGuideSeq = self.sWTSeq[nIndexStart - 20:nIndexEnd]
+                    sGuideSeq = self.sWTSeq[nIndexStart - self.spacer_len:nIndexEnd]
                 else:
                     nIndexStart = sReIndex.start() + 1
                     nIndexEnd = sReIndex.end()
