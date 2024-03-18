@@ -345,6 +345,16 @@ dict_model_info = {
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
         'path': 'DeepPrime/DeepPrime_off'
     },
+    'sRGN-PE2max-HEK293T': {
+        'type': 'DeepPrime-FT',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepPrime/DP_variant_293T_sRGN-PE2max'
+    },
+    'sRGN-PE2max-DLD1': {
+        'type': 'DeepPrime-FT',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepPrime/DP_variant_DLD1_sRGN-PE2max'
+    },
 }
 
 
@@ -368,8 +378,6 @@ dict_model_requests = {
         'model_2.pt',
         'model_3.pt',
         'model_4.pt',
-        'mean.csv',
-        'std.csv',
         'mean_231124.csv',
         'std_231124.csv',
     ],
@@ -396,8 +404,6 @@ dict_model_requests = {
         'final_model_17.pt',
         'final_model_18.pt',
         'final_model_19.pt',
-        'mean.csv',
-        'std.csv',
         'mean_231124.csv',
         'std_231124.csv',
     ],

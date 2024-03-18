@@ -34,6 +34,7 @@ class DeepPrime:
     def __init__(self, sID:str, Ref_seq: str, ED_seq: str, edit_type: str, edit_len: int,
                  pam:str = 'NGG', pbs_min:int = 7, pbs_max:int = 15,
                  rtt_min:int = 0, rtt_max:int = 40, 
+                 spacer_len:int=20,
                 ):
         """DeepPrime: pegRNA activity prediction models\n
 
@@ -62,7 +63,7 @@ class DeepPrime:
         self.check_input()
 
         ## PEFeatureExtraction Class
-        cFeat = PEFeatureExtraction(Ref_seq, ED_seq, edit_type, edit_len)
+        cFeat = PEFeatureExtraction(Ref_seq, ED_seq, edit_type, edit_len, spacer_len)
 
         cFeat.input_id = sID
         # cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
@@ -204,6 +205,7 @@ class DeepPrimeGuideRNA:
 
     def __init__(self, sID:str, target:str, pbs:str, rtt:str, 
                  edit_len:int, edit_pos:int, edit_type:str, 
+                 spacer_len:int=20 
                  ):
         """이미 디자인 된 pegRNA에서 DeepPrime을 돌리고 싶을 때 사용하는 pipeline.
 
@@ -245,7 +247,7 @@ class DeepPrimeGuideRNA:
         if len(target) != 74: raise ValueError('Please check your input: target. The length of target should be 74nt')
         if edit_len not in [1, 2, 3]: raise ValueError('Please check your input: edit_len. The length of edit should be 1, 2, or 3')
 
-        self.spacer = target[4:24]
+        self.spacer = target[24-spacer_len:24]
         self.rtpbs  = back_transcribe(rtt+pbs)
 
         # Check edit_type input and determine type dependent features
@@ -343,8 +345,8 @@ class DeepPrimeGuideRNA:
             'GC_contents_RT-PBS'         : [100 * gc(self.rtpbs)],
 
             # pegRNA MFE feature
-            'MFE_RT-PBS-polyT'           : [fMFE3],
-            'MFE_Spacer'                 : [fMFE4],
+            'MFE_RT-PBS-polyT'           : [round(fMFE3, 1)],
+            'MFE_Spacer'                 : [round(fMFE4, 1)],
 
             # DeepSpCas9 score
             'DeepSpCas9_score'           : [SpCas9().predict([target[:30]]).SpCas9.loc[0]],
@@ -456,12 +458,12 @@ def check_PAM_window(dict_sWinSize, sStrand, nIndexStart, nIndexEnd, sAltType, n
 # def END: check_PAM_window
 
 class PEFeatureExtraction:
-    def __init__(self, Ref_seq, ED_seq, edit_type, edit_len):
+    def __init__(self, Ref_seq, ED_seq, edit_type, edit_len, spacer_len):
         
         # configuration parameters
         # 이게 sRGN을 지정하는 단계까 .predict  부분이기 때문에, feature extraction 부분에서 spacer 길이를 조정할 수가 없음...!
         # pe_system을 지정하는 단계를 바꿔줘야 할 것 같음. 
-        self.spacer_len = 20
+        self.spacer_len = spacer_len
         
         # Initialized
         self.get_input(Ref_seq, ED_seq, edit_type, edit_len)
@@ -996,7 +998,7 @@ class PEFeatureExtraction:
 
         df_out = pd.DataFrame(list_output, columns=hder_features)
 
-        list_spacer = [wt74[4:24] for wt74 in df_out.Target]
+        list_spacer = [wt74[24-self.spacer_len:24] for wt74 in df_out.Target]
         df_out.insert(1, 'Spacer', list_spacer)
         
         # loop END: sPAMKey
