@@ -114,7 +114,8 @@ nav:
     - How it works: 1_Predict/1_howworks.md
     - Cas9 nuclease: 1_Predict/2_predict_cas9.md
     - Base editor: 1_Predict/3_predict_be.md
-    - Prime editor: 1_Predict/4_predict_pe.md
+    - DeepPrime: 1_Predict/4_predict_pe.md
+    - DeepPrime-Off: 1_Predict/5_DeepPrime-Off.md
 
   - Design:
     - Genet design module: 2_Design/1_Design_intro.md
