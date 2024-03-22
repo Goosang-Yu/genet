@@ -27,33 +27,6 @@ class DBconfig:
 
 
 
-class NCBIconfig(DBconfig):
-    def __init__(self) -> None:
-        super().__init__()
-
-        self.ftp_server  = "ftp.ncbi.nlm.nih.gov"
-        self.ftp_user    = "your_username"
-
-        self.remote_path = "/genomes/ASSEMBLY_REPORTS/"
-        self.local_path  = f"{self.genet_path}/database/metadata/NCBI/"
-
-        self.target_file = 'assembly_summary_refseq.txt'
-        self.local_file  = 'assembly_summary_refseq.parquet'
-
-        try:
-            self.version = self.get_file_version(f'{self.local_path}/{self.local_file}')
-            self.isexist = True
-        except:
-            self.version = '[Error] NCBI metadata file not found.'
-            self.isexist = False
-
-    def update(self, ):
-        pass
-        
-
-
-
-
 class Ensemblconfig(DBconfig):
     def __init__(self) -> None:
         super().__init__()
