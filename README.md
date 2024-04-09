@@ -27,7 +27,7 @@ Please see the [documentation](https://goosang-yu.github.io/genet/).
 conda create -n genet python=3.8
 conda activate genet
 
-# Install genet ( >= ver. 0.7.0)
+# Install genet
 pip install genet
 ```
 
@@ -59,7 +59,57 @@ GenET was developed for anyone interested in the field of genome editing. Especi
 - Design a saturation library for a specific gene.
 
 
-## Example: Prediction of prime editing efficiency by DeepPrime
+
+## Example 1: Download genomic data from NCBI database
+
+The genomic information required for research is often downloaded from public databases like NCBI. When only basic information is needed, searching on the NCBI website is usually sufficient. However, when a large amount of data is required or when specific reference sequence files are needed for certain analysis pipelines, it may be necessary to find and download files containing the specific information.
+
+The GenET database module provides functions to easily download frequently used data files from NCBI. For example, to download the genomic assembly of `Homo sapiens`, you can use `GetGenome` as follows:
+
+```python 
+from genet.database import GetGenome
+```
+
+To create a GetGenome instance for the desired species:
+```python
+# Specify the species
+species = "Homo sapiens"
+
+# Create a GetGenome instance
+genome = GetGenome(species)
+```
+
+To check the available files related to the assembly of the specified species:
+```python
+# Check available files
+available_files = genome.contents()
+print("Available files:", available_files)
+```
+
+> Available files:    
+  ['README.txt',
+ 'Annotation_comparison',
+ 'GCF_000001405.40_GRCh38.p14_assembly_structure',
+ 'GCF_000001405.40-RS_2023_10_annotation_report.xml',
+ 'annotation_hashes.txt',
+ 'RefSeq_transcripts_alignments',
+ 'GCF_000001405.40_GRCh38.p14_assembly_regions.txt',
+ ...]
+
+To download the desired file with the specified name to the desired path:
+```python
+# Specify the desired file name
+file_name = "example_genome.fasta"
+
+# Specify the desired download path
+download_path = "/desired/download/path/"
+
+# Download the file
+genome.download(file_name, download_path)
+```
+
+
+## Example 2: Prediction of prime editing efficiency by DeepPrime
 ![](docs/en/assets/contents/en_1_4_1_DeepPrime_architecture.svg)
 DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs) that target specific target sites for prime editing ([Yu et al. Cell 2023](https://doi.org/10.1016/j.cell.2023.03.034)). DeepSpCas9 prediction score is calculated simultaneously and requires tensorflow (version >=2.6). DeepPrime was developed on pytorch. For more details, please see the [documentation](https://goosang-yu.github.io/genet/).
 
@@ -72,7 +122,7 @@ seq_ed   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGACGAACTAT
 pegrna = DeepPrime('SampleName', seq_wt, seq_ed, edit_type='sub', edit_len=1)
 
 # check designed pegRNAs
->>> pegrna.features.head()
+pegrna.features.head()
 ```
 
 |     | ID   | Spacer               | RT-PBS                                            | PBS_len | RTT_len | RT-PBS_len | Edit_pos | Edit_len | RHA_len | Target                                            | ... | deltaTm_Tm4-Tm2 | GC_count_PBS | GC_count_RTT | GC_count_RT-PBS | GC_contents_PBS | GC_contents_RTT | GC_contents_RT-PBS | MFE_RT-PBS-polyT | MFE_Spacer | DeepSpCas9_score |
@@ -88,8 +138,9 @@ Next, select model PE system and run DeepPrime
 ```python 
 pe2max_output = pegrna.predict(pe_system='PE2max', cell_type='HEK293T')
 
->>> pe2max_output.head()
+pe2max_output.head()
 ```
+
 |   | ID   | PE2max_score | Spacer               | RT-PBS                                         | PBS_len | RTT_len | RT-PBS_len | Edit_pos | Edit_len | RHA_len | Target                                            |
 | - | ---- | ------------ | -------------------- | ---------------------------------------------- | ------- | ------- | ---------- | -------- | -------- | ------- | ------------------------------------------------- |
 | 0 | SampleName | 0.904387     | AAGACAACACCCTTGCCTTG | CGTCTCAGTTTCTGGGAGCTTTGAAAACTCCACAAGGCAAGG     | 7       | 35      | 42         | 34       | 1        | 1       | ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGA... |

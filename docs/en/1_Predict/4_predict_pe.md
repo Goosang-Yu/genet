@@ -3,6 +3,53 @@
 ![](../assets/contents/en_1_4_1_DeepPrime_architecture.svg)
 DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs) that target specific target sites for prime editing ([Yu et al. Cell 2023](https://doi.org/10.1016/j.cell.2023.03.034)). DeepSpCas9 prediction score is calculated simultaneously and requires tensorflow (version >=2.6). DeepPrime was developed on pytorch.
 
+
+### How to Use DeepPrime
+To use DeepPrime, you need to prepare DNA sequence information in a specific format.
+
+1. Prepare the unedited sequence (WT_seq) and the prime-edited sequence (ED_seq) separately.
+2. The prime-edited sequence allows only 1-3nt continuous edits.
+3. Both the unedited sequence and the prime-edited sequence are fixed at a length of 121 base pairs.
+4. The first position of prime editing must always be located at the center of the unedited/prime-edited sequence.
+
+
+Some example inputs are as follows:
+
+![](../assets/contents/en_1_4_2_DeepPrime_input_ex1.svg)
+
+```python
+# Example 1: 1bp substitution (T to A)
+Unedited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
+Prime-edited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTACAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
+
+edit_type = 'sub'
+edit_len  = 1
+```
+
+![](../assets/contents/en_1_4_3_DeepPrime_input_ex2.svg)
+
+```python
+# Example 2: 3bp insertion (CTT insertion)
+Unedited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
+Prime-edited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTCTTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCAT'
+
+edit_type = 'ins'
+edit_len  = 3
+```
+
+![](../assets/contents/en_1_4_4_DeepPrime_input_ex3.svg)
+
+```python
+# Example 3: 2bp deletion (TC deletion)
+Unedited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
+Prime-edited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCATTC'
+
+edit_type = 'del'
+edit_len  = 2
+```
+
+If you have prepared the input as described above, you can use DeepPrime as follows. When you input the target sequence and editing informations into DeepPrime and run it, it designs all possible types of pegRNAs for the given sequence and automatically calculates their corresponding biofeatures. You can check the calculated biofeatures using `.features`.
+
 ```python 
 from genet.predict import DeepPrime
 
@@ -30,6 +77,7 @@ pe2max_output = pegrna.predict(pe_system='PE2max', cell_type='HEK293T')
 
 >>> pe2max_output.head()
 ```
+
 |   | ID   | PE2max_score | Spacer               | RT-PBS                                         | PBS_len | RTT_len | RT-PBS_len | Edit_pos | Edit_len | RHA_len | Target                                            |
 | - | ---- | ------------ | -------------------- | ---------------------------------------------- | ------- | ------- | ---------- | -------- | -------- | ------- | ------------------------------------------------- |
 | 0 | SampleName | 0.904387     | AAGACAACACCCTTGCCTTG | CGTCTCAGTTTCTGGGAGCTTTGAAAACTCCACAAGGCAAGG     | 7       | 35      | 42         | 34       | 1        | 1       | ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGA... |
@@ -37,6 +85,30 @@ pe2max_output = pegrna.predict(pe_system='PE2max', cell_type='HEK293T')
 | 2 | SampleName | 2.61238      | AAGACAACACCCTTGCCTTG | CGTCTCAGTTTCTGGGAGCTTTGAAAACTCCACAAGGCAAGGGT   | 9       | 35      | 44         | 34       | 1        | 1       | ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGA... |
 | 3 | SampleName | 3.641537     | AAGACAACACCCTTGCCTTG | CGTCTCAGTTTCTGGGAGCTTTGAAAACTCCACAAGGCAAGGGTG  | 10      | 35      | 45         | 34       | 1        | 1       | ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGA... |
 | 4 | SampleName | 3.768321     | AAGACAACACCCTTGCCTTG | CGTCTCAGTTTCTGGGAGCTTTGAAAACTCCACAAGGCAAGGGTGT | 11      | 35      | 46         | 34       | 1        | 1       | ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGA... |
+
+
+### Predicting efficiencies of existing pegRNAs
+
+If you want to use DeepPrime with pre-designed pegRNAs, you can obtain prediction scores using `DeepPrimeGuideRNA`. Similar to `.predict` method in `DeepPrime`, you can specify pe_system and cell_type. This feature was added in GenET >= 0.13.7.
+
+
+```python
+from genet.predict import DeepPrimeGuideRNA
+
+target    = 'ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATG'
+pbs       = 'GGCAAGGGTGT'
+rtt       = 'CGTCTCAGTTTCTGGGAGCTTTGAAAACTCCACAA'
+edit_len  = 1
+edit_pos  = 34
+edit_type = 'sub'
+
+pegrna = DeepPrimeGuideRNA('pegRNA_test', target=target, pbs=pbs, rtt=rtt, 
+                           edit_len=edit_len, edit_pos=edit_pos, edit_type=edit_type)
+
+pe2max_score = pegrna.predict('PE2max')
+
+>>> pe2max_score # output: 3.768320083618164 (type: float)
+```
 
 
 ### Current available DeepPrime models:
