@@ -81,6 +81,7 @@ def request_file(server:str, remote_path:str, local_path:str, target_file:str, s
         unit="B",
         unit_scale=True,
         unit_divisor=1024,
+        leave=False,
     ) as pbar:
         
         for data in response.iter_content(chunk_size=4096):

@@ -96,9 +96,7 @@ markdown_extensions:
   - pymdownx.mark
   - attr_list
   - pymdownx.emoji:
-      # emoji_index: !!python/name:materialx.emoji.twemoji
       emoji_index: !!python/name:material.extensions.emoji.twemoji
-      # emoji_generator: !!python/name:materialx.emoji.to_svg
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 
@@ -116,23 +114,24 @@ nav:
     - How it works: 1_Predict/1_howworks.md
     - Cas9 nuclease: 1_Predict/2_predict_cas9.md
     - Base editor: 1_Predict/3_predict_be.md
-    - Prime editor: 1_Predict/4_predict_pe.md
+    - DeepPrime: 1_Predict/4_predict_pe.md
+    - DeepPrime-Off: 1_Predict/5_DeepPrime-Off.md
 
   - Design:
-    - Introduction: 2_Design/1_Design_intro.md
+    - Genet design module: 2_Design/1_Design_intro.md
     - Synonymous PE: 2_Design/2_SynonymousPE.md
   
   - Database:
-    - Introduction: 3_Database/1_database_intro.md
+    - Genet database module: 3_Database/1_database_intro.md
     - Background  : 3_Database/2_Genome_resource_background.md
     - Metadata    : 3_Database/3_Metadata from databases.md
     - Download    : 3_Database/4_Download_files.md
 
   - Analysis:
-    - Introduction: 4_Analysis/1_analysis_intro.md
+    - Genet Analysis module: 4_Analysis/1_analysis_intro.md
   
   - Utils:
-    - Introduction: 5_Utils/1_utils_intro.md
+    - Genet Utils module: 5_Utils/1_utils_intro.md
     - Download from server: 5_Utils/2_download_files.md
 
   - Application note:
