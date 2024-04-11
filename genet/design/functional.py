@@ -76,6 +76,7 @@ class SynonymousPE:
                  cds_end:int=121,
                  adj_rha:bool=True,
                  mut_target:str=None,
+                 mut_in_cds_filter = False
                  ):
         """DeepPrime output으로 만들어진 파일에서 pegRNA들에 silent mutation을 함께 유발하는 것 중 최적의 pegRNA를 선택해주는 것
         모든 기능은 prime editing으로 1bp substitution을 했을 때를 가정하여 만들어졌다.
@@ -102,6 +103,7 @@ class SynonymousPE:
             * cds_end (int, optional): CDS가 종료되는 위치, 그 이후 위치에서부터는 silent mutation을 만들 수 없으므로 고르는 위치에서 제외. Defaults to 121.
             * adj_rha (bool, optional): silent mutation이 RHA에 위치하는 경우, 기존의 pegRNA에서의 RHA 길이만큼을 유지하기 위해 RTT를 늘려주는 기능. Defaults to True.
             * mut_target (str, optional): Synonymous mutation을 특정 패턴의 sequence에서 찾아서 하고 싶을 경우. 해당 sequence가 들어있는 codon에 만든다.
+            * mut_in_cds_filter : synonymous mutation을 cds에만 만든다.(default = False)
 
         Raises:
             ValueError: frame이 0, 1, 2 중에 하나로 입력되지 않은 경우
@@ -129,7 +131,8 @@ class SynonymousPE:
         self.pbs_dna   = self.rtpbs_dna[:dp_record.PBS_len]
         self.rtt_dna   = self.rtpbs_dna[-dp_record.RTT_len:]
         self.rtt_len   = dp_record.RTT_len
-
+        self.spacer    = dp_record.Spacer
+        
         self.wt_seq    = dp_record.Target # WT74 seq
         self.ed_seq    = self.wt_seq[:21] + self.rtt_dna + self.wt_seq[21+self.rtt_len:] # ED74 seq
 
@@ -323,6 +326,19 @@ class SynonymousPE:
                     if mut_refpos in self.splicing_adaptor: silent_check = False
                     else                                  : silent_check = aa_wt==aa_mut
                     
+                    
+                    # synonymous mutation이 cds에 있는지 표기
+                    if strand == '+':
+                        abs_mut_pos = ref_seq.find(spacer) + 17 + mut_pos - 1 # 0에서 시작하는 숫자
+                    else: 
+                        abs_mut_pos = 120 - (reverse_complement(ref_seq).find(spacer) + 17 + mut_pos -1)
+                    
+                    if (abs_mut_pos >= cds_start) and (abs_mut_pos <= cds_end):
+                        mut_in_cds = 'True' # synonymous mutation이 cds에 있는 경우
+                    else:
+                        mut_in_cds = 'False'  # synonymous mutation이 cds 바깥에 있는 경우
+                            
+                    
                     # 전체 결과를 dict에 넣기
                     self.dict_mut['Codon_WT'].append(codon)
                     self.dict_mut['Codon_Mut'].append(mut_codon)
@@ -340,11 +356,15 @@ class SynonymousPE:
                     self.dict_mut['PAM_Mut'].append(rtt_dna_mut[4:6])
                     self.dict_mut['RTT_DNA_Mut'].append(rtt_dna_mut)
                     self.dict_mut['Edit_class'].append(edit_class)
+                    self.dict_mut['Syn_in_CDS'].append(mut_in_cds)
 
         self.mutations  = pd.DataFrame(self.dict_mut) 
 
         self.synonymous = self.mutations.groupby(by='Silent_check').get_group(True).sort_values(by='Priority').reset_index(drop=True)
         
+        if mut_in_cds_filter:
+        self.synonymous = self.synonymous[self.synonymous['Syn_in_CDS'] == 'True']    
+    
         return self.synonymous.iloc[0]
     # def End: generate
 
