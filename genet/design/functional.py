@@ -106,6 +106,7 @@ class SynonymousPE:
             * cds_end (int, optional): CDS가 종료되는 위치, 그 이후 위치에서부터는 silent mutation을 만들 수 없으므로 고르는 위치에서 제외. Defaults to 121.
             * adj_rha (bool, optional): silent mutation이 RHA에 위치하는 경우, 기존의 pegRNA에서의 RHA 길이만큼을 유지하기 위해 RTT를 늘려주는 기능. Defaults to True.
             * mut_target (str, optional): Synonymous mutation을 특정 패턴의 sequence에서 찾아서 하고 싶을 경우. 해당 sequence가 들어있는 codon에 만든다.
+            * mut_in_cds_filter (bool): synonymous mutation을 coding sequence (CDS)에만 넣을지를 의미함. (True/False)
 
         Raises:
             ValueError: frame이 0, 1, 2 중에 하나로 입력되지 않은 경우
@@ -232,6 +233,7 @@ class SynonymousPE:
         Args:
             rtt_frame (int): CDS에서 RTT의 frame을 의미함 (0, 1, 2).
             strand (str): Reference sequence 기준으로 pegRNA의 방향 (+ / -)
+            mut_in_cds_filter (bool): synonymous mutation을 coding sequence (CDS)에만 넣을지를 의미함 (True/False)
 
         Returns:
             pd.DataFrame: Mutation 정보들이 담긴 DataFrame.
