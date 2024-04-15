@@ -111,7 +111,7 @@ class SynonymousPE:
         """        
     
         # input error check
-        if type(dp_record) != type(pd.Series()): raise TypeError("The type of 'dp_record' should be pd.Series.")
+        if type(dp_record) != type(pd.Series(dtype = 'object')): raise TypeError("The type of 'dp_record' should be pd.Series.")
         if frame not in [0, 1, 2]              : raise ValueError('Frame should be 0, 1 or 2')
 
         # step 1: Get required features
@@ -393,10 +393,7 @@ class SynonymousPE:
             self.synonymous = self.mutations.groupby(by='Silent_check').get_group(True).sort_values(by='Priority').reset_index(drop=True)
             if mut_in_cds_filter:
                 self.synonymous = self.synonymous[self.synonymous['Syn_in_CDS'] == 'True']
-        
-            if mut_in_cds_filter:
-                self.synonymous = self.synonymous[self.synonymous['Syn_in_CDS'] == 'True'] # mut_in_cds_filter = True로 설정할 경우 CDS에 들어있는 synonymous mutation만 출력
-                
+
             return self.synonymous.iloc[0] # Series 형태
         
         except:
