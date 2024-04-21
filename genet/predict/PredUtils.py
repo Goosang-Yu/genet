@@ -3,7 +3,8 @@ import numpy as np
 def preprocess_masked_seq(data, seq_length):
     """더 이상 쓰이지 않는 함수. 테스트 해보고 문제 없으면 없앨 예정.
 
-    """  
+    """    
+
     seq_onehot = np.zeros((len(data), 1, seq_length, 4), dtype=float)
 
     for l in range(len(data)):
@@ -31,26 +32,18 @@ def one_hot_encode(seq):
     return np.delete(arr_seq, -1, axis=1)
 
 def preprocess_seq(data, length:int):
-    encoded_seq = np.array([one_hot_encode(seq.upper()) for seq in data])
+    encoded_seq = [one_hot_encode(seq.upper()) for seq in data]
     return np.stack(encoded_seq, axis=0).reshape(len(data), 1, length, 4)
 
 def reverse_complement(sSeq):
-    """
-        Replace with Biopython's reverse_complement or reverse_complement_rna.
-        A function no longer in use.
-        Plan to remove it if no issues are found upon testing.
-    """
+    """Biopython의 reverse_complement 또는 reverse_complement_rna로 모두 대체함. 
+    더 이상 쓰이지 않는 함수.
+    테스트 해보고 문제 없으면 없앨 예정.
+    """    
     dict_sBases = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A', 'N': 'N', 'U': 'U', 'n': '',
                    '.': '.', '*': '*', 'a': 't', 'c': 'g', 'g': 'c', 't': 'a'}
     list_sSeq = list(sSeq)  # Turns the sequence in to a gigantic list
     list_sSeq = [dict_sBases[sBase] for sBase in list_sSeq]
     return ''.join(list_sSeq)[::-1]
- 
-def padding(arr, max_length):
-    """ Padding sequences to the same length """
-    str_arr = []
-    c = arr[0]
-    if max_length > len(c):
-      c += "N" * (max_length - len(c))
-    str_arr.append(c)
-    return str_arr
+
+# def END: reverse_complement
