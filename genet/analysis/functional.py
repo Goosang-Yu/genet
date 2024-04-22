@@ -189,12 +189,9 @@ def sort_barcode(list_sParameters):
         SeqIO.write(seq_rec, '%s/%s.%s' % (temp_dir, barcode, output_format), output_format)
 
 # def END: sort_barcode
-
-
+ 
 def combine_files(list_combine_param):
-    """Combine files by name
-
-    """
+    """Combine files by name"""
 
     # parameters
     splits_dir    = list_combine_param[0]
@@ -278,17 +275,32 @@ def sort_barcode_and_combine(list_sParameters):
     if silence == False: print('Make temp sorted %s file: %s' % (output_format, subsplit_name))
     
     for barcode, seq_rec in dict_barcode.items():
-        SeqIO.write(seq_rec, '%s/%s.%s' % (temp_dir, barcode, output_format), output_format)
+        SeqIO.write(seq_rec, '%s/%s.%s' % (temp_dir, barcode, output_format), output_format) 
 
-# def END: sort_barcode
+""" Codon usage analysis "temporary" """
 
+def calculate_codon_composition(seq):
+    """Calculates the frequency of each codon in a DNA sequence."""
+    codon_counts = {}
+    for i in range(0, len(seq) - 2, 3):
+        codon = seq[i:i+3]
+        codon_counts[codon] = codon_counts.get(codon, 0) + 1
+ 
+    total_count = sum(codon_counts.values())
+    for codon, count in codon_counts.items():
+        codon_counts[codon] = count / total_count
 
-def loadseq():
-    '''
-    테스트용으로 만든 코드
-    
-    '''
-    
-    print('For testing')
+    return codon_counts
 
-
+def find_orfs(seq):
+    """Identifies potential open reading frames (ORFs) in a DNA sequence."""
+    orfs = []
+    for frame in range(3):
+        for start in range(frame, len(seq), 3):
+            codon = seq[start:start + 3]
+            if codon == 'ATG':
+                end = start + 3
+                while end < len(seq) and seq[end:end + 3] not in ['TAA', 'TAG', 'TGA']:
+                    end += 3
+                orfs.append((start, end, '+'))
+    return orfs

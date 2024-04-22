@@ -1,6 +1,6 @@
 # Backgrounds
 
-Genome resources를 활용하기 위해서는 먼저 알아둬야 할 기초 지식들이 있다. 이 중 `genet.database`를 활용하기 위해 알아야 할 최소한의 내용을 소개한다. 
+To utilize genome resources effectively, there are foundational concepts one must understand. Here, we introduce the minimum knowledge required to utilize the  `genet.database`
 
 ### 1. Databases
 Genome resource를 제공하는 database는 여러 개가 존재한다. 그 중 대표적으로 몇 개를 소개한다. 
