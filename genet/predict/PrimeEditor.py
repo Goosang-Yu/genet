@@ -207,22 +207,22 @@ class DeepPrimeGuideRNA:
                  edit_len:int, edit_pos:int, edit_type:str, 
                  spacer_len:int=20 
                  ):
-        """이미 디자인 된 pegRNA에서 DeepPrime을 돌리고 싶을 때 사용하는 pipeline.
+        """A pipeline used when running DeepPrime on a pre-designed pegRNA.
 
         Args:
-            sID (str): 해당 pegRNA의 id.
-            target (str): Target sequence, 74nt 길이로 고정된다.
+            sID (str): ID of the pegRNA.
+            target (str): Target sequence, fixed length of 74nt.
             pbs (str): PBS sequence.
             rtt (str): RTT sequence.
-            edit_len (int): Length of prime editing. Available edit length range: 1-3nt
-            edit_pos (int): Position of prime editing. Available edit position range: 1-40nt
-            edit_type (str): Type of prime editing. Available edit style: sub, ins, del
+            edit_len (int): Length of prime editing. Available edit length range: 1-3nt.
+            edit_pos (int): Position of prime editing. Available edit position range: 1-40nt.
+            edit_type (str): Type of prime editing. Available edit style: sub, ins, del.
 
         Raises:
-            ValueError: Target sequence length가 74nt가 아닌 경우 발생
-            ValueError: Edit length가 1, 2 또는 3이 아닌 경우 발생
-            ValueError: Edit type이 sub, ins, del 중 하나가 아닌 경우 발생
-
+            ValueError: Raised if the target sequence length is not 74nt.
+            ValueError: Raised if the edit length is not 1, 2, or 3.
+            ValueError: Raised if the edit type is not one of sub, ins, del.
+            
         ### Examples:
         ``` python
         from genet.predict import DeepPrimeGuideRNA
@@ -246,6 +246,10 @@ class DeepPrimeGuideRNA:
 
         if len(target) != 74: raise ValueError('Please check your input: target. The length of target should be 74nt')
         if edit_len not in [1, 2, 3]: raise ValueError('Please check your input: edit_len. The length of edit should be 1, 2, or 3')
+
+        target = target.upper()
+        pbs    = pbs.upper()
+        rtt    = rtt.upper()
 
         self.spacer = target[24-spacer_len:24]
         self.rtpbs  = back_transcribe(rtt+pbs)
