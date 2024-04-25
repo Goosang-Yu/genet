@@ -31,19 +31,16 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class DeepPrime:
 
-    def __init__(self, sID:str, Ref_seq: str, ED_seq: str, edit_type: str, edit_len: int,
-                 pam:str = 'NGG', pbs_min:int = 7, pbs_max:int = 15,
+    def __init__(self, sequence: str, name:str='SampleName', pam:str = 'NGG',
+                 pbs_min:int = 7, pbs_max:int = 15,
                  rtt_min:int = 0, rtt_max:int = 40, 
                  spacer_len:int=20,
                 ):
-        """DeepPrime: pegRNA activity prediction models\n
+        """DeepPrime: pegRNA activity prediction models
 
         Args:
-            sID (str): Sample ID for pegRNAs.
-            Ref_seq (str): 121 nt DNA sequence without edit.
-            ED_seq (str): 121 nt DNA sequence with edit.
-            edit_type (str): Available Edit types is sub1, sub2, sub3, ins1, ins2, ins3, del1, del2, del3.
-            edit_len (int): Length of prime editing. Available edit length range: 1-3nt.
+            sequence (str): Sequence to prime editing. Intended prime editing should marked with parenthesis.
+            name (str, optional): Sample ID for pegRNAs. Defaults to 'SampleName'
             pam (str, optional): PAM sequence. Available PAMs are NGG, NGA, NAG, NRCH. Defaults to 'NGG'.
             pbs_min (int, optional): Minimum length of PBS (1-17). Defaults to 7.
             pbs_max (int, optional): Maximum length of PBS (1-17). Defaults to 15.
@@ -53,20 +50,26 @@ class DeepPrime:
         
         # input parameters
         self.nAltIndex = 60
-        self.sID, self.Ref_seq, self.ED_seq = sID, Ref_seq, ED_seq
-        self.edit_type, self.edit_len, self.pam = edit_type, edit_len, pam
+
+        self.inputs = self.make_input_info(sequence)
+        
+        self.Ref_seq   = self.inputs['wt_seq']
+        self.ED_seq    = self.inputs['ed_seq']
+        self.edit_type = self.inputs['edit_type']
+        self.edit_len  = self.inputs['edit_len']
+        
+        self.pam = pam
         self.pbs_min, self.pbs_max = pbs_min, pbs_max
         self.pbs_range = [pbs_min, pbs_max]
         self.rtt_min, self.rtt_max   = rtt_min, rtt_max
         
-        # initializing
+        # Check input parameters
         self.check_input()
 
-        ## PEFeatureExtraction Class
-        cFeat = PEFeatureExtraction(Ref_seq, ED_seq, edit_type, edit_len, spacer_len)
+        ## DeepPrime Feature Extraction 
+        cFeat = PEFeatureExtraction(self.Ref_seq, self.ED_seq, self.edit_type, self.edit_len, spacer_len)
 
-        cFeat.input_id = sID
-        # cFeat.get_input(Ref_seq, ED_seq, edit_type, edit_len)
+        cFeat.input_id = name
         cFeat.get_sAltNotation(self.nAltIndex)
         cFeat.get_all_RT_PBS(self.nAltIndex, nMinPBS= self.pbs_min-1, nMaxPBS=self.pbs_max, nMaxRT=rtt_max, pam=self.pam)
         cFeat.make_rt_pbs_combinations()
@@ -83,7 +86,7 @@ class DeepPrime:
             self.pegRNAcnt = len(self.features)
         
         else:
-            print('\nsID:', sID)
+            print('\nsID:', name)
             print('DeepPrime only support RTT length upto 40nt')
             print('There are no available pegRNAs, please check your input sequences.\n')
             self.pegRNAcnt = 0
@@ -154,14 +157,45 @@ class DeepPrime:
 
     # def predict: END
 
+    def make_input_info(self, seq:str) -> dict:
+        """Make DeepPrime inputs from input sequence.
+        
+        Args:
+            seq (str): Sequence to prime editing. Intended prime editing should marked with parenthesis.
+
+        Raises:
+            ValueError: _description_
+
+        Returns:
+            dict: DeepPrime inputs from input sequence
+        """    
+
+        f_context, res_seq  = seq.split('(')
+        edit_seq, r_context = res_seq.split(')')
+        wt, ed = edit_seq.split('/')
+
+        if len(wt) == len(ed): edit_type = 'sub'; edit_len = len(ed)
+        elif wt == '': edit_type = 'ins'; edit_len = len(ed)
+        elif ed == '': edit_type = 'del'; edit_len = len(wt)
+        else: raise ValueError('Not supported edit type.')
+
+        dict_input = {
+            'wt_seq': f_context[-60:] + (wt + r_context)[:61],
+            'ed_seq' : f_context[-60:] + (ed + r_context)[:61],
+            'edit_type': edit_type,
+            'edit_len': edit_len,
+        }
+        
+        return dict_input
+
 
     def check_input(self):
         
         if len(self.Ref_seq) != 121:
-            raise ValueError('Please check your input: Ref_seq. The length of Ref_seq should be 121nt')
+            raise ValueError('Please check your input sequence. The length of context sequence is not enough.')
         
         if len(self.ED_seq) != 121:
-            raise ValueError('Please check your input: ED_seq. The length of ED_seq should be 121nt')
+            raise ValueError('Please check your input sequence. The length of context sequence is not enough.')
 
         if self.pbs_min < 1:
             raise ValueError('Please check your input: pbs_min. Please set PBS max length at least 1nt')
@@ -207,22 +241,22 @@ class DeepPrimeGuideRNA:
                  edit_len:int, edit_pos:int, edit_type:str, 
                  spacer_len:int=20 
                  ):
-        """이미 디자인 된 pegRNA에서 DeepPrime을 돌리고 싶을 때 사용하는 pipeline.
+        """A pipeline used when running DeepPrime on a pre-designed pegRNA.
 
         Args:
-            sID (str): 해당 pegRNA의 id.
-            target (str): Target sequence, 74nt 길이로 고정된다.
+            sID (str): ID of the pegRNA.
+            target (str): Target sequence, fixed length of 74nt.
             pbs (str): PBS sequence.
             rtt (str): RTT sequence.
-            edit_len (int): Length of prime editing. Available edit length range: 1-3nt
-            edit_pos (int): Position of prime editing. Available edit position range: 1-40nt
-            edit_type (str): Type of prime editing. Available edit style: sub, ins, del
+            edit_len (int): Length of prime editing. Available edit length range: 1-3nt.
+            edit_pos (int): Position of prime editing. Available edit position range: 1-40nt.
+            edit_type (str): Type of prime editing. Available edit style: sub, ins, del.
 
         Raises:
-            ValueError: Target sequence length가 74nt가 아닌 경우 발생
-            ValueError: Edit length가 1, 2 또는 3이 아닌 경우 발생
-            ValueError: Edit type이 sub, ins, del 중 하나가 아닌 경우 발생
-
+            ValueError: Raised if the target sequence length is not 74nt.
+            ValueError: Raised if the edit length is not 1, 2, or 3.
+            ValueError: Raised if the edit type is not one of sub, ins, del.
+            
         ### Examples:
         ``` python
         from genet.predict import DeepPrimeGuideRNA
@@ -244,11 +278,16 @@ class DeepPrimeGuideRNA:
         # PBS와 RTT는 target 기준으로 reverse complementary 방향으로 있어야 함.
         # PBS와 RTT를 DNA/RNA 중 어떤 것으로 input을 받아도, 전부 DNA로 변환해주기.
 
+        target = target.upper()
+        pbs    = back_transcribe(pbs).upper()
+        rtt    = back_transcribe(rtt).upper()
+
         if len(target) != 74: raise ValueError('Please check your input: target. The length of target should be 74nt')
+        if reverse_complement(pbs) != target[21-len(pbs):21]: raise ValueError('Please check your input: target, pbs sequence and position.')
         if edit_len not in [1, 2, 3]: raise ValueError('Please check your input: edit_len. The length of edit should be 1, 2, or 3')
 
         self.spacer = target[24-spacer_len:24]
-        self.rtpbs  = back_transcribe(rtt+pbs)
+        self.rtpbs  = rtt + pbs
 
         # Check edit_type input and determine type dependent features
         if   edit_type == 'sub': type_sub=1; type_ins=0; type_del=0; rha_len=len(rtt)-edit_pos-edit_len+1
@@ -295,7 +334,7 @@ class DeepPrimeGuideRNA:
         ############################################################################
 
         # MFE_3 - RT + PBS + PolyT
-        seq_MFE3 = back_transcribe(rtt) + back_transcribe(pbs) + 'TTTTTT'
+        seq_MFE3 = self.rtpbs + 'TTTTTT'
         sDBSeq, fMFE3 = fold_compound(seq_MFE3).mfe()
 
         # MFE_4 - spacer only

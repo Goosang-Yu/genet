@@ -5,12 +5,7 @@ DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs)
 
 
 ### How to Use DeepPrime
-DeepPrime을 사용하기 위해서는 정해진 형태의 DNA sequence 정보를 준비해야 한다.
-
-1. Unedited sequence (WT_seq)과 prime-edited sequence (ED_seq)을 각각 준비해야한다. 
-2. Prime-edited sequence는 1-3nt의 연속된 edit만 허용된다.
-3. Unedited sequence과 prime-edited sequence는 각각 121 base pairs 길이로 고정된다.
-4. Prime editing이 일어나는 첫번째 위치는 항상 unedited/prime-edited sequence의 중앙에 위치해야 한다. 
+DeepPrime을 사용하기 위해서, intended prime editing과 주변 context 정보가 담긴 DNA sequence를 input으로 준비해야 한다. Intended prime editing은 1-3nt substitution, insertion, 또는 deletion만 가능하며, 여러 개의 edit type이 복합적으로 도입되는 것은 불가능하다. Prime editing을 도입하는 위치는 괄호로 표시되며, '/'를 이용해서 original과 prime-edited sequence를 구분한다. 
 
 몇 가지 input 예시는 아래와 같다. 
 
@@ -18,33 +13,21 @@ DeepPrime을 사용하기 위해서는 정해진 형태의 DNA sequence 정보�
 
 ```python
 # Example 1: 1bp substitution (T to A)
-Unedited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
-Prime-edited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTACAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
-
-edit_type = 'sub'
-edit_len  = 1
+input_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCT(T/A)CAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
 ```
 
 ![](../assets/contents/ko_1_4_3_DeepPrime_input_ex2.svg)
 
 ```python
 # Example 2: 3bp insertion (CTT insertion)
-Unedited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
-Prime-edited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTCTTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCAT'
-
-edit_type = 'ins'
-edit_len  = 3
+input_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCT(/CTT)TCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
 ```
 
 ![](../assets/contents/ko_1_4_4_DeepPrime_input_ex3.svg)
 
 ```python
 # Example 3: 2bp deletion (TC deletion)
-Unedited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
-Prime-edited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCATTC'
-
-edit_type = 'del'
-edit_len  = 2
+input_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCT(TC/)AGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
 ```
 
 If you have prepared the input as described above, you can use DeepPrime as follows. When you input the target sequence and editing informations into DeepPrime and run it, it designs all possible types of pegRNAs for the given sequence and automatically calculates their corresponding biofeatures. You can check the calculated biofeatures using `.features`.
@@ -52,10 +35,9 @@ If you have prepared the input as described above, you can use DeepPrime as foll
 ```python 
 from genet.predict import DeepPrime
 
-seq_wt   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATGTCAACTGAAACCTTAAAGTGAGTATTTAATTGAGCTGAAGT'
-seq_ed   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGACGAACTATAACCTGCAAATGTCAACTGAAACCTTAAAGTGAGTATTTAATTGAGCTGAAGT'
+input_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCT(T/A)CAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
 
-pegrna = DeepPrime('Test', seq_wt, seq_ed, edit_type='sub', edit_len=1)
+pegrna = DeepPrime(input_seq)
 
 # check designed pegRNAs
 >>> pegrna.features.head()
@@ -88,8 +70,11 @@ pe2max_output = pegrna.predict(pe_system='PE2max', cell_type='HEK293T')
 
 ### Predicting efficiencies of existing pegRNAs
 
-If you want to use DeepPrime with pre-designed pegRNAs, you can obtain prediction scores using `DeepPrimeGuideRNA`. Similar to `.predict` method in `DeepPrime`, you can specify pe_system and cell_type. This feature was added in GenET >= 0.13.7.
+`DeepPrimeGuideRNA`는 target, PBS, 그리고 RT template sequence를 정확히 입력했을 때, 해당 pegRNA의 DeepPrime score를 예측해준다. 예를 들어, 아래와 같은 target과 pegRNA가 있다고 가정해보자. 
 
+![prime_editing_complex](../assets/contents/ko_1_4_5_prime_editing_complex.svg)
+
+위 pegRNA의 DeepPrime score를 구하고 싶다면, 아래와 같이 코드를 실행하면 된다. Similar to `.predict` method in `DeepPrime`, you can specify `pe_system` and `cell_type`.
 
 ```python
 from genet.predict import DeepPrimeGuideRNA
@@ -109,6 +94,18 @@ pe2max_score = pegrna.predict('PE2max')
 >>> pe2max_score # output: 3.768320083618164 (type: float)
 ```
 
+
+`DeepPrimeGuideRNA`에 사용되는 input은 아래와 같이 설정한다. 
+
+| Input     | Type | Description                                                                                                                                                                                                                |
+| --------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| sID       | str  | Name of sample or pegRNA                                                                                                                                                                                                   |
+| target    | str  | 4nt additional context sequence must be included in the 5' direction. The Protospacer (region to which the guide sequence is attached) is oriented in the 5'->3' direction and the target sequence must be 74nt in length. |
+| pbs       | str  | The PBS sequence from the pegRNA. Both T (DNA) and U (RNA) forms are acceptable.                                                                                                                                           |
+| rtt       | str  | The RT template sequence from the pegRNA. Both T (DNA) and U (RNA) forms are acceptable.                                                                                                                                   |
+| edit_len  | int  | Select one of 1, 2, or 3 according to the intended prime editing.                                                                                                                                                          |
+| edit_pos  | int  | Select one from 1-40 according to the intended prime editing.                                                                                                                                                              |
+| edit_type | str  | Select one from 'sub', 'ins', 'del' according to the intended prime editing.    
 
 ### Current available DeepPrime models:
 | Cell type  | PE system   | Model                                                             |

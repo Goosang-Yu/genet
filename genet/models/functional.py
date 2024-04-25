@@ -64,7 +64,7 @@ class LoadModel:
             save_dir (str): The location to download the file.
         """        
         
-        print('The model %s is not installed. Download checkpoint files.\n' % path)
+        print('The model %s is not installed. Download checkpoint files.' % path)
 
         for file_name in files:
 
