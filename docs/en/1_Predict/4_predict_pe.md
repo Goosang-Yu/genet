@@ -5,13 +5,7 @@ DeepPrime is a prediction model for evaluating prime editing guideRNAs (pegRNAs)
 
 
 ### How to Use DeepPrime
-To use DeepPrime, you need to prepare DNA sequence information in a specific format.
-
-1. Prepare the unedited sequence (WT_seq) and the prime-edited sequence (ED_seq) separately.
-2. The prime-edited sequence allows only 1-3nt continuous edits.
-3. Both the unedited sequence and the prime-edited sequence are fixed at a length of 121 base pairs.
-4. The first position of prime editing must always be located at the center of the unedited/prime-edited sequence.
-
+To use DeepPrime, you need to prepare a DNA sequence containing the intended prime editing and surrounding context information as input. Intended prime editing can only involve 1-3nt substitution, insertion, or deletion, and it is not possible to introduce multiple edit types in combination. The position where prime editing is introduced is indicated in parentheses, and the original and prime-edited sequences are separated using '/'.
 
 Some example inputs are as follows:
 
@@ -19,33 +13,21 @@ Some example inputs are as follows:
 
 ```python
 # Example 1: 1bp substitution (T to A)
-Unedited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
-Prime-edited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTACAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
-
-edit_type = 'sub'
-edit_len  = 1
+input_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCT(T/A)CAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
 ```
 
 ![](../assets/contents/en_1_4_3_DeepPrime_input_ex2.svg)
 
 ```python
 # Example 2: 3bp insertion (CTT insertion)
-Unedited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
-Prime-edited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTCTTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCAT'
-
-edit_type = 'ins'
-edit_len  = 3
+input_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCT(/CTT)TCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
 ```
 
 ![](../assets/contents/en_1_4_4_DeepPrime_input_ex3.svg)
 
 ```python
 # Example 3: 2bp deletion (TC deletion)
-Unedited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTTCAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
-Prime-edited_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCTAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCATTC'
-
-edit_type = 'del'
-edit_len  = 2
+input_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCT(TC/)AGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
 ```
 
 If you have prepared the input as described above, you can use DeepPrime as follows. When you input the target sequence and editing informations into DeepPrime and run it, it designs all possible types of pegRNAs for the given sequence and automatically calculates their corresponding biofeatures. You can check the calculated biofeatures using `.features`.
@@ -53,10 +35,9 @@ If you have prepared the input as described above, you can use DeepPrime as foll
 ```python 
 from genet.predict import DeepPrime
 
-seq_wt   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATGTCAACTGAAACCTTAAAGTGAGTATTTAATTGAGCTGAAGT'
-seq_ed   = 'ATGACAATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGACGAACTATAACCTGCAAATGTCAACTGAAACCTTAAAGTGAGTATTTAATTGAGCTGAAGT'
+input_seq = 'CTCACGTGAGCTCTTTGAGCTTGCCTGTCTCTGTGGGCTGAAGGCTGTTCCCTGTTTCCT(T/A)CAGCTCTACGTCTCCTCCGAGAGCCGCTTCAACACCCTGGCCGAGTTGGTTCATCATCAT'
 
-pegrna = DeepPrime('Test', seq_wt, seq_ed, edit_type='sub', edit_len=1)
+pegrna = DeepPrime(input_seq)
 
 # check designed pegRNAs
 >>> pegrna.features.head()
@@ -89,27 +70,40 @@ pe2max_output = pegrna.predict(pe_system='PE2max', cell_type='HEK293T')
 
 ### Predicting efficiencies of existing pegRNAs
 
-If you want to use DeepPrime with pre-designed pegRNAs, you can obtain prediction scores using `DeepPrimeGuideRNA`. Similar to `.predict` method in `DeepPrime`, you can specify pe_system and cell_type. This feature was added in GenET >= 0.13.7.
+When the target, PBS, and RT template sequences are accurately inputted, `DeepPrimeGuideRNA` predicts the DeepPrime score of the corresponding pegRNA. For example, let's assume we have the following target and pegRNA:
 
+![prime_editing_complex](../assets/contents/en_1_4_5_prime_editing_complex.svg)
+
+To obtain the DeepPrime score of the pegRNA above, you can execute the code as follow; similar to `.predict` method in `DeepPrime`, you can specify `pe_system` and `cell_type`.
 
 ```python
 from genet.predict import DeepPrimeGuideRNA
 
-target    = 'ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATG'
-pbs       = 'GGCAAGGGTGT'
-rtt       = 'CGTCTCAGTTTCTGGGAGCTTTGAAAACTCCACAA'
+target    = 'TTTAAGGTTTCAGTTGACATTTGCAGGTTATAGTTCTTCTCAGTTTCTGGGAGCTTTGAAAACTCCACAAGGCA'
+pbs       = 'AATGTCAAC'
+rtt       = 'AGAAACTGAGACGAACTATAACCTGCA'
 edit_len  = 1
-edit_pos  = 34
+edit_pos  = 16
 edit_type = 'sub'
 
 pegrna = DeepPrimeGuideRNA('pegRNA_test', target=target, pbs=pbs, rtt=rtt, 
                            edit_len=edit_len, edit_pos=edit_pos, edit_type=edit_type)
 
 pe2max_score = pegrna.predict('PE2max')
-
->>> pe2max_score # output: 3.768320083618164 (type: float)
+print(pe2max_score) # 8.23717212677002
 ```
 
+The inputs for `DeepPrimeGuideRNA` are configured as follows:
+
+| Input     | Type | Description                                                                                                                                                                                                                |
+| --------- | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| sID       | str  | Name of sample or pegRNA                                                                                                                                                                                                   |
+| target    | str  | 4nt additional context sequence must be included in the 5' direction. The Protospacer (region to which the guide sequence is attached) is oriented in the 5'->3' direction and the target sequence must be 74nt in length. |
+| pbs       | str  | The PBS sequence from the pegRNA. Both T (DNA) and U (RNA) forms are acceptable.                                                                                                                                           |
+| rtt       | str  | The RT template sequence from the pegRNA. Both T (DNA) and U (RNA) forms are acceptable.                                                                                                                                   |
+| edit_len  | int  | Select one of 1, 2, or 3 according to the intended prime editing.                                                                                                                                                          |
+| edit_pos  | int  | Select one from 1-40 according to the intended prime editing.                                                                                                                                                              |
+| edit_type | str  | Select one from 'sub', 'ins', 'del' according to the intended prime editing.                                                                                                                                               |
 
 ### Current available DeepPrime models:
 | Cell type  | PE system   | Model                                                             |
@@ -136,7 +130,7 @@ pe2max_score = pegrna.predict('PE2max')
 
 
 ### Get ClinVar record and DeepPrime score using GenET
-ClinVar database contains mutations that are clinically evaluated to be pathogenic and related to human diseases([Laudrum et al. NAR 2018](https://academic.oup.com/nar/article/46/D1/D1062/4641904)). GenET utilized the NCBI efect module to access ClinVar records to retrieve related variant data such as the genomic sequence, position, and mutation pattern. Using this data, genET designs and evaluates pegRNAs that target the variant using DeepPrime.
+ClinVar database contains mutations that are clinically evaluated to be pathogenic and related to human diseases([Laudrum et al. NAR 2018](https://academic.oup.com/nar/article/46/D1/D1062/4641904)). GenET utilized the NCBI efect module to access ClinVar records to retrieve related variant data such as the genomic sequence, position, and mutation pattern. Using this data, GenET designs and evaluates pegRNAs that target the variant using DeepPrime.
 
 ```python
 from genet import database as db
