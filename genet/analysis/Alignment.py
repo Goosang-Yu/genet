@@ -19,8 +19,9 @@ AlignmentResult = namedtuple(
      'n_mismatches', 'score'])
 
 
-def aligner(seqj, seqi, method='global', gap_open=-7, gap_extend=-7,
-            gap_double=-7, matrix=BLOSUM62, max_hits=1):
+def aligner(seqj:str, seqi:str, method:str='global', 
+            gap_open:float=-7, gap_extend:float=-7, gap_double:float=-7,
+            matrix:dict=BLOSUM62, max_hits:int=1):
     '''Calculates the alignment of two sequences.
 
     The supported 'methods' are:
@@ -38,16 +39,15 @@ def aligner(seqj, seqi, method='global', gap_open=-7, gap_extend=-7,
 
     Arguments:
 
-        - seqj (``sequence``) First aligned iterable object of symbols.
-        - seqi (``sequence``) Second aligned iterable object of symbols.
-        - method (``str``) Type of alignment: 'global', 'global_cfe', 'local',
-          'glocal'.
-        - gap_open (``float``) The gap-opening cost.
-        - gap_extend (``float``) The cost of extending an open gap.
-        - gap_double (``float``) The gap-opening cost if a gap is already open
+        - seqj First aligned iterable object of symbols.
+        - seqi Second aligned iterable object of symbols.
+        - method Type of alignment: 'global', 'global_cfe', 'local', 'glocal'.
+        - gap_open The gap-opening cost.
+        - gap_extend The cost of extending an open gap.
+        - gap_double The gap-opening cost if a gap is already open
           in the other sequence.
-        - matrix (``dict``) A score matrix dictionary.
-        - max_hits (``int``) The maximum number of results to return in
+        - matrix  A score matrix dictionary.
+        - max_hits The maximum number of results to return in
           case multiple alignments with the same score are found. If set to 1,
           a single ``AlignmentResult`` object is returned. If set to values
           larger than 1, a list containing ``AlignmentResult`` objects are
