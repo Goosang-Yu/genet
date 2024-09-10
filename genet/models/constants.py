@@ -337,7 +337,7 @@ dict_model_info = {
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
         'path': 'DeepPrime/DeepPrime_FT_DLD1_PE7_epegRNA_dataset'
     },
-    'PE4max-DLD1': {
+    'PE7max-DLD1': {
         'type': 'DeepPrime-FT',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
         'path': 'DeepPrime/DeepPrime_FT_DLD1_PE7_pegRNA_dataset'
