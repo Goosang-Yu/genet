@@ -50,7 +50,7 @@ class NCBI(db.config.DBconfig):
             )
         
         # File will be converted to parquet format automatically
-        if convert==True: self._convert_to_parquet()
+        if convert==True: self._convert_to_parquet(target_file)
         
         print(f'[Info] Complete')
 

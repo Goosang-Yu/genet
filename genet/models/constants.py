@@ -320,6 +320,35 @@ dict_model_info = {
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
         'path': 'DeepPrime/DP_variant_A549_PE4max_epegRNA_Opti_220428'
     },
+
+    'PE7max-e-A549': {
+        'type': 'DeepPrime-FT',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepPrime/DeepPrime_FT_A549_PE7_epegRNA_dataset'
+    },
+    'PE7max-A549': {
+        'type': 'DeepPrime-FT',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepPrime/DeepPrime_FT_A549_PE7_pegRNA_dataset'
+    },
+
+    'PE7max-e-DLD1': {
+        'type': 'DeepPrime-FT',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepPrime/DeepPrime_FT_DLD1_PE7_epegRNA_dataset'
+    },
+    'PE4max-DLD1': {
+        'type': 'DeepPrime-FT',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepPrime/DeepPrime_FT_DLD1_PE7_pegRNA_dataset'
+    },
+
+    'PE7max-HEK293T': {
+        'type': 'DeepPrime-FT',
+        'repo': 'Goosang-Yu/genet-models/main/genet_models',
+        'path': 'DeepPrime/DeepPrime_FT_HEK293T_PE7_pegRNA_dataset_240909'
+    },
+
     'NRCH_PE2-HEK293T': {
         'type': 'DeepPrime-FT',
         'repo': 'Goosang-Yu/genet-models/main/genet_models',
