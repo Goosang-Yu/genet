@@ -264,9 +264,9 @@ class DeepPrimeBatch:
         
         # input parameters
         try:
-            df_input = pd.DataFrame(data)
+            self.df_input = pd.DataFrame(data)
         except:
-            df_input = self.load_file_as_dataframe(data)
+            self.df_input = self.load_file_as_dataframe(data)
 
         self.input_params = {
             'nAltIndex' : 60,
@@ -282,10 +282,13 @@ class DeepPrimeBatch:
             'edit_len'  : None,
         }
 
+
+    def preprocess(self, num_cpus=1, memory=2) -> pd.DataFrame:
+
         ray.init()
 
        # 병렬 작업을 위한 Ray Actor 클래스 정의
-        @ray.remote
+        @ray.remote(num_cpus=num_cpus, memory=memory*1024*1024*1024)
         class DeepPrimeWorker:
             def __init__(self, sequence:str, id:str, input_params:dict):
 
@@ -297,7 +300,7 @@ class DeepPrimeBatch:
         # 데이터프레임에서 각 시퀀스를 병렬로 처리
         self.workers = [DeepPrimeWorker.remote(
             data['sequence'], data['id'], self.input_params
-            ) for _, data in df_input.iterrows()]
+            ) for _, data in self.df_input.iterrows()]
         
         # Ray 작업 실행 및 결과 수집
         self.features = ray.get([worker.get_feature.remote() for worker in self.workers])
