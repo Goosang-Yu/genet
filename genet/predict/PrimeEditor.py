@@ -1,5 +1,4 @@
 # genet package and modules 
-import genet.utils
 from genet.predict.PredUtils import *
 from genet.predict.Nuclease import SpCas9
 from genet.models import LoadModel
@@ -7,15 +6,18 @@ from genet.database import GetGenome, GetChromosome
 
 # python standard packages
 import os, sys, regex, gzip
+import ray
 import numpy as np
 import pandas as pd
 from glob import glob
 from tqdm import tqdm
+from time import time
 
 # pytorch package and modules 
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
+from torch.utils.data import TensorDataset, DataLoader
 
 # biopython package and modules 
 from Bio import SeqIO
@@ -49,33 +51,34 @@ class DeepPrime:
         """        
         
         # input parameters
-        self.nAltIndex = 60
+        self.input_params = {
+            'name'      : name,
+            'sequence'  : sequence,
+            'nAltIndex' : 60,
+            'spacerlen' : spacer_len,
+            'pam'       : pam,
+            'pbs_min'   : pbs_min,
+            'pbs_max'   : pbs_max,
+            'rtt_min'   : rtt_min,
+            'rtt_max'   : rtt_max,
+            'wt_seq'    : None,
+            'ed_seq'    : None,
+            'edit_type' : None,
+            'edit_len'  : None,
+        }
 
-        self.inputs = self.make_input_info(sequence)
-        
-        self.Ref_seq   = self.inputs['wt_seq']
-        self.ED_seq    = self.inputs['ed_seq']
-        self.edit_type = self.inputs['edit_type']
-        self.edit_len  = self.inputs['edit_len']
-        
-        self.pam = pam
-        self.pbs_min, self.pbs_max = pbs_min, pbs_max
-        self.pbs_range = [pbs_min, pbs_max]
-        self.rtt_min, self.rtt_max   = rtt_min, rtt_max
-        
         # Check input parameters
-        self.check_input()
+        dp_input = DeepPrimeInputProcessor(self.input_params)
+        self.input_params = dp_input.check_input()
 
         ## DeepPrime Feature Extraction 
-        cFeat = PEFeatureExtraction(self.Ref_seq, self.ED_seq, self.edit_type, self.edit_len, spacer_len)
+        cFeat = PEFeatureExtraction(self.input_params)
 
         cFeat.input_id = name
-        cFeat.get_sAltNotation(self.nAltIndex)
-        cFeat.get_all_RT_PBS(self.nAltIndex, nMinPBS= self.pbs_min-1, nMaxPBS=self.pbs_max, nMaxRT=rtt_max, pam=self.pam)
+        cFeat.get_all_RT_PBS(self.input_params)
         cFeat.make_rt_pbs_combinations()
         cFeat.determine_seqs()
         cFeat.determine_secondary_structure()
-
         self.features = cFeat.make_output_df()
         
         del cFeat
@@ -157,11 +160,13 @@ class DeepPrime:
 
     # def predict: END
 
-    def make_input_info(self, seq:str) -> dict:
+
+class DeepPrimeInputProcessor:
+    def __init__(self, input_params:dict):
         """Make DeepPrime inputs from input sequence.
         
         Args:
-            seq (str): Sequence to prime editing. Intended prime editing should marked with parenthesis.
+            sequence (str): Sequence to prime editing. Intended prime editing should marked with parenthesis.
 
         Raises:
             ValueError: _description_
@@ -170,7 +175,11 @@ class DeepPrime:
             dict: DeepPrime inputs from input sequence
         """    
 
-        f_context, res_seq  = seq.split('(')
+        self.input_params = input_params
+
+        sequence = self.input_params['sequence']
+
+        f_context, res_seq  = sequence.split('(')
         edit_seq, r_context = res_seq.split(')')
         wt, ed = edit_seq.split('/')
 
@@ -179,46 +188,44 @@ class DeepPrime:
         elif ed == '': edit_type = 'del'; edit_len = len(wt)
         else: raise ValueError('Not supported edit type.')
 
-        dict_input = {
+        self.input_params.update({
             'wt_seq': f_context[-60:] + (wt + r_context)[:61],
             'ed_seq' : f_context[-60:] + (ed + r_context)[:61],
             'edit_type': edit_type,
             'edit_len': edit_len,
-        }
+        })
         
-        return dict_input
-
 
     def check_input(self):
         
-        if len(self.Ref_seq) != 121:
+        if len(self.input_params['wt_seq']) != 121:
             raise ValueError('Please check your input sequence. The length of context sequence is not enough.')
         
-        if len(self.ED_seq) != 121:
+        if len(self.input_params['ed_seq']) != 121:
             raise ValueError('Please check your input sequence. The length of context sequence is not enough.')
 
-        if self.pbs_min < 1:
+        if self.input_params['pbs_min'] < 1:
             raise ValueError('Please check your input: pbs_min. Please set PBS max length at least 1nt')
         
-        if self.pbs_max > 17:
+        if self.input_params['pbs_max'] > 17:
             raise ValueError('Please check your input: pbs_max. Please set PBS max length upto 17nt')
         
-        if self.rtt_max > 40:
+        if self.input_params['rtt_max'] > 40:
             raise ValueError('Please check your input: rtt_max. Please set RTT max length upto 40nt')
 
-        if self.edit_type not in ['sub', 'ins', 'del']:
+        if self.input_params['edit_type'] not in ['sub', 'ins', 'del']:
             raise ValueError('Please check your input: edit_type. Available edit style: sub, ins, del')
         
-        if self.pam not in ['NGG', 'NRCH', 'NAG', 'NGA', 'NNGG']:
+        if self.input_params['pam'] not in ['NGG', 'NRCH', 'NAG', 'NGA', 'NNGG']:
             raise ValueError('Please check your input: pam. Available PAM: NGG, NGA, NAG, NRCH, NNGG')
 
-        if self.edit_len > 3:
+        if self.input_params['edit_len'] > 3:
             raise ValueError('Please check your input: edit_len. Please set edit length upto 3nt. Available edit length range: 1~3nt')
         
-        if self.edit_len < 1:
+        if self.input_params['edit_len'] < 1:
             raise ValueError('Please check your input: edit_len. Please set edit length at least 1nt. Available edit length range: 1~3nt')
 
-        return None
+        return self.input_params
     
     # def check_input: END
 
@@ -233,6 +240,187 @@ class DeepPrime:
         return None
     
     # def check_input: END
+
+
+class DeepPrimeBatch:
+    def __init__(self, data, pam:str = 'NGG',
+                 pbs_min:int = 7, pbs_max:int = 15,
+                 rtt_min:int = 0, rtt_max:int = 40, 
+                 spacer_len:int=20,
+                ):
+        """DeepPrime을 Batch Mode로 돌릴 수 있는 pipeline. 
+        FeatureExtraction을 CPU에서 multiprocessing을 전체적으로 하고, 
+        한번에 많은 양의 dataset을 DataLoader로 밀어넣어서 GPU 연산을 하도록 설계
+
+        Args:
+            sequence (str): Sequence to prime editing. Intended prime editing should marked with parenthesis.
+            name (str, optional): Sample ID for pegRNAs. Defaults to 'SampleName'
+            pam (str, optional): PAM sequence. Available PAMs are NGG, NGA, NAG, NRCH. Defaults to 'NGG'.
+            pbs_min (int, optional): Minimum length of PBS (1-17). Defaults to 7.
+            pbs_max (int, optional): Maximum length of PBS (1-17). Defaults to 15.
+            rtt_min (int, optional): Minimum length of RTT (0-40). Defaults to 0.
+            rtt_max (int, optional): Maximum length of RTT (0-40). Defaults to 40.
+        """        
+        
+        # input parameters
+        try:
+            self.df_input = pd.DataFrame(data)
+        except:
+            self.df_input = self.load_file_as_dataframe(data)
+
+        self.input_params = {
+            'nAltIndex' : 60,
+            'spacerlen' : spacer_len,
+            'pam'       : pam,
+            'pbs_min'   : pbs_min,
+            'pbs_max'   : pbs_max,
+            'rtt_min'   : rtt_min,
+            'rtt_max'   : rtt_max,
+            'wt_seq'    : None,
+            'ed_seq'    : None,
+            'edit_type' : None,
+            'edit_len'  : None,
+        }
+
+
+    def preprocess(self, num_cpus=1, memory=2) -> pd.DataFrame:
+
+        ray.init()
+
+       # 병렬 작업을 위한 Ray Actor 클래스 정의
+        @ray.remote(num_cpus=num_cpus, memory=memory*1024*1024*1024)
+        class DeepPrimeWorker:
+            def __init__(self, sequence:str, id:str, input_params:dict):
+
+                self.pegrna = DeepPrime(sequence, name=id)
+            
+            def get_feature(self):
+                return self.pegrna.features
+
+        # 데이터프레임에서 각 시퀀스를 병렬로 처리
+        self.workers = [DeepPrimeWorker.remote(
+            data['sequence'], data['id'], self.input_params
+            ) for _, data in self.df_input.iterrows()]
+        
+        # Ray 작업 실행 및 결과 수집
+        self.features = ray.get([worker.get_feature.remote() for worker in self.workers])
+
+    # def __init__: END
+
+
+    def predict(self, pe_system:str, cell_type:str = 'HEK293T', show_features:bool = False, gpu_id='0', report=False) -> pd.DataFrame:
+        """_summary_
+    
+        Args:
+            pe_system (str): Available PE systems are PE2, PE2max, PE4max, NRCH_PE2, NRCH_PE2max, NRCH_PE4max
+            cell_type (str, optional): Available Cell types are HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3. Defaults to 'HEK293T'.
+            show_features (bool, optional): _description_. Defaults to False.
+            report (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            pd.DataFrame: 각 pegRNA와 target쌍 마다의 DeepPrime prediction score를 계산한 결과를 DataFrame으로 반환.
+        """
+        
+        # Load models
+        model_info = LoadModel('DeepPrime', pe_system, cell_type)
+        model_dir  = model_info.model_dir
+
+        # Check pe_system is available for PAM
+        self.check_pe_type(pe_system)
+
+        # Data preprocessing for deep learning model
+        df_all = self.features.copy()
+
+        os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+        mean = pd.read_csv(f'{model_dir}/mean_231124.csv', header=None, index_col=0).squeeze()
+        std  = pd.read_csv(f'{model_dir}/std_231124.csv',  header=None, index_col=0).squeeze()
+
+        test_features = select_cols(df_all)
+
+        g_test = seq_concat(df_all)
+        x_test = (test_features - mean) / std
+
+        # VRAM 절약을 위해 데이터셋을 CPU에 남겨두고 Loading할 배치만 GPU로 이동
+        g_test_tensor = torch.tensor(g_test, dtype=torch.float32)  # CPU Tensor
+        x_test_tensor = torch.tensor(x_test.to_numpy(), dtype=torch.float32)  # CPU Tensor
+
+        # g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
+        # x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
+
+        # DataLoader 정의
+        batch_size = 4096
+        num_workers = 4 # could be modified; default: 0; dataloader에서 vram으로 올려주는 역할인데, worker 개수만큼 쓰레드를 만들어서 대기하고 있는 것
+
+        test_set = TensorDataset(g_test_tensor, x_test_tensor)
+        test_loader = DataLoader(
+            dataset=test_set,
+            batch_size=batch_size,
+            shuffle=False, # 학습 때에는 shuffle 하는 것이 좋지만, 실제 사용 할 때에는 순서대로 하기 위함
+            num_workers=num_workers,
+            pin_memory=True # for faster VRAM loading CPU 안에 있는 메모리 
+        )
+
+        models = [m_files for m_files in glob(f'{model_dir}/*.pt')]
+        
+        total_size = len(test_loader.dataset)  # 전체 데이터의 크기
+        all_preds = np.zeros((len(models), total_size, 1), dtype=np.float32)
+
+        for model_idx, m in enumerate(models):
+            model = GeneInteractionModel(hidden_size=128, num_layers=1).to(device)
+            model.load_state_dict(torch.load(m, map_location=device))
+            model = nn.DataParallel(model)  # DataParallel을 사용하여 여러 GPU에 모델 분산
+            model.eval()
+
+            current_idx = 0
+
+            with torch.no_grad():
+                for g, x in test_loader:
+                    
+                    # non_blocking: loading 순서에 영향 있는지?
+                    # async loading이 만약 충돌을 일으켜서 error가 나오면 끄는 것으로 하기
+                    g = g.permute((0, 3, 1, 2)).to(device, non_blocking=True)
+                    x = x.to(device, non_blocking=True)
+
+                    # 모델 예측 수행
+                    pred = model(g, x).detach().cpu().numpy()
+
+                    batch_size = pred.shape[0]
+                    all_preds[model_idx, current_idx:current_idx + batch_size] = pred
+                    current_idx += batch_size
+
+        # AVERAGE PREDICTIONS
+        preds = np.mean(all_preds, axis=0)
+        preds = np.exp(preds) - 1
+
+        df_all.insert(1, f'{pe_system}_score', preds)
+
+        if   show_features == False: return df_all.iloc[:, :11]
+        elif show_features == True : return df_all
+
+    # def predict: END
+
+    def load_file_as_dataframe(self, file_path):
+        # 파일 확장자 추출
+        file_extension = file_path.split('.')[-1].lower()
+        
+        # 확장자에 따라 파일 읽기
+        if file_extension == 'csv':
+            df = pd.read_csv(file_path)
+        elif file_extension == 'txt':
+            df = pd.read_csv(file_path, delimiter='\t')
+        elif file_extension == 'parquet':
+            df = pd.read_parquet(file_path)
+        elif file_extension == 'feather':
+            df = pd.read_feather(file_path)
+        else:
+            raise ValueError(f"Unsupported file format: {file_extension}")
+        
+        df.columns = ['id', 'sequence']
+        
+        return df
+
 
 
 class DeepPrimeGuideRNA:
@@ -497,55 +685,33 @@ def check_PAM_window(dict_sWinSize, sStrand, nIndexStart, nIndexEnd, sAltType, n
 # def END: check_PAM_window
 
 class PEFeatureExtraction:
-    def __init__(self, Ref_seq, ED_seq, edit_type, edit_len, spacer_len):
+    def __init__(self, input_params: dict):
         
         # configuration parameters
         # 이게 sRGN을 지정하는 단계까 .predict  부분이기 때문에, feature extraction 부분에서 spacer 길이를 조정할 수가 없음...!
         # pe_system을 지정하는 단계를 바꿔줘야 할 것 같음. 
-        self.spacer_len = spacer_len
+        self.spacer_len = input_params['spacerlen']
         
         # Initialized
-        self.get_input(Ref_seq, ED_seq, edit_type, edit_len)
+        self.get_input(input_params)
+        self.get_sAltNotation(input_params['nAltIndex'])
 
-        self.sGuideKey = ''
-        self.sStrand = ''
-        self.nEditIndex = 0
-        self.nPBSLen = 0
-        self.nRTTLen = 0
-        self.sPBSSeq = ''
-        self.sRTSeq = ''
-        self.sPegRNASeq = ''
-
-
-        self.list_sSeqs = []
-        self.fTm1 = 0.0
-        self.fTm2 = 0.0
-        self.fTm2new = 0.0
-        self.fTm3 = 0.0
-        self.fTm4 = 0.0
-        self.fTmD = 0.0
-        self.fMFE3 = 0.0
-        self.fMFE4 = 0.0
-
-        self.nGCcnt1 = 0
-        self.nGCcnt2 = 0
-        self.nGCcnt3 = 0
-        self.fGCcont1 = 0.0
-        self.fGCcont2 = 0.0
-        self.fGCcont3 = 0.0
-        
-        self.dict_sSeqs = {}
+        self.dict_sSeqs   = {}
         self.dict_sCombos = {}
         self.dict_sOutput = {}
-    
+
+        self.gc_cache   = {}
+        self.tm_cache   = {}
+        self.mfe_cache  = {}
+
     # def End: __init__
     
-    def get_input(self, wt_seq, ed_seq, edit_type, edit_len):
-        self.sWTSeq = wt_seq.upper()
-        self.sEditedSeq = ed_seq.upper()
-        self.sAltKey = edit_type + str(edit_len)
-        self.sAltType = edit_type
-        self.nAltLen = edit_len
+    def get_input(self, input_params: dict):
+        self.sWTSeq     = input_params['wt_seq'].upper()
+        self.sEditedSeq = input_params['ed_seq'].upper()
+        self.sAltType   = input_params['edit_type']
+        self.nAltLen    = input_params['edit_len']
+        self.sAltKey    = self.sAltType + str(self.nAltLen)
 
         if   self.sAltType.startswith('sub'): self.type_sub = 1; self.type_del = 0; self.type_ins = 0
         elif self.sAltType.startswith('del'): self.type_del = 1; self.type_sub = 0; self.type_ins = 0
@@ -568,15 +734,7 @@ class PEFeatureExtraction:
 
     # def END: get_sAltNotation
 
-    def get_all_RT_PBS(self, 
-                    nAltIndex,
-                    nMinPBS = 0,
-                    nMaxPBS = 17,
-                    nMaxRT = 40,
-                    nSetPBSLen = 0,
-                    nSetRTLen = 0,
-                    pam = 'NGG'
-                    ):
+    def get_all_RT_PBS(self, input_params:dict):
         """
         nMinPBS: If you set specific number, lower than MinPBS will be not generated. Default=0
         nMaxPBS: If you set specific number, higher than MinPBS will be not generated. Default=17
@@ -585,6 +743,14 @@ class PEFeatureExtraction:
         nSetRTLen = 0  # Fix RT  Len: Set if >0
         PAM: 4-nt sequence
         """
+
+        nAltIndex   = input_params['nAltIndex']
+        pam         = input_params['pam']
+        nMinPBS     = input_params['pbs_min']
+        nMaxPBS     = input_params['pbs_max']
+        nMaxRT      = input_params['rtt_max']
+        nSetPBSLen  = 0
+        nSetRTLen   = 0
 
         nMaxEditPosWin = nMaxRT + 3  # Distance between PAM and mutation
 
@@ -791,55 +957,57 @@ class PEFeatureExtraction:
                     ## for Tm2
                     sForTm2 = self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq)]
                     
-                    ## for Tm2new
-                    if self.sAltType.startswith('sub'):
-                        sForTm2new = self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq)]
-                    elif self.sAltType.startswith('ins'):
-                        sForTm2new = self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq) - self.nAltLen]
-                    else:  # del
-                        sForTm2new = self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq) + self.nAltLen]
-
                     ## for Tm3
                     if self.sAltType.startswith('sub'):
-                        sTm3antiSeq = reverse_complement(self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq)])
+                        sForTm3 = self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq)]
                     elif self.sAltType.startswith('ins'):
-                        sTm3antiSeq = reverse_complement(self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq) - self.nAltLen])
+                        sForTm3 = self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq) - self.nAltLen]
                     else:  # del
-                        sTm3antiSeq = reverse_complement(self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq) + self.nAltLen])                    
+                        sForTm3 = self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq) + self.nAltLen]
+
+                    ## for Tm4
+                    if self.sAltType.startswith('sub'):
+                        sTm4antiSeq = reverse_complement(self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq)])
+                    elif self.sAltType.startswith('ins'):
+                        sTm4antiSeq = reverse_complement(self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq) - self.nAltLen])
+                    else:  # del
+                        sTm4antiSeq = reverse_complement(self.sWTSeq[nNickIndex:nNickIndex + len(sRTSeq) + self.nAltLen])                    
 
                 else:
                     ## for Tm2
                     sForTm2 = reverse_complement(self.sWTSeq[nNickIndex - len(sRTSeq):nNickIndex])
 
-                    ## for Tm2new
-                    if self.sAltType.startswith('sub'):
-                        sForTm2new = reverse_complement(self.sWTSeq[nNickIndex - len(sRTSeq):nNickIndex])
-                    elif self.sAltType.startswith('ins'):
-                        sForTm2new = reverse_complement(self.sWTSeq[nNickIndex - len(sRTSeq) + self.nAltLen:nNickIndex])
-                    else:  # del
-                        sForTm2new = reverse_complement(self.sWTSeq[nNickIndex - len(sRTSeq) - self.nAltLen:nNickIndex])
-
                     ## for Tm3
                     if self.sAltType.startswith('sub'):
-                        sTm3antiSeq = self.sWTSeq[nNickIndex - len(sRTSeq):nNickIndex]
+                        sForTm3 = reverse_complement(self.sWTSeq[nNickIndex - len(sRTSeq):nNickIndex])
                     elif self.sAltType.startswith('ins'):
-                        sTm3antiSeq = self.sWTSeq[nNickIndex - len(sRTSeq) + self.nAltLen:nNickIndex]
+                        sForTm3 = reverse_complement(self.sWTSeq[nNickIndex - len(sRTSeq) + self.nAltLen:nNickIndex])
                     else:  # del
-                        sTm3antiSeq = self.sWTSeq[nNickIndex - len(sRTSeq) - self.nAltLen:nNickIndex]
+                        sForTm3 = reverse_complement(self.sWTSeq[nNickIndex - len(sRTSeq) - self.nAltLen:nNickIndex])
+
+                    ## for Tm4
+                    if self.sAltType.startswith('sub'):
+                        sTm4antiSeq = self.sWTSeq[nNickIndex - len(sRTSeq):nNickIndex]
+                    elif self.sAltType.startswith('ins'):
+                        sTm4antiSeq = self.sWTSeq[nNickIndex - len(sRTSeq) + self.nAltLen:nNickIndex]
+                    else:  # del
+                        sTm4antiSeq = self.sWTSeq[nNickIndex - len(sRTSeq) - self.nAltLen:nNickIndex]
 
                 # if END
 
-                sForTm3 = [sRTSeq, sTm3antiSeq]
+                sForTm4 = [sRTSeq, sTm4antiSeq]
 
-                ## for Tm4
-                # sForTm4 = [reverse_complement(sRTSeq.replace('A', 'U')), sRTSeq] # original code
-                sForTm4 = reverse_complement_rna(sRTSeq)
+                ## for Tm5
+                # sForTm5 = [reverse_complement(sRTSeq.replace('A', 'U')), sRTSeq] # original code
+                sForTm5 = reverse_complement_rna(sRTSeq)
 
-                self.dict_sCombos[sPAMKey][sSeqKey] = {'Tm1_PBS': sForTm1,
-                                                        'Tm2_RTT_cTarget_sameLength': sForTm2,
-                                                        'Tm3_RTT_cTarget_replaced': sForTm2new,
-                                                        'Tm4_cDNA_PAM-oppositeTarget': sForTm3,
-                                                        'Tm5_RTT_cDNA': sForTm4}
+                self.dict_sCombos[sPAMKey][sSeqKey] = {
+                    'Tm1_PBS': sForTm1,
+                    'Tm2_RTT_cTarget_sameLength': sForTm2,
+                    'Tm3_RTT_cTarget_replaced': sForTm3,
+                    'Tm4_cDNA_PAM-oppositeTarget': sForTm4,
+                    'Tm5_RTT_cDNA': sForTm5
+                }
             # loop END: sSeqKey
         # loop END: sPAMKey
     # def END: determine_seqs
@@ -856,65 +1024,66 @@ class PEFeatureExtraction:
             if sPAMKey not in self.dict_sOutput:
                 self.dict_sOutput[sPAMKey] = {}
 
+            sGuideGN19 = 'G' + sGuideSeq[1:-3] 
+
             for sSeqKey in self.dict_sCombos[sPAMKey]:
 
                 if sSeqKey not in self.dict_sOutput[sPAMKey]:
-                    
                     self.dict_sOutput[sPAMKey][sSeqKey] = {sKey: '' for sKey in list_sOutputKeys}
 
                 self.determine_Tm(sPAMKey, sSeqKey)
                 self.determine_GC(sPAMKey, sSeqKey)
-                self.determine_MFE(sPAMKey, sSeqKey, sGuideSeq)
+                self.determine_MFE(sPAMKey, sSeqKey, sGuideGN19)
+
             # loop END: sSeqKey
+
         # loop END: sPAMKey
 
 
     def determine_Tm(self, sPAMKey, sSeqKey):
-        sForTm1 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm1_PBS']
-        sForTm2 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm2_RTT_cTarget_sameLength']
-        sForTm2new = self.dict_sCombos[sPAMKey][sSeqKey]['Tm3_RTT_cTarget_replaced']
-        sForTm3 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm4_cDNA_PAM-oppositeTarget']
-        sForTm4 = self.dict_sCombos[sPAMKey][sSeqKey]['Tm5_RTT_cDNA']
 
+        sequences = [
+            self.dict_sCombos[sPAMKey][sSeqKey]['Tm1_PBS'],
+            self.dict_sCombos[sPAMKey][sSeqKey]['Tm2_RTT_cTarget_sameLength'],
+            self.dict_sCombos[sPAMKey][sSeqKey]['Tm3_RTT_cTarget_replaced'],
+            self.dict_sCombos[sPAMKey][sSeqKey]['Tm4_cDNA_PAM-oppositeTarget'],
+            self.dict_sCombos[sPAMKey][sSeqKey]['Tm5_RTT_cDNA'],
+        ]
+        
         ## Tm1 DNA/RNA mm1 ##
-        fTm1 = mt.Tm_NN(seq=Seq(sForTm1), nn_table=mt.R_DNA_NN1)
+        fTm1 = mt.Tm_NN(seq=Seq(sequences[0]), nn_table=mt.R_DNA_NN1)
 
         ## Tm2 DNA/DNA mm0 ##
-        fTm2 = mt.Tm_NN(seq=Seq(sForTm2), nn_table=mt.DNA_NN3)
+        fTm2 = mt.Tm_NN(seq=Seq(sequences[1]), nn_table=mt.DNA_NN3)
 
-        ## Tm2new DNA/DNA mm0 ##
-        fTm2new = mt.Tm_NN(seq=Seq(sForTm2new), nn_table=mt.DNA_NN3)
+        ## Tm3 DNA/DNA mm0 ##
+        fTm3 = mt.Tm_NN(seq=Seq(sequences[2]), nn_table=mt.DNA_NN3)
 
-        ## Tm3 DNA/DNA mm1 ##
-        if not sForTm3:
-            fTm3 = 0
-            fTm5 = 0
+        ## Tm4 DNA/DNA mm1 ##
+        if not sequences[3]: fTm4 = 0
 
         else:
-            list_fTm3 = []
-            for sSeq1, sSeq2 in zip(sForTm3[0], sForTm3[1]):
-                try:
-                    fTm3 = mt.Tm_NN(seq=sSeq1, c_seq=sSeq2, nn_table=mt.DNA_NN3)
-                except ValueError:
-                    continue
-
-                list_fTm3.append(fTm3)
+            for sSeq1, sSeq2 in zip(sequences[3][0], sequences[3][1]):
+                try: fTm4 = mt.Tm_NN(seq=sSeq1, c_seq=sSeq2, nn_table=mt.DNA_NN3)
+                except ValueError: continue
             # loop END: sSeq1, sSeq2
-
         # if END:
 
-        # Tm4 - revcom(AAGTcGATCC(RNA version)) + AAGTcGATCC
-        fTm4 = mt.Tm_NN(seq=Seq(sForTm4), nn_table=mt.R_DNA_NN1)
+        # Tm5 - revcom(AAGTcGATCC(RNA version)) + AAGTcGATCC
+        fTm5 = mt.Tm_NN(seq=Seq(sequences[4]), nn_table=mt.R_DNA_NN1)
 
-        # Tm5 - Tm3 - Tm2
-        fTm5 = fTm3 - fTm2
+        # deltaTm (Tm3 - Tm2)
+        delta_tm = fTm3 - fTm2
 
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm1_PBS'] = fTm1
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm2_RTT_cTarget_sameLength'] = fTm2
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm3_RTT_cTarget_replaced'] = fTm2new
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm4_cDNA_PAM-oppositeTarget'] = fTm3
-        self.dict_sOutput[sPAMKey][sSeqKey]['Tm5_RTT_cDNA'] = fTm4
-        self.dict_sOutput[sPAMKey][sSeqKey]['deltaTm_Tm4-Tm2'] = fTm5
+        # 결과 저장
+        self.dict_sOutput[sPAMKey][sSeqKey].update({
+            'Tm1_PBS'                    : fTm1,
+            'Tm2_RTT_cTarget_sameLength' : fTm2,
+            'Tm3_RTT_cTarget_replaced'   : fTm3,
+            'Tm4_cDNA_PAM-oppositeTarget': fTm4,
+            'Tm5_RTT_cDNA'               : fTm5,
+            'deltaTm_Tm4-Tm2'            : delta_tm,
+        })
 
     # def END: determine_Tm
 
@@ -922,41 +1091,47 @@ class PEFeatureExtraction:
     def determine_GC(self, sPAMKey, sSeqKey):
         sRTSeqAlt, sPBSSeq = sSeqKey.split(',')
 
-        self.nGCcnt1 = sPBSSeq.count('G') + sPBSSeq.count('C')
-        self.nGCcnt2 = sRTSeqAlt.count('G') + sRTSeqAlt.count('C')
-        self.nGCcnt3 = (sPBSSeq + sRTSeqAlt).count('G') + (sPBSSeq + sRTSeqAlt).count('C')
-        self.fGCcont1 = 100 * gc(sPBSSeq)
-        self.fGCcont2 = 100 * gc(sRTSeqAlt)
-        self.fGCcont3 = 100 * gc(sPBSSeq + sRTSeqAlt)
-        self.dict_sOutput[sPAMKey][sSeqKey]['GC_count_PBS'] = self.nGCcnt1
-        self.dict_sOutput[sPAMKey][sSeqKey]['GC_count_RTT'] = self.nGCcnt2
-        self.dict_sOutput[sPAMKey][sSeqKey]['GC_count_RT-PBS'] = self.nGCcnt3
-        self.dict_sOutput[sPAMKey][sSeqKey]['GC_contents_PBS'] = self.fGCcont1
-        self.dict_sOutput[sPAMKey][sSeqKey]['GC_contents_RTT'] = self.fGCcont2
-        self.dict_sOutput[sPAMKey][sSeqKey]['GC_contents_RT-PBS'] = self.fGCcont3
-
+        self.dict_sOutput[sPAMKey][sSeqKey].update({
+            'GC_count_PBS'      : sPBSSeq.count('G') + sPBSSeq.count('C'),
+            'GC_count_RTT'      : sRTSeqAlt.count('G') + sRTSeqAlt.count('C'),
+            'GC_count_RT-PBS'   : (sPBSSeq + sRTSeqAlt).count('G') + (sPBSSeq + sRTSeqAlt).count('C'),
+            'GC_contents_PBS'   : 100 * gc(sPBSSeq),
+            'GC_contents_RTT'   : 100 * gc(sRTSeqAlt),
+            'GC_contents_RT-PBS': 100 * gc(sPBSSeq + sRTSeqAlt)
+        })
 
     # def END: determine_GC
 
-    def determine_MFE(self, sPAMKey, sSeqKey, sGuideSeqExt):
+    def determine_MFE(self, sPAMKey, sSeqKey, sGuideGN19):
 
         sRTSeq, sPBSSeq = sSeqKey.split(',')
 
-        ## Set GuideRNA seq ##
-        sGuideSeq = 'G' + sGuideSeqExt[1:-3] ## GN19 guide seq
+        sequences = [
+            reverse_complement(sPBSSeq + sRTSeq) + 'TTTTTT', # RT + PBS + PolyT
+            sGuideGN19                                       # GN19 guide seq
+        ]
 
-        # MFE_3 - RT + PBS + PolyT
-        sInputSeq = reverse_complement(sPBSSeq + sRTSeq) + 'TTTTTT'
-        sDBSeq, fMFE3 = fold_compound(sInputSeq).mfe()
+        # MFE 계산
+        mfe_values = [self.calculate_MFE(seq) for seq in sequences]
 
-        # MFE_4 - spacer only
-        sInputSeq = sGuideSeq
-        sDBSeq, fMFE4 = fold_compound(sInputSeq).mfe()
-
-        self.dict_sOutput[sPAMKey][sSeqKey]['MFE_RT-PBS-polyT'] = round(fMFE3, 1)
-        self.dict_sOutput[sPAMKey][sSeqKey]['MFE_Spacer'] = round(fMFE4, 1)
+        # 결과 저장
+        self.dict_sOutput[sPAMKey][sSeqKey].update({
+            'MFE_RT-PBS-polyT': mfe_values[0],
+            'MFE_Spacer'      : mfe_values[1],
+        })
 
     # def END: determine_MFE
+
+    def calculate_MFE(self, sequence):
+        # 시퀀스가 캐시에 있는지 확인
+        if sequence in self.mfe_cache:
+            return self.mfe_cache[sequence]
+
+        # 시퀀스가 캐시에 없을 경우 계산
+        mfe_value = round(fold_compound(sequence).mfe()[1], 1)
+        self.mfe_cache[sequence] = mfe_value  # 계산된 값을 캐시에 저장
+        return mfe_value
+    
 
     def make_output_df(self):
 
@@ -1234,7 +1409,8 @@ class DeepPrimeOff:
     def predict(self, show_features:bool=False) -> pd.DataFrame:
 
         os.environ['CUDA_VISIBLE_DEVICES']='0'
-        df_all = self.features.copy()
+        # df_all = self.features.copy()
+        df_all = self.features
 
         data = df_all
         chunk_size = 10000
@@ -1565,13 +1741,6 @@ class DeepPrimeOff:
             try:
                 df_feat_temp = feat_group.get_group(spacer_on).copy()
                 len_feat = len(df_feat_temp)
-
-                # df_feat_temp['Location']    = [location   for _ in range(len_feat)]
-                # df_feat_temp['Position']    = [position   for _ in range(len_feat)]
-                # df_feat_temp['Off-target']  = [off_target for _ in range(len_feat)]
-                # df_feat_temp['Off-context'] = [off74seq   for _ in range(len_feat)]
-                # df_feat_temp['Strand']      = [strand     for _ in range(len_feat)]
-                # df_feat_temp['MM']          = [n_mismatch for _ in range(len_feat)]
 
                 df_feat_temp.insert(10, f'MM_num',      [n_mismatch for _ in range(len_feat)])
                 df_feat_temp.insert(10, f'Strand',      [strand     for _ in range(len_feat)])
