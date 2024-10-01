@@ -68,8 +68,8 @@ class DeepPrime:
         }
 
         # Check input parameters
-        dp_input = DeepPrimeInputProcessor(self.input_params)
-        self.input_params = dp_input.check_input()
+        self.dp_input = DeepPrimeInputProcessor(self.input_params)
+        self.input_params = self.dp_input.check_input()
 
         ## DeepPrime Feature Extraction 
         cFeat = PEFeatureExtraction(self.input_params)
@@ -115,7 +115,7 @@ class DeepPrime:
         model_dir  = model_info.model_dir
 
         # Check pe_system is available for PAM
-        self.check_pe_type(pe_system)
+        self.dp_input.check_pe_type(pe_system)
 
         # Data preprocessing for deep learning model
         df_all = self.features.copy()
@@ -268,6 +268,7 @@ class DeepPrimeBatch:
         except:
             self.df_input = self.load_file_as_dataframe(data)
 
+
         self.input_params = {
             'nAltIndex' : 60,
             'spacerlen' : spacer_len,
@@ -281,6 +282,7 @@ class DeepPrimeBatch:
             'edit_type' : None,
             'edit_len'  : None,
         }
+
 
 
     def preprocess(self, num_cpus=1, memory=2) -> pd.DataFrame:
@@ -321,12 +323,13 @@ class DeepPrimeBatch:
             pd.DataFrame: 각 pegRNA와 target쌍 마다의 DeepPrime prediction score를 계산한 결과를 DataFrame으로 반환.
         """
         
+
         # Load models
         model_info = LoadModel('DeepPrime', pe_system, cell_type)
         model_dir  = model_info.model_dir
 
         # Check pe_system is available for PAM
-        self.check_pe_type(pe_system)
+        # 이 부분은 구현해야 함. 
 
         # Data preprocessing for deep learning model
         df_all = self.features.copy()
