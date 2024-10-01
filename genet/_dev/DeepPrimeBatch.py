@@ -2,10 +2,10 @@
 from genet.predict.PredUtils import *
 from genet.predict.Nuclease import SpCas9
 from genet.models import LoadModel
-from genet.database import GetGenome, GetChromosome
 
 # python standard packages
 import os, sys, regex, gzip
+import ray
 import numpy as np
 import pandas as pd
 from glob import glob
@@ -243,174 +243,100 @@ class DeepPrimeInputProcessor:
     # def check_input: END
 
 
-class DeepPrimeGuideRNA:
-
-    def __init__(self, sID:str, target:str, pbs:str, rtt:str, 
-                 edit_len:int, edit_pos:int, edit_type:str, 
-                 spacer_len:int=20 
-                 ):
-        """A pipeline used when running DeepPrime on a pre-designed pegRNA.
+class DeepPrimeBatch:
+    def __init__(self, data, pam:str = 'NGG',
+                 pbs_min:int = 7, pbs_max:int = 15,
+                 rtt_min:int = 0, rtt_max:int = 40, 
+                 spacer_len:int=20,
+                ):
+        """DeepPrime을 Batch Mode로 돌릴 수 있는 pipeline. 
+        FeatureExtraction을 CPU에서 multiprocessing을 전체적으로 하고, 
+        한번에 많은 양의 dataset을 DataLoader로 밀어넣어서 GPU 연산을 하도록 설계
 
         Args:
-            sID (str): ID of the pegRNA.
-            target (str): Target sequence, fixed length of 74nt.
-            pbs (str): PBS sequence.
-            rtt (str): RTT sequence.
-            edit_len (int): Length of prime editing. Available edit length range: 1-3nt.
-            edit_pos (int): Position of prime editing. Available edit position range: 1-40nt.
-            edit_type (str): Type of prime editing. Available edit style: sub, ins, del.
-
-        Raises:
-            ValueError: Raised if the target sequence length is not 74nt.
-            ValueError: Raised if the edit length is not 1, 2, or 3.
-            ValueError: Raised if the edit type is not one of sub, ins, del.
-            
-        ### Examples:
-        ``` python
-        from genet.predict import DeepPrimeGuideRNA
-
-        target    = 'ATAAAAGACAACACCCTTGCCTTGTGGAGTTTTCAAAGCTCCCAGAAACTGAGAAGAACTATAACCTGCAAATG'
-        pbs       = 'GGCAAGGGTGT'
-        rtt       = 'CGTCTCAGTTTCTGGGAGCTTTGAAAACTCCACAA'
-        edit_len  = 1
-        edit_pos  = 34
-        edit_type = 'sub'
-
-        pegrna = DeepPrimeGuideRNA('pegRNA_test', target=target, pbs=pbs, rtt=rtt,
-                                edit_len=edit_len, edit_pos=edit_pos, edit_type=edit_type)
-
-        pe2max_score = pegrna.predict('PE2max')
-        ```
+            sequence (str): Sequence to prime editing. Intended prime editing should marked with parenthesis.
+            name (str, optional): Sample ID for pegRNAs. Defaults to 'SampleName'
+            pam (str, optional): PAM sequence. Available PAMs are NGG, NGA, NAG, NRCH. Defaults to 'NGG'.
+            pbs_min (int, optional): Minimum length of PBS (1-17). Defaults to 7.
+            pbs_max (int, optional): Maximum length of PBS (1-17). Defaults to 15.
+            rtt_min (int, optional): Minimum length of RTT (0-40). Defaults to 0.
+            rtt_max (int, optional): Maximum length of RTT (0-40). Defaults to 40.
         """        
-
-        # PBS와 RTT는 target 기준으로 reverse complementary 방향으로 있어야 함.
-        # PBS와 RTT를 DNA/RNA 중 어떤 것으로 input을 받아도, 전부 DNA로 변환해주기.
-
-        target = target.upper()
-        pbs    = back_transcribe(pbs).upper()
-        rtt    = back_transcribe(rtt).upper()
-
-        if len(target) != 74: raise ValueError('Please check your input: target. The length of target should be 74nt')
-        if reverse_complement(pbs) != target[21-len(pbs):21]: raise ValueError('Please check your input: target, pbs sequence and position.')
-        if edit_len not in [1, 2, 3]: raise ValueError('Please check your input: edit_len. The length of edit should be 1, 2, or 3')
-
-        self.spacer = target[24-spacer_len:24]
-        self.rtpbs  = rtt + pbs
-
-        # Check edit_type input and determine type dependent features
-        if   edit_type == 'sub': type_sub=1; type_ins=0; type_del=0; rha_len=len(rtt)-edit_pos-edit_len+1
-        elif edit_type == 'ins': type_sub=0; type_ins=1; type_del=0; rha_len=len(rtt)-edit_pos-edit_len+1
-        elif edit_type == 'del': type_sub=0; type_ins=0; type_del=1; rha_len=len(rtt)-edit_pos+1
-        else: raise ValueError('Please check your input: edit_type. Available edit style: sub, ins, del')
-
-
-        # pegRNA Tm feature
-        seq_Tm1    = transcribe(pbs)
-        seq_Tm2    = target[21:21+len(rtt)]
-
-        if edit_type == 'sub':
-            seq_Tm3 = target[21:21 + len(rtt)]
-            sTm4antiSeq = reverse_complement(target[21:21 + len(rtt)])
-        elif edit_type == 'ins':
-            seq_Tm3 = target[21:21 + len(rtt) - edit_len]
-            sTm4antiSeq = reverse_complement(target[21:21 + len(rtt) - edit_len])
-        elif edit_type == 'del':
-            seq_Tm3 = target[21:21 + len(rtt) + edit_len]
-            sTm4antiSeq = reverse_complement(target[21:21 + len(rtt) + edit_len])                    
         
-        seq_Tm4 = [back_transcribe(reverse_complement(rtt)), sTm4antiSeq] # 원래 코드에는 [sRTSeq, sTm3antiSeq]
-
-        seq_Tm5 = transcribe(rtt) # 원래 코드: reverse_complement(sRTSeq.replace('A', 'U'))
-
-        fTm1 = mt.Tm_NN(seq=Seq(seq_Tm1), nn_table=mt.R_DNA_NN1)
-        fTm2 = mt.Tm_NN(seq=Seq(seq_Tm2), nn_table=mt.DNA_NN3)
-        fTm3 = mt.Tm_NN(seq=Seq(seq_Tm3), nn_table=mt.DNA_NN3)
-        
-
-        # 이 부분이 사실 의도된 feature는 아니긴 한데... 이미 이렇게 모델이 만들어졌음...
-        for sSeq1, sSeq2 in zip(seq_Tm4[0], seq_Tm4[1]):
-            try:
-                fTm4 = mt.Tm_NN(seq=sSeq1, c_seq=sSeq2, nn_table=mt.DNA_NN3)
-            except ValueError:
-                fTm4 = 0
-
-        ######### 이 부분이 문제 ###################################################
-        # 이미 DeepPrime이 이 형태로 학습되었으니... 그대로 사용.
-        
-        fTm5 = mt.Tm_NN(seq=Seq(seq_Tm5), nn_table=mt.R_DNA_NN1)
-
-        ############################################################################
-
-        # MFE_3 - RT + PBS + PolyT
-        seq_MFE3 = self.rtpbs + 'TTTTTT'
-        sDBSeq, fMFE3 = fold_compound(seq_MFE3).mfe()
-
-        # MFE_4 - spacer only
-        seq_MFE4 = 'G' + self.spacer[1:]
-        sDBSeq, fMFE4 = fold_compound(seq_MFE4).mfe()
+        # input parameters
+        try:
+            self.df_input = pd.DataFrame(data)
+        except:
+            self.df_input = self.load_file_as_dataframe(data)
 
 
-        self.dict_feat = {
-            # Enter your sample's ID
-            'ID'                         : [sID],
-
-            # pegRNA sequence information
-            'Spacer'                     : [self.spacer],
-            'RT-PBS'                     : [self.rtpbs],
-            
-            # pegRNA length feature
-            'PBS_len'                    : [len(pbs)],
-            'RTT_len'                    : [len(rtt)],
-            'RT-PBS_len'                 : [len(self.rtpbs)],
-            'Edit_pos'                   : [edit_pos],
-            'Edit_len'                   : [edit_len],
-            'RHA_len'                    : [rha_len],
-
-            # Target sequence information
-            'Target'                     : [target],
-            'Masked_EditSeq'             : ['x'*(21-len(pbs)) + reverse_complement(self.rtpbs) + 'x'*(74-21-len(rtt))],
-
-            # Edit type information
-            'type_sub'                   : [type_sub],
-            'type_ins'                   : [type_ins],
-            'type_del'                   : [type_del],
-
-            # pegRNA Tm feature
-            'Tm1_PBS'                    : [fTm1],
-            'Tm2_RTT_cTarget_sameLength' : [fTm2],
-            'Tm3_RTT_cTarget_replaced'   : [fTm3], 
-            'Tm4_cDNA_PAM-oppositeTarget': [fTm4],
-            'Tm5_RTT_cDNA'               : [fTm5],
-            'deltaTm_Tm4-Tm2'            : [fTm4 - fTm2],
-
-            # pegRNA GC feature
-            'GC_count_PBS'               : [pbs.count('G') + pbs.count('C')],
-            'GC_count_RTT'               : [rtt.count('G') + rtt.count('C')],
-            'GC_count_RT-PBS'            : [self.rtpbs.count('G') + self.rtpbs.count('C')],
-            'GC_contents_PBS'            : [100 * gc(pbs)],
-            'GC_contents_RTT'            : [100 * gc(rtt)],
-            'GC_contents_RT-PBS'         : [100 * gc(self.rtpbs)],
-
-            # pegRNA MFE feature
-            'MFE_RT-PBS-polyT'           : [round(fMFE3, 1)],
-            'MFE_Spacer'                 : [round(fMFE4, 1)],
-
-            # DeepSpCas9 score
-            'DeepSpCas9_score'           : [SpCas9().predict([target[:30]]).SpCas9.loc[0]],
+        self.input_params = {
+            'nAltIndex' : 60,
+            'spacerlen' : spacer_len,
+            'pam'       : pam,
+            'pbs_min'   : pbs_min,
+            'pbs_max'   : pbs_max,
+            'rtt_min'   : rtt_min,
+            'rtt_max'   : rtt_max,
+            'wt_seq'    : None,
+            'ed_seq'    : None,
+            'edit_type' : None,
+            'edit_len'  : None,
         }
 
-        self.features = pd.DataFrame.from_dict(data=self.dict_feat, orient='columns')
 
 
-    def predict(self, pe_system:str, cell_type:str = 'HEK293T', show_features:bool = False, report=False):
+    def preprocess(self, num_cpus=1, memory=2) -> pd.DataFrame:
 
-        df_all = self.features.copy()
+        ray.init()
 
-        os.environ['CUDA_VISIBLE_DEVICES']='0'
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+       # 병렬 작업을 위한 Ray Actor 클래스 정의
+        @ray.remote(num_cpus=num_cpus, memory=memory*1024*1024*1024)
+        class DeepPrimeWorker:
+            def __init__(self, sequence:str, id:str, input_params:dict):
+
+                self.pegrna = DeepPrime(sequence, name=id)
+            
+            def get_feature(self):
+                return self.pegrna.features
+
+        # 데이터프레임에서 각 시퀀스를 병렬로 처리
+        self.workers = [DeepPrimeWorker.remote(
+            data['sequence'], data['id'], self.input_params
+            ) for _, data in self.df_input.iterrows()]
         
+        # Ray 작업 실행 및 결과 수집
+        self.features = ray.get([worker.get_feature.remote() for worker in self.workers])
+
+    # def __init__: END
+
+
+    def predict(self, pe_system:str, cell_type:str = 'HEK293T', show_features:bool = False, gpu_id='0', report=False) -> pd.DataFrame:
+        """_summary_
+    
+        Args:
+            pe_system (str): Available PE systems are PE2, PE2max, PE4max, NRCH_PE2, NRCH_PE2max, NRCH_PE4max
+            cell_type (str, optional): Available Cell types are HEK293T, HCT116, MDA-MB-231, HeLa, DLD1, A549, NIH3T3. Defaults to 'HEK293T'.
+            show_features (bool, optional): _description_. Defaults to False.
+            report (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            pd.DataFrame: 각 pegRNA와 target쌍 마다의 DeepPrime prediction score를 계산한 결과를 DataFrame으로 반환.
+        """
+        
+
+        # Load models
         model_info = LoadModel('DeepPrime', pe_system, cell_type)
         model_dir  = model_info.model_dir
+
+        # Check pe_system is available for PAM
+        # 이 부분은 구현해야 함. 
+
+        # Data preprocessing for deep learning model
+        df_all = self.features.copy()
+
+        os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
         mean = pd.read_csv(f'{model_dir}/mean_231124.csv', header=None, index_col=0).squeeze()
         std  = pd.read_csv(f'{model_dir}/std_231124.csv',  header=None, index_col=0).squeeze()
@@ -420,34 +346,84 @@ class DeepPrimeGuideRNA:
         g_test = seq_concat(df_all)
         x_test = (test_features - mean) / std
 
-        g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
-        x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
+        # VRAM 절약을 위해 데이터셋을 CPU에 남겨두고 Loading할 배치만 GPU로 이동
+        g_test_tensor = torch.tensor(g_test, dtype=torch.float32)  # CPU Tensor
+        x_test_tensor = torch.tensor(x_test.to_numpy(), dtype=torch.float32)  # CPU Tensor
+
+        # g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
+        # x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
+
+        # DataLoader 정의
+        batch_size = 4096
+        num_workers = 4 # could be modified; default: 0; dataloader에서 vram으로 올려주는 역할인데, worker 개수만큼 쓰레드를 만들어서 대기하고 있는 것
+
+        test_set = TensorDataset(g_test_tensor, x_test_tensor)
+        test_loader = DataLoader(
+            dataset=test_set,
+            batch_size=batch_size,
+            shuffle=False, # 학습 때에는 shuffle 하는 것이 좋지만, 실제 사용 할 때에는 순서대로 하기 위함
+            num_workers=num_workers,
+            pin_memory=True # for faster VRAM loading CPU 안에 있는 메모리 
+        )
 
         models = [m_files for m_files in glob(f'{model_dir}/*.pt')]
-        preds  = []
+        
+        total_size = len(test_loader.dataset)  # 전체 데이터의 크기
+        all_preds = np.zeros((len(models), total_size, 1), dtype=np.float32)
 
-        for m in models:
+        for model_idx, m in enumerate(models):
             model = GeneInteractionModel(hidden_size=128, num_layers=1).to(device)
             model.load_state_dict(torch.load(m, map_location=device))
+            model = nn.DataParallel(model)  # DataParallel을 사용하여 여러 GPU에 모델 분산
             model.eval()
+
+            current_idx = 0
+
             with torch.no_grad():
-                g, x = g_test, x_test
-                g = g.permute((0, 3, 1, 2))
-                pred = model(g, x).detach().cpu().numpy()
-            preds.append(pred)
-        
+                for g, x in test_loader:
+                    
+                    # non_blocking: loading 순서에 영향 있는지?
+                    # async loading이 만약 충돌을 일으켜서 error가 나오면 끄는 것으로 하기
+                    g = g.permute((0, 3, 1, 2)).to(device, non_blocking=True)
+                    x = x.to(device, non_blocking=True)
+
+                    # 모델 예측 수행
+                    pred = model(g, x).detach().cpu().numpy()
+
+                    batch_size = pred.shape[0]
+                    all_preds[model_idx, current_idx:current_idx + batch_size] = pred
+                    current_idx += batch_size
+
         # AVERAGE PREDICTIONS
-        preds = np.squeeze(np.array(preds))
-        preds = np.mean(preds, axis=0)
+        preds = np.mean(all_preds, axis=0)
         preds = np.exp(preds) - 1
 
         df_all.insert(1, f'{pe_system}_score', preds)
 
-        self.data = df_all
+        if   show_features == False: return df_all.iloc[:, :11]
+        elif show_features == True : return df_all
 
-        return preds
-    
     # def predict: END
+
+    def load_file_as_dataframe(self, file_path):
+        # 파일 확장자 추출
+        file_extension = file_path.split('.')[-1].lower()
+        
+        # 확장자에 따라 파일 읽기
+        if file_extension == 'csv':
+            df = pd.read_csv(file_path)
+        elif file_extension == 'txt':
+            df = pd.read_csv(file_path, delimiter='\t')
+        elif file_extension == 'parquet':
+            df = pd.read_parquet(file_path)
+        elif file_extension == 'feather':
+            df = pd.read_feather(file_path)
+        else:
+            raise ValueError(f"Unsupported file format: {file_extension}")
+        
+        df.columns = ['id', 'sequence']
+        
+        return df
 
 
 
@@ -1121,471 +1097,4 @@ def select_cols(data):
                             'MFE_RT-PBS-polyT', 'MFE_Spacer', 'DeepSpCas9_score']]
 
     return features
-
-
-
-class DeepPrimeOff:
-    def __init__(self):
-        '''Pipeline for creating input for the DeepPrime-Off model and providing the model's output.
-        
-        ## How to use
-        #### Step 1. Run Cas-OFFinder with the spacer sequence of pegRNAs
-
-        #### Step 2. Setup the model
-        ```python
-        from genet.predict import DeepPrimeOff
-
-        deep_off = DeepPrimeOff()
-        deep_off.setup('./cas_offinder_results/cas')
-
-        ```
-        - cas_offinder_results: Path of text file with cas_offinder results.
-        - fasta_path: Path of directory containing fasta files.
-        - seq_length: Length of sequence context.
-
-        #### Step 3. Predict the score
-
-        ```python
-        
-        df_PE_off = deep_off.predict() # type: pd.DataFrame
-
-        ```
-        
-        '''
-
-        # Check Cas-OFFinder installed before importing this module
-        # 만약 Cas-OFFinder가 아직 설치되어 있지 않다면, 현재 OS를 확인 후 적절한 binary file을 다운로드 한다. 
-
-
-        
-
-
-
-
-        pass
-    
-    # def END: __init__
-
-    
-    def setup(self,
-              features:pd.DataFrame,
-              cas_offinder_result:str,
-              ref_genome:str='Homo sapiens', 
-              download_fasta:bool=False,
-              custom_genome:str=None, 
-              ) -> pd.DataFrame:
-        
-        """일단 지금은 Cas-OFFinder output을 넣어주는 형태이지만, 
-        나중에는 DeepPrime_record를 인식해서 spacer sequence를 뽑아내고, 자동으로 Cas-OFFinder가 돌아가게 만들기
-
-        From cas_offinder_results, get on_target_scaper, Location, 
-        Position, Off-target sequence, Strand, and number of mismatch (MM) information.
-
-        Then, find and open the fasta file which matches the chromosome number of each sequence in cas_offinder_result.
-        After then, find the sequence context starting from 'Position' to seq_length (74nt by default).
-        This sequence contexts are returned as a DataFrame.
-
-        Args:
-            features (pd.DataFrame): _description_
-            cas_offinder_result (str): Path of text file with cas_offinder results.
-            ref_genome (str, optional): _description_. Defaults to 'Homo sapiens'.
-            download_fasta (bool, optional): _description_. Defaults to False.
-            custom_genome (str, optional): _description_. Defaults to None.
-        
-        Returns:
-            pd.DataFrame: Input features for predicting off-target scores using the DeepPrime-Off model.
-        """
-
-        # Step1: Check if all required columns are present in the DeepPrime features DataFrame.
-        self.features = self._check_record(features=features)
-
-        # Step2: Check if there are FASTA files at the specified FASTA file path. 
-        # If a path is specified for the custom genome (!= None), search for FASTA files at that path. 
-        # self.fasta is the path (str) where FASTA files are stored.
-
-        if custom_genome==None: 
-            self.fasta = self._check_fasta(ref_genome=ref_genome, download_fasta=download_fasta)
-        else:
-            self.fasta = custom_genome
-
-        # Step3: (TODO) Retrieve spacer sequences from self.features and the FASTA file path received from ref_genome.
-        # After then, execute Cas-OFFinder.
-
-
-        # Step4: Convert Cas-OFFinder result file to DataFrame format
-        self.df_offinder = self._offinder_to_df(cas_offinder_result)
-
-        # Step5: Retrieve the 74nt target context from the FASTA file.
-        self.df_offinder = self._get_target_seq(df_offinder=self.df_offinder, ref_path=self.fasta)
-
-        # Step6: Make the DeepPrime features DataFrame with off-target candidates for each pegRNA by combining them.
-        self.features = self._match_target_seq(features=self.features, df_offinder=self.df_offinder)
-
-        return self.features
-
-    # def END: setup
-
-
-    def predict(self, show_features:bool=False) -> pd.DataFrame:
-
-        os.environ['CUDA_VISIBLE_DEVICES']='0'
-        # df_all = self.features.copy()
-        df_all = self.features
-
-        data = df_all
-        chunk_size = 10000
-
-        chunks = [group for _, group in data.groupby(np.arange(len(data)) // chunk_size)]
-        
-        # make progress bar
-        pbar = tqdm(chunks,
-                    desc='DeepPrime-Off prediction',
-                    total=len(chunks), 
-                    unit=' M index', unit_scale=True, leave=False)
-        
-        # Combining np.ndarrays containing activated values for each index of chunked data
-        preds = np.concatenate([self._model_worker(data=data) for data in pbar])
-        
-        zero_indices = []
-
-        for i in range(len(df_all)):
-            difference = 0
-            on, ref = df_all['Target'].iloc[i], df_all['Off-context'].iloc[i]
-            rt_len = df_all['RTT_len'].iloc[i]
-
-            boundary = 17 + rt_len
-
-            for j in range(boundary):
-                if on[4+j] != ref[4+j]:
-                    difference += 1
-            
-            if difference > 4:
-                zero_indices.append(i)
-        
-        preds[zero_indices] = 0
-
-        df_all.insert(1, f'DeepPrime-Off_score', preds)
-
-        if   show_features == False: return df_all.iloc[:, :17]
-        elif show_features == True : return df_all
-
-    # def End: predict
-        
-    def _model_worker(self, data:pd.DataFrame) -> np.ndarray:
-        """_summary_
-
-        Args:
-            data (pd.DataFrame): _description_
-
-        Returns:
-            np.ndarray: _description_
-        """        
-
-        device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        
-        model_info = LoadModel('DeepPrime', 'PE2-Off', 'HEK293T')
-        model_dir  = model_info.model_dir
-
-        mean = pd.read_csv(f'{model_dir}/mean_231124.csv', header=None, index_col=0).squeeze()
-        std  = pd.read_csv(f'{model_dir}/std_231124.csv',  header=None, index_col=0).squeeze()
-
-        test_features = select_cols(data)
-
-        g_test = seq_concat(data, col1='Off-context', col2='Masked_EditSeq', seq_length=74)
-        x_test = (test_features - mean) / std
-
-        g_test = torch.tensor(g_test, dtype=torch.float32, device=device)
-        x_test = torch.tensor(x_test.to_numpy(), dtype=torch.float32, device=device)
-
-        models = [m_files for m_files in glob(f'{model_dir}/*.pt')]
-        preds  = []
-
-        for m in models:
-            model = GeneInteractionModel(hidden_size=128, num_layers=1).to(device)
-            model.load_state_dict(torch.load(m, map_location=device))
-            model.eval()
-            with torch.no_grad():
-                g, x = g_test, x_test
-                g = g.permute((0, 3, 1, 2))
-                pred = model(g, x).detach().cpu().numpy()
-            preds.append(pred)
-
-        # AVERAGE PREDICTIONS
-        preds = np.squeeze(np.array(preds))
-        preds = np.mean(preds, axis=0)
-        preds = np.exp(preds) - 1
-
-        return preds
-
-    # def End: _model_worker
-
-
-    def _check_record(self, features:pd.DataFrame) -> pd.DataFrame:
-        """A function that checks if the input features conform to the DataFrame format created by the DeepPrime pipeline.
-
-        Args:
-            features (pd.DataFrame): DataFrame containing information of the features required by DeepPrime.
-
-        Raises:
-            ValueError: If the column names that should be included in the features are missing, an error will occur.
-
-        Returns:
-            pd.DataFrame: Return the DataFrame containing features received as input without any modifications.
-        """
-
-        # Check if the input dataframe is in the correct format
-
-        list_features = [
-            'ID', 
-
-            # pegRNA sequence features
-            'Spacer', 'RT-PBS', 
-
-            # pegRNA edit and length features
-            'PBS_len', 'RTT_len', 'RT-PBS_len', 'Edit_pos', 'Edit_len', 'RHA_len', 
-            
-            # Target sequences
-            'Target', 'Masked_EditSeq', 
-
-            # Edit types
-            'type_sub', 'type_ins', 'type_del',
-
-            # Tm features
-            'Tm1_PBS', 'Tm2_RTT_cTarget_sameLength', 'Tm3_RTT_cTarget_replaced', 
-            'Tm4_cDNA_PAM-oppositeTarget', 'Tm5_RTT_cDNA', 'deltaTm_Tm4-Tm2',
-
-            # GC counts and contents
-            'GC_count_PBS', 'GC_count_RTT', 'GC_count_RT-PBS', 
-            'GC_contents_PBS', 'GC_contents_RTT', 'GC_contents_RT-PBS', 
-            
-            # RNA 2ndary structure features
-            'MFE_RT-PBS-polyT', 'MFE_Spacer',
-
-            # DeepSpCas9 score
-            'DeepSpCas9_score',
-            ]
-        
-        for feat_name in list_features:
-            if feat_name not in features.columns:
-                raise ValueError(f'The input dataframe does not have the column {feat_name}')
-            
-        return features
-    
-    # def END: _check_record
-            
-    def _check_fasta(self, ref_genome:str, download_fasta:bool) -> str:
-        """Try to locate the chromosomes using GetChromosome from the path of ref_genome.
-        If the species cannot be found based on chromosomes, attempt to locate them using GetGenome.
-        If none of the files are found, raise a NotFoundError. 
-        However, if download_fasta is set to True, download the fasta files.
-
-        Args:
-            ref_genome (str): The path where the FASTA file is stored or the path where it will be downloaded.
-            download_fasta (bool): Whether to download the FASTA file from the FTP server if it is not found in the specified path.
-
-        Returns:
-            str: The path where the reference FASTA file is stored.
-        """
-
-        ref_path   = ref_genome.replace('\\', '/')
-        ref_genome = os.path.basename(ref_path)
-
-        genome_meta = GetGenome(ref_genome)
-
-        # Case1: If the scaffold level is "chromosome," then check if the files in GetChromosome.contents() are included in ref_path.
-        if genome_meta.info['assembly_level'] == 'Chromosome':
-
-            chrom = GetChromosome(id=ref_genome)
-
-            for f in chrom.contents():
-
-                if os.path.isfile(os.path.join(ref_path, f)): continue
-                else:
-                    if download_fasta == True: chrom.download(f, download_path=ref_path)
-                    else: raise FileNotFoundError(f'FASTA file {f} not found in "{ref_path}" directory. If you want to download it automatically, please set download_fasta=True.')
-
-        # Case2: If the scaffold level is not "chromosome," then try to find it in GetGenome.contents().
-        else:
-            for f in genome_meta.contents():
-
-                # In genome_meta, download the file that ends with '_genomic.fna.gz' rather than downloading the entire contents.
-                if not f.endswith('_genomic.fna.gz'): continue
-                
-                if os.path.isfile(os.path.join(ref_path, f)): break
-                else:
-                    if download_fasta == True: 
-                        genome_meta.download(f, download_path=ref_path)
-                        break
-                    else: 
-                        raise FileNotFoundError(f'FASTA file {f} not found in "{ref_path}" directory. If you want to download it automatically, please set download_fasta=True.')
-            
-        return ref_path
-    # def END: _check_fasta
-        
-
-    def _offinder_to_df(self, cas_offinder_result_path:str) -> pd.DataFrame:
-        """For cas_offinder_result, transform tsv to DataFrame format.
-        Also, add "Chromosome" column.
-
-        Args:
-            cas_offinder_result_path (str): The path of original text file of Cas-OFFinder results
-
-        Returns:
-            pd.DataFrame: DataFrame formatted Cas-OFFinder result
-        """
-
-        df_offinder = pd.read_csv(cas_offinder_result_path, sep='\t', names=['On_target_scaper', 'Location', 'Position', 'Off_target_sequence', 'Strand', 'MM_count'])
-
-        # extract chromosome name from 'Location' and make new column 'Chromosome'
-        df_offinder['Chromosome'] = df_offinder['Location'].apply(lambda x: x.split(' ')[0])
-
-        return df_offinder
-    # def END: _offinder_to_df
-
-
-    def _get_target_seq(self, df_offinder:pd.DataFrame, ref_path:str='Homo sapiens') -> pd.DataFrame:
-        """From FASTA file, get sequence context starting from 'Position' to seq_length (default 74nt).
-        This function searches for the FASTA file with the name received through ref_path.
-        The FASTA file should match the one referenced during Cas-OFFinder execution.
-
-        Args:
-            df_offinder (pd.DataFrame): DataFrame formatted Cas-OFFinder result
-            ref_path (str, optional): The path where the FASTA file is stored. Defaults to 'Homo sapiens'.
-
-        Returns:
-            pd.DataFrame: DataFrame with the 74nt sequence context of the off-targets found by Cas-OFFinder.
-        """
-        
-        seq_length = 74
-        
-        list_df_out = []
-        df_offinder_grouped = df_offinder.groupby('Chromosome')
-
-        # make progress bar
-        pbar = tqdm(df_offinder_grouped.groups.keys(),
-                    desc='Finding sequence context',
-                    total=len(df_offinder_grouped.groups.keys()), 
-                    unit=' chromosomes', unit_scale=True, leave=False)
-
-        # iterate through each chromosome
-        for chromosome in pbar:
-            
-            # fasta  = str(SeqIO.read(f'{ref_path}/chr{chromosome}.fna', 'fasta').seq)
-            file_name = f'chr{chromosome}'
-
-            fasta  = str(self._open_fasta_record(file_name, ref_path=ref_path).seq)
-            df_chr = df_offinder_grouped.get_group(chromosome)
-
-            chr_strand_grouped = df_chr.groupby('Strand')
-
-            # for strand == '+'
-            df_strand_fwd = chr_strand_grouped.get_group('+').copy()
-            df_strand_fwd['Off74_context'] = df_strand_fwd['Position'].apply(lambda pos: fasta[pos-4:pos-4+seq_length])
-            list_df_out.append(df_strand_fwd)
-
-            # for strand == '-'
-            df_strand_rev = chr_strand_grouped.get_group('-').copy()
-            df_strand_rev['Off74_context'] = df_strand_rev['Position'].apply(lambda pos: reverse_complement(fasta[pos+28-seq_length:pos+28]))
-            list_df_out.append(df_strand_rev)
-
-        return pd.concat(list_df_out, axis=0)
-    # def END: _get_target_seq
-    
-    def _open_fasta_record(self, file_name:str, ref_path:str='Homo sapiens') -> str:
-        """Check if there is a file with the specified 'file_name' in the 'ref_path' directory, regardless of the file extension. 
-        If there is a file with one of the following extensions: .fa, .fna, .fasta, .fa.gz, .fna.gz, or .fasta.gz, 
-        return the file path and name.
-
-        Args:
-            file_name (str): The filename to be opened as a Seq record within the given directory.
-            ref_path (str, optional): The path where the reference genome FASTA file is stored. Defaults to 'Homo sapiens'.
-
-        Returns:
-            SeqRecord: Parsing information of the FASTA file.
-        """
-
-        files = glob(f'{ref_path}/{file_name}.*')
-
-        if len(files) == 0:
-            raise FileNotFoundError(f'The FASTA file {file_name} does not exist in {ref_path}')
-        
-        else:
-            for file in files:
-                if file.endswith('.fa') or file.endswith('.fna') or file.endswith('.fasta'):
-                    return SeqIO.read(file, 'fasta')
-                
-                elif file.endswith('.fa.gz') or file.endswith('.fna.gz') or file.endswith('.fasta.gz'):
-                    return SeqIO.read(gzip.open(file, 'rt'), 'fasta')
-                
-            else:
-                raise FileNotFoundError(f'The FASTA file {file_name} does not exist in {ref_path}')
-    
-    # def END: _open_fasta_record
-
-
-    def _match_target_seq(self, features:pd.DataFrame, df_offinder:pd.DataFrame) -> pd.DataFrame:
-        """DeepPrime pipeline에서 만들어진 features record에 off-target candidates로 찾아진 74nt sequence를 연결해주는 함수.
-        이때, 
-
-        Args:
-            features (pd.DataFrame): DeepPrime pipeline으로부터 만들어진 pegRNA / target sequence와 biofeatures가 있는 DataFrame.
-            df_offinder (pd.DataFrame): Cas-OFFinder result DataFrame.
-
-        Returns:
-            pd.DataFrame: Features record에 off-target candidates 74nt sequence를 매칭시킨 DataFrame.
-        """
-
-        # ToDo?: 먼저 index가 중복되지 않은 것이 들어있는지 확인한다. 만약 중복 index가 있으면, 새 index를 배정한다. 
-        # 하지만 DeepPrime pipeline에서 있던 dataframe을 그대로 가져왔다면, 중복 index는 없을 것... 
-
-        list_df    = []
-        feat_group = features.groupby('Spacer')
-
-        # make progress bar
-        pbar = tqdm(df_offinder.index,
-                    desc='Make DeepPrime-Off input DataFrame',
-                    total=len(df_offinder.index),
-                    unit=' Off-targets', unit_scale=True, leave=False)
-
-        for idx_off in pbar:
-            df_off_row = df_offinder.loc[idx_off]
-
-            spacer_on  = df_off_row['On_target_scaper'][:-3]
-            location   = df_off_row['Location']
-            position   = df_off_row['Position']
-            off_target = df_off_row['Off_target_sequence']
-            strand     = df_off_row['Strand']
-            n_mismatch = df_off_row['MM_count']
-            off74seq   = df_off_row['Off74_context']
-            
-            try:
-                df_feat_temp = feat_group.get_group(spacer_on).copy()
-                len_feat = len(df_feat_temp)
-
-                df_feat_temp.insert(10, f'MM_num',      [n_mismatch for _ in range(len_feat)])
-                df_feat_temp.insert(10, f'Strand',      [strand     for _ in range(len_feat)])
-                df_feat_temp.insert(10, f'Position',    [position   for _ in range(len_feat)])
-                df_feat_temp.insert(10, f'Location',    [location   for _ in range(len_feat)])
-                df_feat_temp.insert(10, f'Off-context', [off74seq   for _ in range(len_feat)])
-                df_feat_temp.insert(10, f'Off-target',  [off_target for _ in range(len_feat)])
-            
-            except: continue
-
-            list_df.append(df_feat_temp)
-            
-        df_out = pd.concat(list_df, ignore_index=True)
-
-        return df_out
-    # def END: _match_target_seq
-
-
-
-
-
-
-
-
-
-
-
 
