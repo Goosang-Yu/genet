@@ -7,8 +7,8 @@ from ftplib import FTP
 
 class NCBI(db.config.DBconfig):
     def __init__(self, ):
-        """NCBI FTP 서버에 접속해서 원하는 metadata를 다운로드 받고,
-        metadata를 기반으로 원하는 genome data parsing을 할 수 있는 module
+        """NCBI FTP 서버에 접속해서 원하는 assemble data를 다운로드 받고,
+        assemble data를 기반으로 원하는 genome data parsing을 할 수 있는 module
         """        
 
         super().__init__()
@@ -17,18 +17,21 @@ class NCBI(db.config.DBconfig):
 
         self.remote_path = "/genomes/ASSEMBLY_REPORTS/"
         self.local_path  = f"{self.genet_path}/database/metadata/NCBI/"
-        
+
         self.assembly = 'assembly_summary_refseq'
+        self.genbank  = 'assembly_summary_genbank'
 
         try:
-            self.version = self.get_file_version(f'{self.local_path}/{self.assembly}.parquet')
+            self.version = self.get_file_version(f'{self.local_path}/{self.genbank}.parquet')
         except:
             print('[Info] NCBI reference genome assembly data is not found. This message appears only once when starting the NCBI database for the first time.')
             self._download_summary(target_file=self.assembly, download_path=self.local_path)
-            self.version = self.get_file_version(f'{self.local_path}/{self.assembly}.parquet')
-
-        self.meta = pd.read_parquet(f'{self.local_path}/{self.assembly}.parquet')
-
+            self._download_summary(target_file=self.genbank, download_path=self.local_path)
+            self.version = self.get_file_version(f'{self.local_path}/{self.genbank}.parquet')
+        
+        self.assembly = pd.read_parquet(f'{self.local_path}/{self.assembly}.parquet')
+        self.genbank  = pd.read_parquet(f'{self.local_path}/{self.genbank}.parquet')
+    
     # def End: __init__
         
     def _download_summary(self, target_file:str, download_path:str, convert=True):
@@ -52,8 +55,6 @@ class NCBI(db.config.DBconfig):
         # File will be converted to parquet format automatically
         if convert==True: self._convert_to_parquet(target_file)
         
-        print(f'[Info] Complete')
-
     # def End: download
             
     def _convert_to_parquet(self, target_file:str):
@@ -77,16 +78,18 @@ class NCBI(db.config.DBconfig):
 
     # def End: _convert_to_parquet
 
-    def update(self):
+    def update(self, ):
         '''Update files from FTP server to local path.
         '''
 
+        assembly = 'assembly_summary_refseq'
+        genbank  = 'assembly_summary_genbank'
+
         print('[Info] Updating NCBI assembly summary of reference sequence')
 
-        assembly = 'assembly_summary_refseq'
-
         self._download_summary(target_file=assembly, download_path=self.local_path)
-        
+        self._download_summary(target_file=genbank, download_path=self.local_path)
+
         print(f'[Info] Complete')
 
     # def End: download
@@ -110,18 +113,18 @@ class GetGenome(NCBI):
         elif category == 'accession': category = '#assembly_accession'
         
         # 카테고리로 지정된 column을 index로 지정한 dataframe
-        _columns  = self.meta.columns
-        self.meta = self.meta.set_index(category)
+        _columns  = self.assembly.columns
+        self.assembly = self.assembly.set_index(category)
 
-        try   : self.data = self.meta.loc[[id]].reset_index()[_columns]
-        except: raise ValueError('''[Error] Not valid ID, Please check your id or category ("organism" or "accession") input.\nYou can check available IDs and accession numbers from NCBI().meta.''')
+        try   : self.data = self.assembly.loc[[id]].reset_index()[_columns]
+        except: raise ValueError('''[Error] Not valid ID, Please check your id or category ("organism" or "accession") input.\nYou can check available IDs and accession numbers from NCBI().assembly.''')
 
         if category == 'organism_name':
             self.info = self._search_refseq()
         else:
             self.info = self.data.loc[0]
         
-        del self.meta
+        del self.assembly
     
     # def End: __init__
 
@@ -216,6 +219,93 @@ class GetGenome(NCBI):
     # def End: download
 
 
+class GetGenebank:
+    def __init__(self, id:str, category:str='organism'):
+        """Mammalian cell의 경우에는 chromosome 단위로 file이 정리된 것을 사용해야 할 경우가 있다.
+        대표적으로 Cas-OFFinder는 chromosome이 각각 분리된 파일을 기준으로 작동한다. 
+        따라서 본 함수는 database에서 chromosome이 따로 정리된 파일을 찾아서 다운로드 한다.
+
+        `GetChromosome`은 `GetGenome`을 상속받아서 작동한다. 
+        따라서 `GetGenome`의 __init__() input을 동일하게 넣어줘야 하며, 
+        `GetGenome`의 contents(), download()를 사용할 수 있다. 
+
+        NCBI database에는 각 assembly마다 하위 경로에 chromosome이 나누어진 파일들이 별도로 존재한다.
+        예를 들어, 인간 (Homo sapiens)의 경우, 아래의 경로에 존재한다. 
+        https://ftp.ncbi.nlm.nih.gov/genomes/refseq/vertebrate_mammalian/Homo_sapiens/reference/GCF_000001405.40_GRCh38.p14/GCF_000001405.40_GRCh38.p14_assembly_structure/Primary_Assembly/assembled_chromosomes/FASTA/
+        
+        만약 chromosome으로 assembly가 만들어지는 구조라면, assembly_level == 'Chromosome'으로 되어있다.
+        Mammalian cell이 아니라서 chromosome과 같은 하위 assembly structure가 없는 경우에는 작동하지 않는다.
+
+        Args:
+            gb_file (str): .gbff 파일
+            feature_file (str): .gff 파일
+        """        
+
+        super().__init__(id, category)
+
+        info = self.info.copy()
+
+        
+        if info.assembly_level != 'Chromosome':
+            raise ValueError('''[Error] Not valid assembly level. Please check your assembly level input.
+                    Available assembly levels: "Chromosome"''')
+
+        accession    = info['#assembly_accession']
+        asm_name     = info['asm_name']
+        asm_ftp_path = info.ftp_path
+        
+        # Renew the ftp path to directory containing chromosome FASTA files
+        info.ftp_path = f'{asm_ftp_path}/{accession}_{asm_name}_assembly_structure/Primary_Assembly/assembled_chromosomes/FASTA/'
+        
+        self.info = info
+
+
+    # def End: __init__
+        
+    def download(self, target_file:str, download_path:str='./', silence:bool=False, decompress:bool=False):
+                
+        """target_file과 같은 이름의 파일을 원하는 경로에 FTP 서버로부터 다운로드 해주는 함수.
+        ToDo: target_file='all'이라고 적으면 self.contents()로 불러온 모든 파일을 다운로드 해준다.
+        단, directory는 무시한다. 
+
+        Args:
+            target_file (str): File name for download from NCBI server.
+            path (str, optional): Local path for save downloaded file. Defaults to './' (current working directory).
+        """                
+        ftp_path = self.info.ftp_path
+        paths = ftp_path.split('//')[1]
+        
+        server, remote_path = paths.split('/', 1)
+
+        try:
+            U.request_file(
+                server      = server,
+                remote_path = remote_path,
+                local_path  = download_path, 
+                target_file = target_file, 
+                silence     = silence,
+            )
+        
+            if decompress == True:
+                if silence == False:
+                    print(f"[Info] Decompressing gzipped file: {target_file}")
+                gzipped_file_path = f'{download_path}/{target_file}'
+                output_file_path  = gzipped_file_path.replace('.gz', '')
+
+                with gzip.open(gzipped_file_path, 'rb') as f_in:
+                    with open(output_file_path, 'wb') as f_out:
+                        # .gz 파일을 읽어서 압축 해제하고, 압축 해제된 내용을 새 파일에 쓴다
+                        f_out.write(f_in.read())
+
+                os.unlink(gzipped_file_path)
+
+
+        except:
+            print(f'[Error] Fail to download file. Available file: {self.contents()}')
+
+
+    # def End: download
+
 class GetChromosome(GetGenome):
     def __init__(self, id:str, category:str='organism'):
         """Mammalian cell의 경우에는 chromosome 단위로 file이 정리된 것을 사용해야 할 경우가 있다.
@@ -300,6 +390,9 @@ class GetChromosome(GetGenome):
         except:
             print(f'[Error] Fail to download file. Available file: {self.contents()}')
 
+        
+
+
     # def End: download
 
 
@@ -377,6 +470,7 @@ class DFConverter:
 
     # def End: __init__
 
+
     def convert(self, file_path) -> pd.DataFrame:
         """Database에서 받은 각종 파일들을 dataframe으로 바꿔주는 method.
 
@@ -388,16 +482,18 @@ class DFConverter:
 
         Returns:
             pd.DataFrame: Data file을 DataFrame으로 변환한 것. 
-        """
+        """        
 
         for fmt in self.available_format:
-            if file_path.endswith(fmt):
-                df = self._gff2df(file_path)
-            
-        try: 
-            return df
-        except: 
+            if file_path.endswith(fmt): break
+
             raise ValueError(f'Not available format. Available: {self.available_format}')
+        
+        if fmt in ['.gff', 'gff.gz', '.gtf', 'gtf.gz']:
+            df = self._gff2df(file_path)
+
+        
+        return df
         
     # def End: convert
         
