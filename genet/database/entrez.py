@@ -159,6 +159,9 @@ class GetClinVar:
 
     def __init__(self, record_id:str):
 
+        email = input('Please enter your email address to access NCBI database: ')
+        Entrez.email = email
+
 
         self._record_id = record_id
 
@@ -174,6 +177,7 @@ class GetClinVar:
         self.var_loc = self.root.findall('./VariationArchive/InterpretedRecord/SimpleAllele/Location/SequenceLocation')
 
         for self.info in self.var_loc:
+            print(self.info)
             if self.info.attrib['Assembly'] == 'GRCh38':
                 self.chr_acc = self.info.attrib['Accession']
                 self.start   = int(self.info.attrib['start'])

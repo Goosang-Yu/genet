@@ -98,7 +98,7 @@ genome = GetGenome('Homo sapiens')
 ```python
 from genet.database import GetGenome
 
-genome = GetGenome(id='GCF_009914755.1', category='#assembly_accession')
+genome = GetGenome(id='GCF_009914755.1', category='accession')
 
 >>> genome.info # metadata 정보를 담고 있는 변수, pd.Series
 ```
