@@ -7,7 +7,7 @@ genet의 처음 init 부분
 # How to release with 2FA accounts
 
 # [주의!] 먼저 아래의 version을 변경한다!!
-__version__ = '0.17.1'
+__version__ = '0.17.2'
 
 # hatch build
 # twine upload --username __token__ dist/*
