@@ -1,11 +1,87 @@
-import os, requests
+import os, requests, subprocess
 from ftplib import FTP
 from tqdm import tqdm
+from glob import glob
 
 def lower_list(input: list): return [v.lower() for v in input]
 
 def lower_dict(input: dict): 
     return dict((k.lower(), v.lower) for k, v in input.items())
+
+
+def run_FLASH(flash_path:str, file1:str, file2:str, out_dir:str, 
+              out_prefix:str='out', min_overlap:int=10, 
+              clean:bool=True, overwrite:bool=True):
+
+    out_file = f'{out_dir}/{out_prefix}.extendedFrags.fastq'
+    if os.path.isfile(out_file):
+        if overwrite==False:
+            msg = '[Info] Skip FLASH step. Already combined.'
+            print(msg)
+            return msg + '\n'
+    
+    os.makedirs(out_dir, exist_ok=True)
+
+    assert os.path.isfile(file1) and os.path.isfile(file2)
+
+    command    = f'{flash_path} {file1} {file2} '
+    command   += f'-M 400 '              # max overlap
+    command   += f'-m {min_overlap} '    # min overlap
+    command   += f'-d {out_dir} '
+    command   += f'-o {out_prefix} '
+    # command   += '-O '                   # allow "outies"  Read ends overlap
+
+    if clean:
+        command += f'; rm -rf {out_dir}/*hist* {out_dir}/*notCombined*'
+
+    # Run Flash
+    print('[Info] Starting FLASH v1.2.11')
+    result = subprocess.run(command, shell=True, text=True, capture_output=True)
+
+    return result.stdout
+
+#def END: run_FLASH
+
+
+def split_fq_file (fastq_dir, sFastqTag, overwrite:bool=False):
+    # split files, must be multiples of 4. 
+    # file size < 1G recommendation:40000, size > 1G recommendation:400000
+    nLINE_CNT_LIMIT = 1000000
+
+    sOutDir    = f'{fastq_dir}/split'
+    sInFile    = f'{fastq_dir}/{sFastqTag}.fastq'
+    sOutTag    = f'{sOutDir}/{sFastqTag}_fastq'
+
+    if os.path.isdir(sOutDir):
+        if overwrite==False:
+            msg = '[Info] Skip split step. Already splited.'
+            print(msg)
+
+            file_paths = glob(f'{sOutTag}*')
+            file_names = [os.path.basename(file_path) for file_path in file_paths]
+
+            return file_names
+    
+    os.makedirs(sOutDir,exist_ok=True)
+    assert os.path.isfile(sInFile)
+    
+    command     = 'split '                   # For Logging Purposes
+    command    += '-l %s '                   % nLINE_CNT_LIMIT
+    command    += '-a 4 '                    # Number of suffice places e.g. 0001.fq = 4
+    command    += '--numeric-suffixes=1 '    # Start with number 1
+    command    += '--additional-suffix=.fq ' # Add suffix .fq'
+    command    += '%s %s_'                   % (sInFile, sOutTag)
+
+    os.system(command)
+
+    file_paths = glob(f'{sOutTag}*')
+    file_names = [os.path.basename(file_path) for file_path in file_paths]
+
+    return file_names
+
+#def END: split_fq_file
+
+
 
 class SplitFastq:
     def __init__(

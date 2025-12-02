@@ -45,7 +45,7 @@ list_contents = genome.contents()
 위에 있는 파일들이 이 genome에 대해서 다운로드 받을 수 있는 파일들이다. 각 파일들의 자세한 설명에 대해서는 NCBI에서 제공하는 공식 설명서나, 위 파일에서 `README.txt`를 다운로드 받아서 확인해보자. 위 파일 중 다운로드 받고 싶은 파일이 있다면, 직접 FTP 서버에서 다운로드 받아도 되지만, `download()` method를 사용해서 간편하게 원하는 경로에 다운로드 받을 수 있다.
 
 ```python
-genome.download(target_file='README.txt', path='./')
+genome.download(target_file='README.txt', download_path='./')
 ```
 
 `download()`에서 `path`는 현재 작업 경로 (current working directory)가 기본값으로 설정되어 있다. 따라서 파일 이름만 정확히 입력하면, 지금 `cwd`에 똑같은 이름의 파일이 다운로드 된다. 
