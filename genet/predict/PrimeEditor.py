@@ -1477,16 +1477,19 @@ class DeepPrimeOff:
             df_chr = df_offinder_grouped.get_group(chromosome)
 
             chr_strand_grouped = df_chr.groupby('Strand')
+            strands=df_chr['Strand'].unique()
 
             # for strand == '+'
-            df_strand_fwd = chr_strand_grouped.get_group('+').copy()
-            df_strand_fwd['Off74_context'] = df_strand_fwd['Position'].apply(lambda pos: fasta[pos-4:pos-4+seq_length])
-            list_df_out.append(df_strand_fwd)
+            if '+' in strands : 
+                df_strand_fwd = chr_strand_grouped.get_group('+').copy()
+                df_strand_fwd['Off74_context'] = df_strand_fwd['Position'].apply(lambda pos: fasta[pos-4:pos-4+seq_length])
+                list_df_out.append(df_strand_fwd)
 
             # for strand == '-'
-            df_strand_rev = chr_strand_grouped.get_group('-').copy()
-            df_strand_rev['Off74_context'] = df_strand_rev['Position'].apply(lambda pos: reverse_complement(fasta[pos+28-seq_length:pos+28]))
-            list_df_out.append(df_strand_rev)
+            if '-' in strands : 
+                df_strand_rev = chr_strand_grouped.get_group('-').copy()
+                df_strand_rev['Off74_context'] = df_strand_rev['Position'].apply(lambda pos: reverse_complement(fasta[pos+28-seq_length:pos+28]))
+                list_df_out.append(df_strand_rev)
 
         return pd.concat(list_df_out, axis=0)
     # def END: _get_target_seq
